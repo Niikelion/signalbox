@@ -4,6 +4,7 @@ import { parseArgs } from "node:util"
 import { FlowKitError, write, type FieldSpec } from "@flowkit/core"
 import { createDdnsApp } from "./app.js"
 import { APP_NAME, configSchema, createDdnsConfigStore } from "./config.js"
+import { runOnce } from "./once.js"
 import { controlService, serviceStatus, setupService, teardownService, type ServiceScope } from "./systemd.js"
 
 const USAGE = `${APP_NAME} - Cloudflare dynamic DNS driven by your router's UPnP events
@@ -180,15 +181,9 @@ const main = async (): Promise<void> => {
             return
         }
 
-        case "once": {
-            const config = store.load()
-            const app = createDdnsApp(config)
-            // start() runs the fallback poll's startup check, which is exactly
-            // the one-shot behaviour we want here
-            await app.start()
-            await app.stop("once")
+        case "once":
+            await runOnce(store.load())
             return
-        }
 
         default:
             throw new FlowKitError(`unknown command "${command}"`, "run with --help to see the available commands")
