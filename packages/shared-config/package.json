@@ -1,0 +1,23 @@
+{
+    "name": "@flowkit/shared-config",
+    "private": true,
+    "type": "module",
+    "version": "0.1.0",
+    "exports": {
+        "./eslint": "./eslint.ts",
+        "./prettier": "./prettier.ts"
+    },
+    "dependencies": {
+        "@eslint/js": "^9.18.0",
+        "@gamedev-sensei/ts-config": "^2.1.0",
+        "@gamedev-sensei/tsdown-config": "^2.1.0",
+        "eslint": "^9.39.2",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-prettier": "^5.5.5",
+        "jiti": "^2.6.1",
+        "prettier": "^3.8.1",
+        "tsdown": "^0.15.7",
+        "typescript": "^5.9.3",
+        "typescript-eslint": "^8.21.0"
+    }
+}
