@@ -35,7 +35,7 @@ export interface GraphEdge {
 
 // --- node types -----------------------------------------------------------
 
-export type ConfigFieldType = "string" | "number" | "boolean" | "array" | "object"
+export type ConfigFieldType = "string" | "number" | "boolean" | "array" | "object" | "any"
 
 export interface ConfigField {
     type: ConfigFieldType
@@ -83,6 +83,20 @@ export interface TriggerNodeType {
 
 /** Returned by an action to halt its branch — nothing flows downstream of it. */
 export const STOP: unique symbol = Symbol("flowkit.graph.stop")
+
+const FAN_OUT: unique symbol = Symbol("flowkit.graph.fanout")
+
+/** Returned by an action to send several values down its edge, one flow each. */
+export interface FanOut {
+    readonly [FAN_OUT]: true
+    readonly values: readonly unknown[]
+}
+
+/** Wrap a list of values so the compiler runs the downstream once per value. */
+export const fanOut = (values: readonly unknown[]): FanOut => ({ [FAN_OUT]: true, values })
+
+export const isFanOut = (value: unknown): value is FanOut =>
+    typeof value === "object" && value !== null && (value as Record<PropertyKey, unknown>)[FAN_OUT] === true
 
 /** An action instance, built for one graph node — hold per-node state in its closure. */
 export interface ActionInstance {
@@ -208,6 +222,8 @@ const matchesType = (value: unknown, type: ConfigFieldType): boolean => {
             return Array.isArray(value)
         case "object":
             return typeof value === "object" && value !== null && !Array.isArray(value)
+        case "any":
+            return true
     }
 }
 
@@ -324,6 +340,11 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
                     try {
                         const output = await action.run({ config: node.config ?? {}, input: value, ctx: nodeCtx })
                         if (output === STOP) continue // this action ended its branch
+                        if (isFanOut(output)) {
+                            // one value in, many out: run the rest of the branch per value
+                            for (const each of output.values) await runFrom(nextId, each)
+                            continue
+                        }
                         await runFrom(nextId, output)
                     } catch (error) {
                         nodeCtx.fail(toError(error))
@@ -425,6 +446,38 @@ registerNode({
     configSchema: { value: { type: "object", required: true } },
     create: () => ({
         run: ({ config, input, ctx }) => ctx.resolveDeep(config["value"], input),
+    }),
+})
+
+/**
+ * Fan out over a list: one value in, one flow out per item, all down the same
+ * edge. This is how a graph handles several DNS records — `over` resolves to the
+ * list, and each item is merged into the flowing value under `as`:
+ *
+ * ```json
+ * { "type": "repeat", "config": { "over": "{{ $config.records }}", "as": "record" } }
+ * // { ip } + ["a","b"]  ->  { ip, record: "a" }  and  { ip, record: "b" }
+ * ```
+ *
+ * Put it after `dedupe` so a repeated address is dropped before the fan-out.
+ */
+registerNode({
+    type: "repeat",
+    kind: "action",
+    configSchema: { over: { type: "any", required: true }, as: { type: "string" } },
+    create: () => ({
+        run: ({ config, input, ctx }) => {
+            const over = config["over"]
+            const resolved = typeof over === "string" ? ctx.resolve(over, input) : over
+            const items: unknown[] = Array.isArray(resolved) ? resolved : []
+            const as = typeof config["as"] === "string" ? config["as"] : "item"
+
+            const base =
+                input !== null && typeof input === "object" && !Array.isArray(input)
+                    ? (input as Record<string, unknown>)
+                    : {}
+            return fanOut(items.map((item) => ({ ...base, [as]: item })))
+        },
     }),
 })
 
