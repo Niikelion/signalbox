@@ -417,6 +417,7 @@ __metadata:
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@flowkit/core": "workspace:^"
+    "@flowkit/graph": "workspace:^"
     "@flowkit/shared-config": "workspace:^"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@types/node": "npm:^22.10.2"
@@ -461,7 +462,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@flowkit/graph@workspace:packages/graph":
+"@flowkit/graph@workspace:^, @flowkit/graph@workspace:packages/graph":
   version: 0.0.0-use.local
   resolution: "@flowkit/graph@workspace:packages/graph"
   dependencies:
@@ -501,6 +502,7 @@ __metadata:
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@flowkit/core": "workspace:^"
+    "@flowkit/graph": "workspace:^"
     "@flowkit/shared-config": "workspace:^"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@types/node": "npm:^22.10.2"

@@ -28,7 +28,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@flowkit/core": "workspace:^"
+        "@flowkit/core": "workspace:^",
+        "@flowkit/graph": "workspace:^"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

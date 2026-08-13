@@ -1,6 +1,16 @@
-export { compileGraph, createNodeRegistry, defaultRegistry, registerNode, resolveTemplate } from "./graph.js"
+export {
+    compileGraph,
+    createNodeRegistry,
+    defaultRegistry,
+    registerNode,
+    resolveDeep,
+    resolveTemplate,
+    STOP,
+} from "./graph.js"
 export type {
+    ActionInstance,
     ActionNodeType,
+    CompileOptions,
     ConfigField,
     ConfigFieldType,
     GraphEdge,
@@ -9,6 +19,8 @@ export type {
     NodeConfigSchema,
     NodeRegistry,
     NodeType,
+    ResolveScope,
+    TriggerInstance,
     TriggerNodeType,
     WorkflowGraph,
 } from "./graph.js"
