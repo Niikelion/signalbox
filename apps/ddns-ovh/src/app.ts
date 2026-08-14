@@ -1,0 +1,18 @@
+import { createApp, type App } from "@flowkit/core"
+import { APP_NAME, type DdnsOvhConfig } from "./config.js"
+import type { DdnsOvhEvents } from "./events.js"
+import { buildPlugins } from "./plugins.js"
+import { fallbackPoll } from "./workflows/fallbackPoll.js"
+import { trackWanIp } from "./workflows/trackWanIp.js"
+import { updateDns } from "./workflows/updateDns.js"
+
+/**
+ * The app is only composition: which plugins produce events, which workflows
+ * react to them. All the behaviour lives in those two lists.
+ */
+export const createDdnsOvhApp = (config: DdnsOvhConfig): App<DdnsOvhEvents> =>
+    createApp({
+        name: APP_NAME,
+        plugins: buildPlugins(config),
+        workflows: [trackWanIp, updateDns, fallbackPoll(config.fallbackMinutes)],
+    })

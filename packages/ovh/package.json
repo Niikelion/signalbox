@@ -1,25 +1,24 @@
 {
-    "name": "@flowkit/ddns",
+    "name": "@flowkit/ovh",
     "version": "0.1.0",
     "license": "MIT",
-    "description": "Cloudflare dynamic DNS for home connections, driven by your router's UPnP events",
+    "description": "FlowKit plugin: keep an OVH DynHost record pointed at a changing address",
     "type": "module",
-    "bin": {
-        "flowkit-ddns": "dist/cli.js"
-    },
-    "main": "dist/index.js",
+    "main": "dist/index.cjs",
+    "module": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
         "/dist"
     ],
     "exports": {
-        ".": {
+        "import": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
+        },
+        "require": {
+            "types": "./dist/index.d.cts",
+            "require": "./dist/index.cjs"
         }
-    },
-    "engines": {
-        "node": ">=20"
     },
     "scripts": {
         "build": "tsc --noEmit && tsdown",
@@ -29,12 +28,11 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@flowkit/cloudflare": "workspace:^",
         "@flowkit/core": "workspace:^",
-        "@flowkit/service-cli": "workspace:^",
-        "@flowkit/upnp": "workspace:^"
+        "@flowkit/graph": "workspace:^"
     },
     "devDependencies": {
+        "@arethetypeswrong/core": "^0.18.2",
         "@flowkit/shared-config": "workspace:^",
         "@gamedev-sensei/ts-config": "^2.1.0",
         "@types/node": "^22.10.2",

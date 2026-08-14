@@ -1,11 +1,11 @@
 {
-    "name": "@flowkit/ddns",
+    "name": "@flowkit/ddns-ovh",
     "version": "0.1.0",
     "license": "MIT",
-    "description": "Cloudflare dynamic DNS for home connections, driven by your router's UPnP events",
+    "description": "OVH DynHost dynamic DNS for home connections, driven by your router's UPnP events",
     "type": "module",
     "bin": {
-        "flowkit-ddns": "dist/cli.js"
+        "flowkit-ddns-ovh": "dist/cli.js"
     },
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -29,8 +29,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@flowkit/cloudflare": "workspace:^",
         "@flowkit/core": "workspace:^",
+        "@flowkit/ovh": "workspace:^",
         "@flowkit/service-cli": "workspace:^",
         "@flowkit/upnp": "workspace:^"
     },

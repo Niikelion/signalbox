@@ -604,12 +604,33 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@flowkit/ddns-ovh@workspace:apps/ddns-ovh":
+  version: 0.0.0-use.local
+  resolution: "@flowkit/ddns-ovh@workspace:apps/ddns-ovh"
+  dependencies:
+    "@flowkit/core": "workspace:^"
+    "@flowkit/ovh": "workspace:^"
+    "@flowkit/service-cli": "workspace:^"
+    "@flowkit/shared-config": "workspace:^"
+    "@flowkit/upnp": "workspace:^"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  bin:
+    flowkit-ddns-ovh: dist/cli.js
+  languageName: unknown
+  linkType: soft
+
 "@flowkit/ddns@workspace:apps/ddns":
   version: 0.0.0-use.local
   resolution: "@flowkit/ddns@workspace:apps/ddns"
   dependencies:
     "@flowkit/cloudflare": "workspace:^"
     "@flowkit/core": "workspace:^"
+    "@flowkit/service-cli": "workspace:^"
     "@flowkit/shared-config": "workspace:^"
     "@flowkit/upnp": "workspace:^"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
@@ -626,6 +647,39 @@ __metadata:
 "@flowkit/graph@workspace:^, @flowkit/graph@workspace:packages/graph":
   version: 0.0.0-use.local
   resolution: "@flowkit/graph@workspace:packages/graph"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@flowkit/core": "workspace:^"
+    "@flowkit/shared-config": "workspace:^"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@flowkit/ovh@workspace:^, @flowkit/ovh@workspace:packages/ovh":
+  version: 0.0.0-use.local
+  resolution: "@flowkit/ovh@workspace:packages/ovh"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@flowkit/core": "workspace:^"
+    "@flowkit/graph": "workspace:^"
+    "@flowkit/shared-config": "workspace:^"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@flowkit/service-cli@workspace:^, @flowkit/service-cli@workspace:packages/service-cli":
+  version: 0.0.0-use.local
+  resolution: "@flowkit/service-cli@workspace:packages/service-cli"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@flowkit/core": "workspace:^"
