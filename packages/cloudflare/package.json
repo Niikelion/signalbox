@@ -1,5 +1,5 @@
 {
-    "name": "@flowkit/cloudflare",
+    "name": "@signalbox/cloudflare",
     "version": "0.1.0",
     "license": "MIT",
     "description": "FlowKit plugin: keep Cloudflare DNS A records pointed at a changing address",
@@ -28,13 +28,13 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@flowkit/core": "workspace:^",
-        "@flowkit/graph": "workspace:^"
+        "@signalbox/core": "workspace:^",
+        "@signalbox/graph": "workspace:^"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",
-        "@flowkit/shared-config": "workspace:^",
         "@gamedev-sensei/ts-config": "^2.1.0",
+        "@signalbox/shared-config": "workspace:^",
         "@types/node": "^22.10.2",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",

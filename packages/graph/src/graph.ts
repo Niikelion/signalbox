@@ -5,7 +5,7 @@ import {
     type LogLevel,
     type Unsubscribe,
     type WorkflowDefinition,
-} from "@flowkit/core"
+} from "@signalbox/core"
 
 /**
  * A workflow, expressed as data instead of a function.

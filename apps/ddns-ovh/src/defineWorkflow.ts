@@ -1,4 +1,4 @@
-import { createWorkflowDefiner } from "@flowkit/core"
+import { createWorkflowDefiner } from "@signalbox/core"
 import type { DdnsOvhEvents } from "./events.js"
 import type { DdnsOvhPlugins } from "./plugins.js"
 

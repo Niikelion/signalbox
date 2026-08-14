@@ -1,5 +1,5 @@
-import { write } from "@flowkit/core"
-import { updateDynHost } from "@flowkit/ovh"
+import { write } from "@signalbox/core"
+import { updateDynHost } from "@signalbox/ovh"
 import type { DdnsOvhConfig } from "./config.js"
 import { publicIPv4 } from "./publicIp.js"
 

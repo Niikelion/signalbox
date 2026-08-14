@@ -66,7 +66,7 @@ poll alone.
 ### Install and run
 
 ```bash
-npm install -g @flowkit/ddns
+npm install -g @signalbox/ddns
 
 flowkit-ddns config init          # prompts for token, zone id, records
 sudo flowkit-ddns setup           # systemd unit, service user, ufw rule, enable + start

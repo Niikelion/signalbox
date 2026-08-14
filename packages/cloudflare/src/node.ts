@@ -1,4 +1,4 @@
-import { registerNode, type ActionNodeType } from "@flowkit/graph"
+import { registerNode, type ActionNodeType } from "@signalbox/graph"
 import { createARecord, findARecord, patchARecord } from "./api.js"
 
 /**

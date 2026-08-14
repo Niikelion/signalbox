@@ -1,5 +1,5 @@
-import type { CloudflareEvents } from "@flowkit/cloudflare"
-import type { UpnpEvents } from "@flowkit/upnp"
+import type { CloudflareEvents } from "@signalbox/cloudflare"
+import type { UpnpEvents } from "@signalbox/upnp"
 
 /** Events this app owns, on top of the ones its plugins publish. */
 export type DdnsOwnEvents = {

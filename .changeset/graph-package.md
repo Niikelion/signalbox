@@ -1,8 +1,8 @@
 ---
-"@flowkit/graph": minor
+"@signalbox/graph": minor
 ---
 
-Add `@flowkit/graph`: workflows expressed as data.
+Add `@signalbox/graph`: workflows expressed as data.
 
 A node registry (`registerNode` / `createNodeRegistry`) and a compiler
 (`compileGraph`) that turns a JSON graph of registered nodes into an ordinary

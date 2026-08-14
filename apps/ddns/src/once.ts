@@ -1,5 +1,5 @@
-import { write } from "@flowkit/core"
-import { createARecord, findARecord, patchARecord } from "@flowkit/cloudflare"
+import { write } from "@signalbox/core"
+import { createARecord, findARecord, patchARecord } from "@signalbox/cloudflare"
 import type { DdnsConfig } from "./config.js"
 import { publicIPv4 } from "./publicIp.js"
 

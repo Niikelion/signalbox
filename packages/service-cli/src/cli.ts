@@ -1,6 +1,13 @@
 import { createInterface } from "node:readline/promises"
 import { parseArgs } from "node:util"
-import { FlowKitError, write, type ConfigOf, type ConfigSchema, type ConfigStore, type FieldSpec } from "@flowkit/core"
+import {
+    FlowKitError,
+    write,
+    type ConfigOf,
+    type ConfigSchema,
+    type ConfigStore,
+    type FieldSpec,
+} from "@signalbox/core"
 import { createServiceManager, type ServiceScope } from "./systemd.js"
 
 /** The bit of an app the CLI needs to `run` it, without knowing its event map. */

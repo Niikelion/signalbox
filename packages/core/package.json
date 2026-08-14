@@ -1,5 +1,5 @@
 {
-    "name": "@flowkit/core",
+    "name": "@signalbox/core",
     "version": "0.1.0",
     "license": "MIT",
     "description": "Event-based application framework: typed bus, plugins, workflows, lifecycle and config",
@@ -29,8 +29,8 @@
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",
-        "@flowkit/shared-config": "workspace:^",
         "@gamedev-sensei/ts-config": "^2.1.0",
+        "@signalbox/shared-config": "workspace:^",
         "@types/node": "^22.10.2",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",

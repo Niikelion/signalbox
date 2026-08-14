@@ -1,6 +1,7 @@
 {
-    "name": "@flowkit/ddns",
+    "name": "@signalbox/ddns",
     "version": "0.1.0",
+    "private": true,
     "license": "MIT",
     "description": "Cloudflare dynamic DNS for home connections, driven by your router's UPnP events",
     "type": "module",
@@ -29,14 +30,14 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@flowkit/cloudflare": "workspace:^",
-        "@flowkit/core": "workspace:^",
-        "@flowkit/service-cli": "workspace:^",
-        "@flowkit/upnp": "workspace:^"
+        "@signalbox/cloudflare": "workspace:^",
+        "@signalbox/core": "workspace:^",
+        "@signalbox/service-cli": "workspace:^",
+        "@signalbox/upnp": "workspace:^"
     },
     "devDependencies": {
-        "@flowkit/shared-config": "workspace:^",
         "@gamedev-sensei/ts-config": "^2.1.0",
+        "@signalbox/shared-config": "workspace:^",
         "@types/node": "^22.10.2",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",

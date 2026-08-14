@@ -1,5 +1,5 @@
 {
-    "name": "@flowkit/service-cli",
+    "name": "@signalbox/service-cli",
     "version": "0.1.0",
     "license": "MIT",
     "description": "FlowKit service CLI: config-driven command line and systemd lifecycle management for a long-running app, with no domain logic baked in",
@@ -28,12 +28,12 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@flowkit/core": "workspace:^"
+        "@signalbox/core": "workspace:^"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",
-        "@flowkit/shared-config": "workspace:^",
         "@gamedev-sensei/ts-config": "^2.1.0",
+        "@signalbox/shared-config": "workspace:^",
         "@types/node": "^22.10.2",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",

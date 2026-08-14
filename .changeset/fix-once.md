@@ -1,5 +1,5 @@
 ---
-"@flowkit/ddns": patch
+"@signalbox/ddns": patch
 ---
 
 Fix `once` exiting before the update ran.

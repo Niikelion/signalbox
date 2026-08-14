@@ -1,5 +1,5 @@
-import type { OvhEvents } from "@flowkit/ovh"
-import type { UpnpEvents } from "@flowkit/upnp"
+import type { OvhEvents } from "@signalbox/ovh"
+import type { UpnpEvents } from "@signalbox/upnp"
 
 /** Events this app owns, on top of the ones its plugins publish. */
 export type DdnsOvhOwnEvents = {

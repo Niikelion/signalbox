@@ -1,4 +1,4 @@
-import { definePlugin } from "@flowkit/core"
+import { definePlugin } from "@signalbox/core"
 import type { GatewayService } from "./discovery.js"
 import { createUpnpWatcher, type UpnpWatcher } from "./watch.js"
 

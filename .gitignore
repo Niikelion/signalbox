@@ -12,3 +12,6 @@ dist-bundle/
 !.yarn/versions
 .pnp.*
 yarn-error.log
+
+# JetBrains IDE
+.idea/

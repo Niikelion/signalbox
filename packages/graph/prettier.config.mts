@@ -1,2 +1,2 @@
-import { prettierConfig } from "@flowkit/shared-config/prettier"
+import { prettierConfig } from "@signalbox/shared-config/prettier"
 export default prettierConfig

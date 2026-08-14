@@ -1,6 +1,6 @@
-import { cloudflarePlugin } from "@flowkit/cloudflare"
-import type { PluginApis } from "@flowkit/core"
-import { upnpPlugin } from "@flowkit/upnp"
+import { cloudflarePlugin } from "@signalbox/cloudflare"
+import type { PluginApis } from "@signalbox/core"
+import { upnpPlugin } from "@signalbox/upnp"
 import type { DdnsConfig } from "./config.js"
 
 export const buildPlugins = (config: DdnsConfig) => ({

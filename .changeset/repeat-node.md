@@ -1,5 +1,5 @@
 ---
-"@flowkit/graph": minor
+"@signalbox/graph": minor
 ---
 
 Add a `repeat` fan-out node, so a graph can act on a list.

@@ -1,6 +1,6 @@
-import type { PluginApis } from "@flowkit/core"
-import { ovhPlugin } from "@flowkit/ovh"
-import { upnpPlugin } from "@flowkit/upnp"
+import type { PluginApis } from "@signalbox/core"
+import { ovhPlugin } from "@signalbox/ovh"
+import { upnpPlugin } from "@signalbox/upnp"
 import type { DdnsOvhConfig } from "./config.js"
 
 export const buildPlugins = (config: DdnsOvhConfig) => ({

@@ -1,4 +1,4 @@
-import { defineWorkflow } from "../defineWorkflow.js"
+import { defineWorkflow } from "@/defineWorkflow"
 
 /** The whole point of the app: a confirmed address change reaches OVH DynHost. */
 export const updateDns = defineWorkflow("update-dns", (ctx) => {

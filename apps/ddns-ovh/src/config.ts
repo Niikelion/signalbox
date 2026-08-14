@@ -1,4 +1,4 @@
-import { createConfigStore, type ConfigOf } from "@flowkit/core"
+import { createConfigStore, type ConfigOf } from "@signalbox/core"
 
 export const APP_NAME = "flowkit-ddns-ovh"
 

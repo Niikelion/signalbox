@@ -572,163 +572,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@flowkit/cloudflare@workspace:^, @flowkit/cloudflare@workspace:packages/cloudflare":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/cloudflare@workspace:packages/cloudflare"
-  dependencies:
-    "@arethetypeswrong/core": "npm:^0.18.2"
-    "@flowkit/core": "workspace:^"
-    "@flowkit/graph": "workspace:^"
-    "@flowkit/shared-config": "workspace:^"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-  languageName: unknown
-  linkType: soft
-
-"@flowkit/core@workspace:^, @flowkit/core@workspace:packages/core":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/core@workspace:packages/core"
-  dependencies:
-    "@arethetypeswrong/core": "npm:^0.18.2"
-    "@flowkit/shared-config": "workspace:^"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-  languageName: unknown
-  linkType: soft
-
-"@flowkit/ddns-ovh@workspace:apps/ddns-ovh":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/ddns-ovh@workspace:apps/ddns-ovh"
-  dependencies:
-    "@flowkit/core": "workspace:^"
-    "@flowkit/ovh": "workspace:^"
-    "@flowkit/service-cli": "workspace:^"
-    "@flowkit/shared-config": "workspace:^"
-    "@flowkit/upnp": "workspace:^"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-  bin:
-    flowkit-ddns-ovh: dist/cli.js
-  languageName: unknown
-  linkType: soft
-
-"@flowkit/ddns@workspace:apps/ddns":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/ddns@workspace:apps/ddns"
-  dependencies:
-    "@flowkit/cloudflare": "workspace:^"
-    "@flowkit/core": "workspace:^"
-    "@flowkit/service-cli": "workspace:^"
-    "@flowkit/shared-config": "workspace:^"
-    "@flowkit/upnp": "workspace:^"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-  bin:
-    flowkit-ddns: dist/cli.js
-  languageName: unknown
-  linkType: soft
-
-"@flowkit/graph@workspace:^, @flowkit/graph@workspace:packages/graph":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/graph@workspace:packages/graph"
-  dependencies:
-    "@arethetypeswrong/core": "npm:^0.18.2"
-    "@flowkit/core": "workspace:^"
-    "@flowkit/shared-config": "workspace:^"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-  languageName: unknown
-  linkType: soft
-
-"@flowkit/ovh@workspace:^, @flowkit/ovh@workspace:packages/ovh":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/ovh@workspace:packages/ovh"
-  dependencies:
-    "@arethetypeswrong/core": "npm:^0.18.2"
-    "@flowkit/core": "workspace:^"
-    "@flowkit/graph": "workspace:^"
-    "@flowkit/shared-config": "workspace:^"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-  languageName: unknown
-  linkType: soft
-
-"@flowkit/service-cli@workspace:^, @flowkit/service-cli@workspace:packages/service-cli":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/service-cli@workspace:packages/service-cli"
-  dependencies:
-    "@arethetypeswrong/core": "npm:^0.18.2"
-    "@flowkit/core": "workspace:^"
-    "@flowkit/shared-config": "workspace:^"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-  languageName: unknown
-  linkType: soft
-
-"@flowkit/shared-config@workspace:^, @flowkit/shared-config@workspace:packages/shared-config":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/shared-config@workspace:packages/shared-config"
-  dependencies:
-    "@eslint/js": "npm:^9.18.0"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
-    eslint: "npm:^9.39.2"
-    eslint-config-prettier: "npm:^10.1.8"
-    eslint-plugin-prettier: "npm:^5.5.5"
-    jiti: "npm:^2.6.1"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-    typescript-eslint: "npm:^8.21.0"
-  languageName: unknown
-  linkType: soft
-
-"@flowkit/upnp@workspace:^, @flowkit/upnp@workspace:packages/upnp":
-  version: 0.0.0-use.local
-  resolution: "@flowkit/upnp@workspace:packages/upnp"
-  dependencies:
-    "@arethetypeswrong/core": "npm:^0.18.2"
-    "@flowkit/core": "workspace:^"
-    "@flowkit/graph": "workspace:^"
-    "@flowkit/shared-config": "workspace:^"
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-    vitest: "npm:^2.1.9"
-  languageName: unknown
-  linkType: soft
-
 "@gamedev-sensei/ts-config@npm:^2.1.0":
   version: 2.1.0
   resolution: "@gamedev-sensei/ts-config@npm:2.1.0"
@@ -1231,6 +1074,163 @@ __metadata:
   conditions: os=win32 & cpu=x64
   languageName: node
   linkType: hard
+
+"@signalbox/cloudflare@workspace:^, @signalbox/cloudflare@workspace:packages/cloudflare":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/cloudflare@workspace:packages/cloudflare"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "workspace:^"
+    "@signalbox/graph": "workspace:^"
+    "@signalbox/shared-config": "workspace:^"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/core@workspace:^, @signalbox/core@workspace:packages/core":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/core@workspace:packages/core"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/shared-config": "workspace:^"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/ddns-ovh@workspace:apps/ddns-ovh":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/ddns-ovh@workspace:apps/ddns-ovh"
+  dependencies:
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "workspace:^"
+    "@signalbox/ovh": "workspace:^"
+    "@signalbox/service-cli": "workspace:^"
+    "@signalbox/shared-config": "workspace:^"
+    "@signalbox/upnp": "workspace:^"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  bin:
+    flowkit-ddns-ovh: dist/cli.js
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/ddns@workspace:apps/ddns":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/ddns@workspace:apps/ddns"
+  dependencies:
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/cloudflare": "workspace:^"
+    "@signalbox/core": "workspace:^"
+    "@signalbox/service-cli": "workspace:^"
+    "@signalbox/shared-config": "workspace:^"
+    "@signalbox/upnp": "workspace:^"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  bin:
+    flowkit-ddns: dist/cli.js
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/graph@workspace:^, @signalbox/graph@workspace:packages/graph":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/graph@workspace:packages/graph"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "workspace:^"
+    "@signalbox/shared-config": "workspace:^"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/ovh@workspace:^, @signalbox/ovh@workspace:packages/ovh":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/ovh@workspace:packages/ovh"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "workspace:^"
+    "@signalbox/graph": "workspace:^"
+    "@signalbox/shared-config": "workspace:^"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/service-cli@workspace:^, @signalbox/service-cli@workspace:packages/service-cli":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/service-cli@workspace:packages/service-cli"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "workspace:^"
+    "@signalbox/shared-config": "workspace:^"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/shared-config@workspace:^, @signalbox/shared-config@workspace:packages/shared-config":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/shared-config@workspace:packages/shared-config"
+  dependencies:
+    "@eslint/js": "npm:^9.18.0"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@gamedev-sensei/tsdown-config": "npm:^2.1.0"
+    eslint: "npm:^9.39.2"
+    eslint-config-prettier: "npm:^10.1.8"
+    eslint-plugin-prettier: "npm:^5.5.5"
+    jiti: "npm:^2.6.1"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    typescript-eslint: "npm:^8.21.0"
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/upnp@workspace:^, @signalbox/upnp@workspace:packages/upnp":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/upnp@workspace:packages/upnp"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "workspace:^"
+    "@signalbox/graph": "workspace:^"
+    "@signalbox/shared-config": "workspace:^"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
+  languageName: unknown
+  linkType: soft
 
 "@turbo/darwin-64@npm:2.10.9":
   version: 2.10.9

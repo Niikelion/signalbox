@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { runCliMain } from "@flowkit/service-cli"
+import { runCliMain } from "@signalbox/service-cli"
 import { createDdnsApp } from "./app.js"
 import { APP_NAME, configSchema, createDdnsConfigStore } from "./config.js"
 import { runOnce } from "./once.js"

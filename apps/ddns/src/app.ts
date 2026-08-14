@@ -1,4 +1,4 @@
-import { createApp, type App } from "@flowkit/core"
+import { createApp, type App } from "@signalbox/core"
 import { APP_NAME, type DdnsConfig } from "./config.js"
 import type { DdnsEvents } from "./events.js"
 import { buildPlugins } from "./plugins.js"

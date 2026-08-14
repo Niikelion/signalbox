@@ -1,5 +1,5 @@
 {
-    "name": "@flowkit/shared-config",
+    "name": "@signalbox/shared-config",
     "private": true,
     "type": "module",
     "version": "0.1.0",

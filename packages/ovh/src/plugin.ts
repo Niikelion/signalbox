@@ -1,4 +1,4 @@
-import { definePlugin } from "@flowkit/core"
+import { definePlugin } from "@signalbox/core"
 import { updateDynHost, type OvhDynHostCredentials } from "./api.js"
 
 /** Events this plugin publishes. An app's event map must include them. */

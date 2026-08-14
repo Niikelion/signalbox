@@ -1,4 +1,4 @@
-import { definePlugin } from "@flowkit/core"
+import { definePlugin } from "@signalbox/core"
 import { createARecord, findARecord, patchARecord, verifyZone, type CloudflareCredentials } from "./api.js"
 
 /** Events this plugin publishes. An app's event map must include them. */

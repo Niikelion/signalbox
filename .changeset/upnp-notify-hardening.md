@@ -1,5 +1,5 @@
 ---
-"@flowkit/upnp": patch
+"@signalbox/upnp": patch
 ---
 
 Harden the UPnP NOTIFY path so only genuine WAN address changes reach the DNS

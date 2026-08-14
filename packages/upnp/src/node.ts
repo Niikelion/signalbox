@@ -1,4 +1,4 @@
-import { registerNode, type TriggerNodeType } from "@flowkit/graph"
+import { registerNode, type TriggerNodeType } from "@signalbox/graph"
 import { createUpnpWatcher } from "./watch.js"
 
 /**

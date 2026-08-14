@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process"
 import { chownSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
-import { isRoot, FlowKitError, write } from "@flowkit/core"
+import { isRoot, FlowKitError, write } from "@signalbox/core"
 
 /**
  * A system unit needs root: a service account, /etc/systemd/system, a firewall
