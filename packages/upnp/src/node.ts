@@ -12,15 +12,19 @@ export const upnpSourceNode: TriggerNodeType = {
     configSchema: {
         port: { type: "number" },
         retrySeconds: { type: "number" },
+        minRetrySeconds: { type: "number" },
     },
     create: () => ({
         start: ({ config, ctx, push }) => {
             const port = typeof config["port"] === "number" ? config["port"] : 5959
             const retrySeconds = typeof config["retrySeconds"] === "number" ? config["retrySeconds"] : undefined
+            const minRetrySeconds =
+                typeof config["minRetrySeconds"] === "number" ? config["minRetrySeconds"] : undefined
 
             const watcher = createUpnpWatcher({
                 port,
                 retrySeconds,
+                minRetrySeconds,
                 hooks: {
                     onObserved: (ip) => {
                         push({ ip, source: "upnp" })
@@ -30,6 +34,9 @@ export const upnpSourceNode: TriggerNodeType = {
                     },
                     onUnavailable: (reason) => {
                         ctx.log(`UPnP unavailable: ${reason}`, "warn")
+                    },
+                    onReconnected: ({ downSeconds }) => {
+                        ctx.log(`router reachable again after ${String(downSeconds)}s`)
                     },
                     log: (message, level) => {
                         ctx.log(message, level)

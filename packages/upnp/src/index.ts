@@ -10,4 +10,6 @@ export { defaultGateway, discoverGateway, sourceIpToward } from "./discovery.js"
 export type { GatewayService } from "./discovery.js"
 
 export { createNotifyServer, gena } from "./gena.js"
-export type { Subscription } from "./gena.js"
+export type { NotifyServerOptions, Subscription } from "./gena.js"
+
+export { isPublicIPv4 } from "./ip.js"

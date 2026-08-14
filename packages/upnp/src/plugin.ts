@@ -4,16 +4,20 @@ import { createUpnpWatcher, type UpnpWatcher } from "./watch.js"
 
 /** Events this plugin publishes. An app's event map must include them. */
 export type UpnpEvents = {
-    "wan-ip:observed": { ip: string; source: "upnp" | "http" | "startup" }
+    "wan-ip:observed": { ip: string; source: "upnp" | "http" | "startup" | "reconnect" }
     "upnp:subscribed": { sid: string; eventUrl: string; serviceType: string }
     "upnp:unavailable": { reason: string }
+    /** The router answered again after being unreachable, or after forgetting us. */
+    "upnp:reconnected": { downSeconds: number; attempts: number }
 }
 
 export interface UpnpOptions {
     /** TCP port the NOTIFY callback listens on. */
     port: number
-    /** How long to wait before retrying discovery after a failure. */
+    /** Ceiling for the retry backoff once the router stops answering. */
     retrySeconds?: number
+    /** First retry delay after a failure; doubles up to `retrySeconds`. */
+    minRetrySeconds?: number
 }
 
 export interface UpnpApi {
@@ -41,6 +45,7 @@ export const upnpPlugin = (options: UpnpOptions) => {
             watcher = createUpnpWatcher({
                 port: options.port,
                 retrySeconds: options.retrySeconds,
+                minRetrySeconds: options.minRetrySeconds,
                 hooks: {
                     onObserved: (ip) => {
                         ctx.bus.emit("wan-ip:observed", { ip, source: "upnp" })
@@ -50,6 +55,9 @@ export const upnpPlugin = (options: UpnpOptions) => {
                     },
                     onUnavailable: (reason) => {
                         ctx.bus.emit("upnp:unavailable", { reason })
+                    },
+                    onReconnected: (info) => {
+                        ctx.bus.emit("upnp:reconnected", info)
                     },
                     log: (message, level) => {
                         ctx.log(message, level)
