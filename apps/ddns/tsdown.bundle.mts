@@ -8,7 +8,7 @@ export default defineConfig([
         format: ["esm"],
         entry: ["src/cli.ts"],
         outDir: "dist-bundle",
-        noExternal: [/^@flowkit\//],
+        noExternal: [/^@signalbox\//],
         dts: false,
         target: "node18",
     },
