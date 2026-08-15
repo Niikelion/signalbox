@@ -15,3 +15,6 @@ yarn-error.log
 
 # JetBrains IDE
 .idea/
+
+# Working docs / roadmap (not part of the published repo)
+docs/
