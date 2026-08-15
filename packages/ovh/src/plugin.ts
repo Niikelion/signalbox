@@ -1,4 +1,4 @@
-import { definePlugin } from "@signalbox/core"
+import { definePlugin, type ReadChannel } from "@signalbox/core"
 import { updateDynHost, type OvhDynHostCredentials } from "./api.js"
 
 export type OvhEvents = {
@@ -33,6 +33,7 @@ export const applyRecords = async (
 }
 
 export interface OvhApi {
+    events: ReadChannel<OvhEvents>
     update: (ip: string) => Promise<boolean>
 }
 
@@ -40,13 +41,14 @@ export const ovhPlugin = (options: OvhOptions) =>
     definePlugin<OvhApi, OvhEvents>({
         name: "ovh",
         init: (ctx) => ({
+            events: ctx.channel,
             update: async (ip: string) => {
                 const changed = await applyRecords(options, ip, (outcome) => {
                     if (outcome.changed)
-                        ctx.bus.emit("dns:updated", { record: outcome.record, previous: null, current: ip })
+                        ctx.channel.emit("dns:updated", { record: outcome.record, previous: null, current: ip })
                 })
 
-                if (!changed) ctx.bus.emit("dns:unchanged", { ip })
+                if (!changed) ctx.channel.emit("dns:unchanged", { ip })
                 return changed
             },
         }),

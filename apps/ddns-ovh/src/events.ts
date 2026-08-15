@@ -1,12 +1,7 @@
-import type { OvhEvents } from "@signalbox/ovh"
-import type { UpnpEvents } from "@signalbox/upnp"
+type WanIpSource = "upnp" | "http" | "startup" | "reconnect"
 
-export type DdnsOvhOwnEvents = {
-    "wan-ip:changed": {
-        previous: string | null
-        current: string
-        source: "upnp" | "http" | "startup" | "reconnect"
-    }
+export type DdnsOvhEvents = {
+    "wan-ip:observed": { ip: string; source: WanIpSource }
+    "wan-ip:changed": { previous: string | null; current: string; source: WanIpSource }
+    "wan-ip:recheck": { downSeconds: number }
 }
-
-export type DdnsOvhEvents = DdnsOvhOwnEvents & UpnpEvents & OvhEvents

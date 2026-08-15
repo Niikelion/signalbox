@@ -13,5 +13,5 @@ export const fallbackPoll = (intervalMinutes: number) =>
             }),
         emit: "wan-ip:observed",
         toPayload: (ip, phase) => ({ ip, source: phaseSource[phase] }),
-        retryOn: { event: "upnp:reconnected", backoff: [5, 15, 30, 60] },
+        retryOn: { event: "wan-ip:recheck", backoff: [5, 15, 30, 60] },
     })

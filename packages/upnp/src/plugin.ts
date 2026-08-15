@@ -1,12 +1,12 @@
-import { definePlugin } from "@signalbox/core"
+import { definePlugin, type ReadChannel } from "@signalbox/core"
 import type { GatewayService } from "./discovery.js"
 import { createUpnpWatcher, type UpnpWatcher } from "./watch.js"
 
 export type UpnpEvents = {
-    "wan-ip:observed": { ip: string; source: "upnp" | "http" | "startup" | "reconnect" }
-    "upnp:subscribed": { sid: string; eventUrl: string; serviceType: string }
-    "upnp:unavailable": { reason: string }
-    "upnp:reconnected": { downSeconds: number; attempts: number }
+    "external-ip": { ip: string }
+    subscribed: { sid: string; eventUrl: string; serviceType: string }
+    unavailable: { reason: string }
+    reconnected: { downSeconds: number; attempts: number }
 }
 
 export interface UpnpOptions {
@@ -16,6 +16,7 @@ export interface UpnpOptions {
 }
 
 export interface UpnpApi {
+    events: ReadChannel<UpnpEvents>
     current: () => string | null
     subscribed: () => boolean
     gateway: () => GatewayService | null
@@ -33,16 +34,16 @@ export const upnpPlugin = (options: UpnpOptions) => {
                 minRetrySeconds: options.minRetrySeconds,
                 hooks: {
                     onObserved: (ip) => {
-                        ctx.bus.emit("wan-ip:observed", { ip, source: "upnp" })
+                        ctx.channel.emit("external-ip", { ip })
                     },
                     onSubscribed: (info) => {
-                        ctx.bus.emit("upnp:subscribed", info)
+                        ctx.channel.emit("subscribed", info)
                     },
                     onUnavailable: (reason) => {
-                        ctx.bus.emit("upnp:unavailable", { reason })
+                        ctx.channel.emit("unavailable", { reason })
                     },
                     onReconnected: (info) => {
-                        ctx.bus.emit("upnp:reconnected", info)
+                        ctx.channel.emit("reconnected", info)
                     },
                     log: (message, level) => {
                         ctx.log(message, level)
@@ -53,6 +54,7 @@ export const upnpPlugin = (options: UpnpOptions) => {
             ctx.onStop(() => watcher?.stop() ?? Promise.resolve())
 
             return {
+                events: ctx.channel,
                 current: () => watcher?.current() ?? null,
                 subscribed: () => watcher?.subscribed() ?? false,
                 gateway: () => watcher?.gateway() ?? null,

@@ -1,12 +1,13 @@
-import type { EventMap } from "./bus.js"
-import type { AppBus, LogLevel } from "./events.js"
+import type { Channel, EventMap } from "./bus.js"
+import type { LogLevel } from "./events.js"
 
 export type Cleanup = () => void | Promise<void>
 
 export interface PluginContext<TEvents extends EventMap> {
-    bus: AppBus<TEvents>
+    channel: Channel<TEvents>
     log: (message: string, level?: LogLevel) => void
     fail: (error: unknown) => void
+    onStart: (fn: () => void | Promise<void>) => void
     onStop: (cleanup: Cleanup) => void
     interval: (ms: number, handler: () => void | Promise<void>) => void
 }

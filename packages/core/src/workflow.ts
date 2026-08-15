@@ -1,32 +1,25 @@
-import type { EventMap, Listener, Unsubscribe } from "./bus.js"
-import type { AppBus, FrameworkEvents, LogLevel } from "./events.js"
+import type { Channel, EventMap } from "./bus.js"
+import type { LogLevel } from "./events.js"
 import type { Cleanup } from "./plugin.js"
 
-export interface WorkflowContext<TEvents extends EventMap, TPlugins> {
-    bus: AppBus<TEvents>
+export interface WorkflowContext<TAppEvents extends EventMap, TPlugins> {
+    app: Channel<TAppEvents>
     plugins: TPlugins
-    on: <TKey extends keyof (TEvents & FrameworkEvents)>(
-        event: TKey,
-        listener: Listener<(TEvents & FrameworkEvents)[TKey]>,
-    ) => Unsubscribe
-    emit: <TKey extends keyof (TEvents & FrameworkEvents)>(
-        event: TKey,
-        payload: (TEvents & FrameworkEvents)[TKey],
-    ) => void
     log: (message: string, level?: LogLevel) => void
     fail: (error: unknown) => void
+    onStart: (fn: () => void | Promise<void>) => void
     onStop: (cleanup: Cleanup) => void
     interval: (ms: number, handler: () => void | Promise<void>) => void
 }
 
-export interface WorkflowDefinition<TEvents extends EventMap, TPlugins> {
+export interface WorkflowDefinition<TAppEvents extends EventMap, TPlugins> {
     name: string
-    setup: (context: WorkflowContext<TEvents, TPlugins>) => void | Promise<void>
+    setup: (context: WorkflowContext<TAppEvents, TPlugins>) => void | Promise<void>
 }
 
 export const createWorkflowDefiner =
-    <TEvents extends EventMap, TPlugins>() =>
+    <TAppEvents extends EventMap, TPlugins>() =>
     (
         name: string,
-        setup: (context: WorkflowContext<TEvents, TPlugins>) => void | Promise<void>,
-    ): WorkflowDefinition<TEvents, TPlugins> => ({ name, setup })
+        setup: (context: WorkflowContext<TAppEvents, TPlugins>) => void | Promise<void>,
+    ): WorkflowDefinition<TAppEvents, TPlugins> => ({ name, setup })

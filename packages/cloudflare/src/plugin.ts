@@ -1,4 +1,4 @@
-import { definePlugin } from "@signalbox/core"
+import { definePlugin, type ReadChannel } from "@signalbox/core"
 import { createARecord, findARecord, patchARecord, verifyZone, type CloudflareCredentials } from "./api.js"
 
 export type CloudflareEvents = {
@@ -53,6 +53,7 @@ export const applyRecords = async (
 }
 
 export interface CloudflareApi {
+    events: ReadChannel<CloudflareEvents>
     update: (ip: string) => Promise<boolean>
     verify: () => Promise<{ name: string }>
 }
@@ -61,18 +62,19 @@ export const cloudflarePlugin = (options: CloudflareOptions) =>
     definePlugin<CloudflareApi, CloudflareEvents>({
         name: "cloudflare",
         init: (ctx) => ({
+            events: ctx.channel,
             verify: () => verifyZone(options),
             update: async (ip: string) => {
                 const changed = await applyRecords(options, ip, (outcome) => {
                     if (outcome.action === "unchanged") return
-                    ctx.bus.emit("dns:updated", {
+                    ctx.channel.emit("dns:updated", {
                         record: outcome.record,
                         previous: outcome.action === "updated" ? outcome.previous : null,
                         current: ip,
                     })
                 })
 
-                if (!changed) ctx.bus.emit("dns:unchanged", { ip })
+                if (!changed) ctx.channel.emit("dns:unchanged", { ip })
                 return changed
             },
         }),

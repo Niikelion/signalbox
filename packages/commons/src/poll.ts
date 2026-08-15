@@ -1,4 +1,4 @@
-import type { EventMap, FrameworkEvents, LogLevel, WorkflowDefinition } from "@signalbox/core"
+import type { EventMap, LogLevel, WorkflowDefinition } from "@signalbox/core"
 
 export type PollPhase = "startup" | "interval" | "retry"
 
@@ -35,15 +35,11 @@ export const createPoll =
                 const result = await options.probe((message, level) => {
                     ctx.log(message, level)
                 })
-                ctx.emit(options.emit, options.toPayload(result, phase) as (TEvents & FrameworkEvents)[TKey])
+                ctx.app.emit(options.emit, options.toPayload(result, phase))
             }
 
             if (options.atStartup ?? true) {
-                ctx.on("app:started", () => {
-                    void probeAndEmit("startup").catch((error: unknown) => {
-                        ctx.fail(error)
-                    })
-                })
+                ctx.onStart(() => probeAndEmit("startup"))
             }
 
             ctx.interval(options.every, () => {
@@ -54,7 +50,7 @@ export const createPoll =
 
             const retry = options.retryOn
             if (retry) {
-                ctx.on(retry.event, async () => {
+                ctx.app.on(retry.event, async () => {
                     for (const waitSeconds of retry.backoff) {
                         if (stopped) return
                         try {

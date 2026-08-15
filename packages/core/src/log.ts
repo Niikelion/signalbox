@@ -1,5 +1,5 @@
-import type { EventMap } from "./bus.js"
-import type { AppBus, LogLevel } from "./events.js"
+import type { ReadChannel } from "./bus.js"
+import type { FrameworkEvents, LogLevel } from "./events.js"
 
 export class FlowKitError extends Error {
     constructor(
@@ -21,11 +21,11 @@ export const write = (level: LogLevel, message: string): void => {
     else process.stdout.write(line)
 }
 
-export const attachConsoleLogger = <TEvents extends EventMap>(bus: AppBus<TEvents>): (() => void) => {
-    const offLog = bus.on("log", ({ level, message, scope }) => {
+export const attachConsoleLogger = (channel: ReadChannel<FrameworkEvents>): (() => void) => {
+    const offLog = channel.on("log", ({ level, message, scope }) => {
         write(level, scope ? `[${scope}] ${message}` : message)
     })
-    const offError = bus.on("error", ({ scope, error }) => {
+    const offError = channel.on("error", ({ scope, error }) => {
         write("error", `[${scope}] ${error.message}`)
     })
 

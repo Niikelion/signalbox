@@ -238,9 +238,9 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
         setup: (ctx) => {
             const nodeCtx: GraphNodeContext = {
                 plugins: ctx.plugins as Record<string, unknown>,
-                on: (event, listener) => ctx.on(event as never, listener),
+                on: (event, listener) => ctx.app.on(event as never, listener),
                 emit: (event, payload) => {
-                    ctx.emit(event as never, payload as never)
+                    ctx.app.emit(event as never, payload as never)
                 },
                 log: (message, level) => {
                     ctx.log(redact(message), level)

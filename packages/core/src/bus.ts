@@ -4,42 +4,50 @@ export type Listener<TPayload> = (payload: TPayload) => void | Promise<void>
 
 export type Unsubscribe = () => void
 
-export interface EventBus<TEvents extends EventMap> {
+export interface ReadChannel<TEvents extends EventMap> {
     on<TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): Unsubscribe
     once<TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): Unsubscribe
     off<TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): void
-    emit<TKey extends keyof TEvents>(event: TKey, payload: TEvents[TKey]): void
-    pause(): void
-    resume(): void
-    readonly paused: boolean
-    readonly buffered: number
-    clear(): void
 }
 
-export interface EventBusOptions {
+export interface Channel<TEvents extends EventMap> extends ReadChannel<TEvents> {
+    emit<TKey extends keyof TEvents>(event: TKey, payload: TEvents[TKey]): void
+}
+
+export interface Bus {
+    channel<TEvents extends EventMap>(id: string): Channel<TEvents>
+    pause(): void
+    resume(): void
+    clear(): void
+    readonly paused: boolean
+    readonly buffered: number
+}
+
+export interface BusOptions {
     paused?: boolean
-    onListenerError?: (error: Error, event: string) => void
+    onListenerError?: (error: Error, channel: string, event: string) => void
 }
 
 interface QueuedEvent {
+    channelId: string
     event: PropertyKey
     payload: unknown
 }
 
-export const createEventBus = <TEvents extends EventMap>(options: EventBusOptions = {}): EventBus<TEvents> => {
-    const listeners = new Map<keyof TEvents, Set<Listener<never>>>()
+export const createBus = (options: BusOptions = {}): Bus => {
+    const channels = new Map<string, Map<PropertyKey, Set<Listener<never>>>>()
     const queue: QueuedEvent[] = []
 
     let paused = options.paused ?? false
     let flushing = false
 
-    const report = (error: unknown, event: PropertyKey): void => {
+    const report = (error: unknown, channelId: string, event: PropertyKey): void => {
         const normalized = error instanceof Error ? error : new Error(String(error))
-        options.onListenerError?.(normalized, String(event))
+        options.onListenerError?.(normalized, channelId, String(event))
     }
 
-    const dispatch = (event: PropertyKey, payload: unknown): void => {
-        const set = listeners.get(event as keyof TEvents)
+    const dispatch = (channelId: string, event: PropertyKey, payload: unknown): void => {
+        const set = channels.get(channelId)?.get(event)
         if (!set) return
 
         for (const listener of [...set]) {
@@ -47,50 +55,64 @@ export const createEventBus = <TEvents extends EventMap>(options: EventBusOption
                 const result = (listener as Listener<unknown>)(payload)
                 if (result instanceof Promise) {
                     result.catch((error: unknown) => {
-                        report(error, event)
+                        report(error, channelId, event)
                     })
                 }
             } catch (error) {
-                report(error, event)
+                report(error, channelId, event)
             }
         }
     }
 
-    const off: EventBus<TEvents>["off"] = (event, listener) => {
-        const set = listeners.get(event)
-        if (!set) return
-
-        set.delete(listener)
-        if (set.size === 0) listeners.delete(event)
+    const listenersFor = (channelId: string): Map<PropertyKey, Set<Listener<never>>> => {
+        const existing = channels.get(channelId)
+        if (existing) return existing
+        const created = new Map<PropertyKey, Set<Listener<never>>>()
+        channels.set(channelId, created)
+        return created
     }
 
-    const on: EventBus<TEvents>["on"] = (event, listener) => {
-        const set = listeners.get(event) ?? new Set<Listener<never>>()
-        set.add(listener)
-        listeners.set(event, set)
+    const channel = <TEvents extends EventMap>(channelId: string): Channel<TEvents> => {
+        const off = <TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): void => {
+            const map = channels.get(channelId)
+            const set = map?.get(event)
+            if (!set) return
+            set.delete(listener)
+            if (set.size === 0) map?.delete(event)
+        }
 
-        return () => {
-            off(event, listener)
+        const on = <TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): Unsubscribe => {
+            const map = listenersFor(channelId)
+            const set = map.get(event) ?? new Set<Listener<never>>()
+            set.add(listener)
+            map.set(event, set)
+            return () => {
+                off(event, listener)
+            }
+        }
+
+        return {
+            on,
+            off,
+            once: (event, listener) => {
+                const unsubscribe = on(event, (payload) => {
+                    unsubscribe()
+                    return listener(payload)
+                })
+                return unsubscribe
+            },
+            emit: (event, payload) => {
+                if (paused) {
+                    queue.push({ channelId, event: event, payload })
+                    return
+                }
+                dispatch(channelId, event, payload)
+            },
         }
     }
 
     return {
-        on,
-        off,
-        once: (event, listener) => {
-            const unsubscribe = on(event, (payload) => {
-                unsubscribe()
-                return listener(payload)
-            })
-            return unsubscribe
-        },
-        emit: (event, payload) => {
-            if (paused) {
-                queue.push({ event, payload })
-                return
-            }
-            dispatch(event, payload)
-        },
+        channel,
         pause: () => {
             paused = true
         },
@@ -104,7 +126,7 @@ export const createEventBus = <TEvents extends EventMap>(options: EventBusOption
                 while (queue.length > 0) {
                     const next = queue.shift()
                     if (!next) break
-                    dispatch(next.event, next.payload)
+                    dispatch(next.channelId, next.event, next.payload)
                 }
             } finally {
                 flushing = false
@@ -117,7 +139,7 @@ export const createEventBus = <TEvents extends EventMap>(options: EventBusOption
             return queue.length
         },
         clear: () => {
-            listeners.clear()
+            channels.clear()
             queue.length = 0
         },
     }

@@ -1,46 +1,65 @@
-import { createEventBus, type EventBus, type EventMap } from "./bus.js"
-import type { AppBus, FrameworkEvents, LogLevel } from "./events.js"
+import { createBus, type Bus, type EventMap } from "./bus.js"
+import { FRAMEWORK_CHANNEL, type FrameworkEvents, type LogLevel } from "./events.js"
 import { attachConsoleLogger, toError, write } from "./log.js"
 import type { AnyPluginDefinition, Cleanup, PluginApis, PluginContext } from "./plugin.js"
 import type { WorkflowContext, WorkflowDefinition } from "./workflow.js"
 
-export interface AppOptions<TEvents extends EventMap, TPlugins extends Record<string, AnyPluginDefinition>> {
+const APP_CHANNEL = "app"
+
+export interface AppOptions<TAppEvents extends EventMap, TPlugins extends Record<string, AnyPluginDefinition>> {
     name: string
     plugins: TPlugins
-    workflows: WorkflowDefinition<TEvents, PluginApis<TPlugins>>[]
+    workflows: WorkflowDefinition<TAppEvents, PluginApis<TPlugins>>[]
     logging?: boolean
 }
 
-export interface App<TEvents extends EventMap> {
+export interface App {
     readonly name: string
-    readonly bus: AppBus<TEvents>
     start: () => Promise<void>
     stop: (reason?: string) => Promise<void>
     run: () => Promise<void>
 }
 
-export const createApp = <TEvents extends EventMap, TPlugins extends Record<string, AnyPluginDefinition>>(
-    options: AppOptions<TEvents, TPlugins>,
-): App<TEvents> => {
-    const bus = createEventBus<TEvents & Record<string, unknown>>({
-        paused: true,
-        onListenerError: (error, event) => {
-            write("error", `[bus] listener for "${event}" failed: ${error.message}`)
-        },
-    }) as AppBus<TEvents>
+type ScopedContext = Pick<PluginContext<EventMap>, "log" | "fail" | "onStart" | "onStop" | "interval">
 
-    const frameworkBus = bus as unknown as EventBus<FrameworkEvents & Record<string, unknown>>
+export const createApp = <TAppEvents extends EventMap, TPlugins extends Record<string, AnyPluginDefinition>>(
+    options: AppOptions<TAppEvents, TPlugins>,
+): App => {
+    const bus: Bus = createBus({
+        paused: true,
+        onListenerError: (error, channel, event) => {
+            write("error", `[bus] listener for "${channel}/${event}" failed: ${error.message}`)
+        },
+    })
+
+    const framework = bus.channel<FrameworkEvents>(FRAMEWORK_CHANNEL)
+    const appChannel = bus.channel<TAppEvents>(APP_CHANNEL)
 
     const cleanups: Cleanup[] = []
+    const startHooks: (() => void)[] = []
     let detachLogger: (() => void) | undefined
     let started = false
 
-    const scopedContext = (scope: string): Pick<PluginContext<TEvents>, "log" | "fail" | "onStop" | "interval"> => ({
+    const scopedContext = (scope: string): ScopedContext => ({
         log: (message: string, level: LogLevel = "info") => {
-            frameworkBus.emit("log", { level, message, scope })
+            framework.emit("log", { level, message, scope })
         },
         fail: (error: unknown) => {
-            frameworkBus.emit("error", { scope, error: toError(error) })
+            framework.emit("error", { scope, error: toError(error) })
+        },
+        onStart: (fn) => {
+            startHooks.push(() => {
+                try {
+                    const result = fn()
+                    if (result instanceof Promise) {
+                        result.catch((error: unknown) => {
+                            framework.emit("error", { scope, error: toError(error) })
+                        })
+                    }
+                } catch (error) {
+                    framework.emit("error", { scope, error: toError(error) })
+                }
+            })
         },
         onStop: (cleanup: Cleanup) => {
             cleanups.push(cleanup)
@@ -51,11 +70,11 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
                     const result = handler()
                     if (result instanceof Promise) {
                         result.catch((error: unknown) => {
-                            frameworkBus.emit("error", { scope, error: toError(error) })
+                            framework.emit("error", { scope, error: toError(error) })
                         })
                     }
                 } catch (error) {
-                    frameworkBus.emit("error", { scope, error: toError(error) })
+                    framework.emit("error", { scope, error: toError(error) })
                 }
             }, ms)
             timer.unref()
@@ -69,27 +88,25 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
         if (started) return
         started = true
 
-        if (options.logging !== false) detachLogger = attachConsoleLogger(bus)
+        if (options.logging !== false) detachLogger = attachConsoleLogger(framework)
 
         const apis: Record<string, unknown> = {}
-        const contexts = new Map<string, PluginContext<TEvents>>()
+        const contexts = new Map<string, PluginContext<EventMap>>()
         for (const [key, plugin] of Object.entries(options.plugins)) {
-            const context = { bus, ...scopedContext(plugin.name || key) } as PluginContext<TEvents>
+            const context: PluginContext<EventMap> = {
+                channel: bus.channel<EventMap>(key),
+                ...scopedContext(plugin.name || key),
+            }
             contexts.set(key, context)
             apis[key] = await plugin.init(context)
         }
         const plugins = apis as PluginApis<TPlugins>
 
         for (const workflow of options.workflows) {
-            const scope = scopedContext(workflow.name)
-            const context: WorkflowContext<TEvents, PluginApis<TPlugins>> = {
-                bus,
+            const context: WorkflowContext<TAppEvents, PluginApis<TPlugins>> = {
+                app: appChannel,
                 plugins,
-                on: (event, listener) => bus.on(event, listener),
-                emit: (event, payload) => {
-                    bus.emit(event, payload)
-                },
-                ...scope,
+                ...scopedContext(workflow.name),
             }
             await workflow.setup(context)
         }
@@ -100,21 +117,15 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
             await plugin.setup(context)
         }
 
-        frameworkBus.emit("app:started", {
-            plugins: Object.entries(options.plugins).map(([key, plugin]) =>
-                plugin.name.length > 0 ? plugin.name : key,
-            ),
-            workflows: options.workflows.map((workflow) => workflow.name),
-        })
-
         bus.resume()
+
+        for (const hook of startHooks) hook()
     }
 
-    const stop = async (reason = "shutdown"): Promise<void> => {
+    const stop = async (_reason = "shutdown"): Promise<void> => {
         if (!started) return
         started = false
 
-        frameworkBus.emit("app:stopping", { reason })
         for (const cleanup of [...cleanups].reverse()) {
             try {
                 await cleanup()
@@ -123,8 +134,8 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
             }
         }
         cleanups.length = 0
+        startHooks.length = 0
 
-        frameworkBus.emit("app:stopped", { reason })
         detachLogger?.()
         detachLogger = undefined
         bus.clear()
@@ -146,5 +157,5 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
         })
     }
 
-    return { name: options.name, bus, start, stop, run }
+    return { name: options.name, start, stop, run }
 }

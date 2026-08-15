@@ -1,4 +1,4 @@
-import type { EventMap, FrameworkEvents, WorkflowDefinition } from "@signalbox/core"
+import type { EventMap, WorkflowDefinition } from "@signalbox/core"
 
 export interface DedupeOptions<TEvents extends EventMap, TIn extends keyof TEvents, TOut extends keyof TEvents> {
     name: string
@@ -18,7 +18,7 @@ export const createDedupe =
         setup: (ctx) => {
             let previous: string | null = null
 
-            ctx.on(options.on, (payload) => {
+            ctx.app.on(options.on, (payload) => {
                 const next = options.key(payload)
                 if (next === previous) return
 
@@ -26,7 +26,7 @@ export const createDedupe =
                 previous = next
 
                 if (options.message) ctx.log(options.message(payload, prior))
-                ctx.emit(options.emit, options.toPayload(payload, prior) as (TEvents & FrameworkEvents)[TOut])
+                ctx.app.emit(options.emit, options.toPayload(payload, prior))
             })
         },
     })

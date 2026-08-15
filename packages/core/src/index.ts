@@ -1,7 +1,8 @@
-export { createEventBus } from "./bus.js"
-export type { EventBus, EventBusOptions, EventMap, Listener, Unsubscribe } from "./bus.js"
+export { createBus } from "./bus.js"
+export type { Bus, BusOptions, Channel, EventMap, Listener, ReadChannel, Unsubscribe } from "./bus.js"
 
-export type { AppBus, FrameworkEvents, LogLevel } from "./events.js"
+export { FRAMEWORK_CHANNEL } from "./events.js"
+export type { FrameworkEvents, LogLevel } from "./events.js"
 
 export { attachConsoleLogger, toError, FlowKitError, write } from "./log.js"
 
