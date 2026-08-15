@@ -1,5 +1,5 @@
-export { cloudflarePlugin } from "./plugin.js"
-export type { CloudflareApi, CloudflareEvents, CloudflareOptions } from "./plugin.js"
+export { applyRecords, cloudflarePlugin } from "./plugin.js"
+export type { CloudflareApi, CloudflareEvents, CloudflareOptions, RecordOutcome } from "./plugin.js"
 
 export { cloudflareUpdateNode, registerCloudflareNodes } from "./node.js"
 

@@ -12,6 +12,46 @@ export interface CloudflareOptions extends CloudflareCredentials {
     proxied: boolean
 }
 
+export type RecordOutcome =
+    | { record: string; action: "created"; current: string }
+    | { record: string; action: "updated"; previous: string; current: string }
+    | { record: string; action: "unchanged"; current: string }
+
+export const applyRecords = async (
+    options: CloudflareOptions,
+    ip: string,
+    onRecord?: (outcome: RecordOutcome) => void,
+): Promise<boolean> => {
+    let changed = false
+
+    for (const name of options.records) {
+        const existing = await findARecord(options, name)
+
+        if (!existing) {
+            await createARecord(options, { name, content: ip, ttl: options.ttl, proxied: options.proxied })
+            onRecord?.({ record: name, action: "created", current: ip })
+            changed = true
+            continue
+        }
+
+        if (existing.content === ip) {
+            onRecord?.({ record: name, action: "unchanged", current: ip })
+            continue
+        }
+
+        await patchARecord(options, existing.id, {
+            name,
+            content: ip,
+            ttl: existing.ttl,
+            proxied: existing.proxied,
+        })
+        onRecord?.({ record: name, action: "updated", previous: existing.content, current: ip })
+        changed = true
+    }
+
+    return changed
+}
+
 export interface CloudflareApi {
     update: (ip: string) => Promise<boolean>
     verify: () => Promise<{ name: string }>
@@ -23,29 +63,14 @@ export const cloudflarePlugin = (options: CloudflareOptions) =>
         init: (ctx) => ({
             verify: () => verifyZone(options),
             update: async (ip: string) => {
-                let changed = false
-
-                for (const name of options.records) {
-                    const existing = await findARecord(options, name)
-
-                    if (!existing) {
-                        await createARecord(options, { name, content: ip, ttl: options.ttl, proxied: options.proxied })
-                        ctx.bus.emit("dns:updated", { record: name, previous: null, current: ip })
-                        changed = true
-                        continue
-                    }
-
-                    if (existing.content === ip) continue
-
-                    await patchARecord(options, existing.id, {
-                        name,
-                        content: ip,
-                        ttl: existing.ttl,
-                        proxied: existing.proxied,
+                const changed = await applyRecords(options, ip, (outcome) => {
+                    if (outcome.action === "unchanged") return
+                    ctx.bus.emit("dns:updated", {
+                        record: outcome.record,
+                        previous: outcome.action === "updated" ? outcome.previous : null,
+                        current: ip,
                     })
-                    ctx.bus.emit("dns:updated", { record: name, previous: existing.content, current: ip })
-                    changed = true
-                }
+                })
 
                 if (!changed) ctx.bus.emit("dns:unchanged", { ip })
                 return changed

@@ -1,5 +1,5 @@
-export { ovhPlugin } from "./plugin.js"
-export type { OvhApi, OvhEvents, OvhOptions } from "./plugin.js"
+export { applyRecords, ovhPlugin } from "./plugin.js"
+export type { OvhApi, OvhEvents, OvhOptions, RecordOutcome } from "./plugin.js"
 
 export { ovhUpdateNode, registerOvhNodes } from "./node.js"
 

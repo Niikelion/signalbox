@@ -10,6 +10,28 @@ export interface OvhOptions extends OvhDynHostCredentials {
     records: string[]
 }
 
+export interface RecordOutcome {
+    record: string
+    changed: boolean
+    current: string
+}
+
+export const applyRecords = async (
+    options: OvhOptions,
+    ip: string,
+    onRecord?: (outcome: RecordOutcome) => void,
+): Promise<boolean> => {
+    let changed = false
+
+    for (const record of options.records) {
+        const result = await updateDynHost(options, record, ip)
+        onRecord?.({ record, changed: result.changed, current: ip })
+        if (result.changed) changed = true
+    }
+
+    return changed
+}
+
 export interface OvhApi {
     update: (ip: string) => Promise<boolean>
 }
@@ -19,15 +41,10 @@ export const ovhPlugin = (options: OvhOptions) =>
         name: "ovh",
         init: (ctx) => ({
             update: async (ip: string) => {
-                let changed = false
-
-                for (const record of options.records) {
-                    const result = await updateDynHost(options, record, ip)
-                    if (result.changed) {
-                        ctx.bus.emit("dns:updated", { record, previous: null, current: ip })
-                        changed = true
-                    }
-                }
+                const changed = await applyRecords(options, ip, (outcome) => {
+                    if (outcome.changed)
+                        ctx.bus.emit("dns:updated", { record: outcome.record, previous: null, current: ip })
+                })
 
                 if (!changed) ctx.bus.emit("dns:unchanged", { ip })
                 return changed

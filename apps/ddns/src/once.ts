@@ -1,39 +1,18 @@
-import { write } from "@signalbox/core"
-import { createARecord, findARecord, patchARecord } from "@signalbox/cloudflare"
-import type { DdnsConfig } from "./config.js"
+import { applyRecords } from "@signalbox/cloudflare"
 import { publicIPv4 } from "@signalbox/commons"
+import { write } from "@signalbox/core"
+import type { DdnsConfig } from "./config.js"
 
 export const runOnce = async (config: DdnsConfig): Promise<boolean> => {
     const ip = await publicIPv4((message) => {
         write("warn", message)
     })
-    const credentials = { apiToken: config.apiToken, zoneId: config.zoneId }
-    let changed = false
 
-    for (const name of config.records) {
-        const existing = await findARecord(credentials, name)
-
-        if (!existing) {
-            await createARecord(credentials, { name, content: ip, ttl: config.ttl, proxied: config.proxied })
-            write("info", `created ${name} -> ${ip}`)
-            changed = true
-            continue
-        }
-
-        if (existing.content === ip) {
-            write("info", `${name} already points at ${ip}`)
-            continue
-        }
-
-        await patchARecord(credentials, existing.id, {
-            name,
-            content: ip,
-            ttl: existing.ttl,
-            proxied: existing.proxied,
-        })
-        write("info", `updated ${name}: ${existing.content} -> ${ip}`)
-        changed = true
-    }
+    const changed = await applyRecords(config, ip, (outcome) => {
+        if (outcome.action === "created") write("info", `created ${outcome.record} -> ${ip}`)
+        else if (outcome.action === "updated") write("info", `updated ${outcome.record}: ${outcome.previous} -> ${ip}`)
+        else write("info", `${outcome.record} already points at ${ip}`)
+    })
 
     if (!changed) write("info", `no change needed, still ${ip}`)
     return changed
