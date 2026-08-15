@@ -8,7 +8,6 @@ export type FieldType = "string" | "int" | "bool" | "list"
 export interface FieldSpec {
     type: FieldType
     required?: boolean
-    /** Redacted by `redacted()` and never echoed back by the CLI. */
     secret?: boolean
     description?: string
 }
@@ -26,11 +25,9 @@ type FieldValue<TSpec extends FieldSpec> = TSpec["type"] extends "string"
 export type ConfigOf<TSchema extends ConfigSchema> = { [TKey in keyof TSchema]: FieldValue<TSchema[TKey]> }
 
 export interface ConfigStoreOptions<TSchema extends ConfigSchema> {
-    /** Used to build the paths: /etc/<appName>/config.json and ~/.config/<appName>/config.json */
     appName: string
     schema: TSchema
     defaults: Partial<ConfigOf<TSchema>>
-    /** Overrides path resolution entirely. */
     path?: string
 }
 
@@ -41,14 +38,11 @@ export interface ConfigStore<TSchema extends ConfigSchema> {
     readonly path: string
     readonly schema: TSchema
     exists: () => boolean
-    /** Read and validate. Throws FlowKitError listing anything required but missing. */
     load: () => ConfigOf<TSchema>
-    /** Read without validating, for the CLI's get/list. */
     readPartial: () => Partial<ConfigOf<TSchema>>
     save: (values: Partial<ConfigOf<TSchema>>) => void
     set: (key: keyof TSchema & string, rawValue: string) => void
     unset: (key: keyof TSchema & string) => void
-    /** Parse a CLI string into the type the field expects. */
     coerce: (key: keyof TSchema & string, rawValue: string) => unknown
     redacted: (values: Partial<ConfigOf<TSchema>>) => Record<string, unknown>
 }
@@ -112,7 +106,6 @@ export const createConfigStore = <TSchema extends ConfigSchema>(
     const save = (values: Partial<ConfigOf<TSchema>>): void => {
         mkdirSync(dirname(path), { recursive: true, mode: 0o750 })
         writeFileSync(path, `${JSON.stringify({ ...defaults, ...values }, null, 4)}\n`, { mode: 0o640 })
-        // the file may hold secrets, so keep it off the world-readable path
         chmodSync(path, 0o640)
     }
 
@@ -154,7 +147,6 @@ export const createConfigStore = <TSchema extends ConfigSchema>(
             save(current as Partial<ConfigOf<TSchema>>)
         },
         unset: (key) => {
-            // rebuild without the key: `delete obj[computed]` is banned by lint
             const { [key]: _removed, ...rest } = readPartial() as Record<string, unknown>
             save(rest as Partial<ConfigOf<TSchema>>)
         },

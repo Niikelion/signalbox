@@ -1,11 +1,6 @@
 import { registerNode, type TriggerNodeType } from "@signalbox/graph"
 import { createUpnpWatcher } from "./watch.js"
 
-/**
- * A trigger node that makes the router the source of a graph. It pushes
- * `{ ip, source: "upnp" }` on every NOTIFY, so downstream nodes reference the
- * address as `{{ ip }}`. Same watch loop as the plugin, configured by the graph.
- */
 export const upnpSourceNode: TriggerNodeType = {
     type: "upnp.source",
     kind: "trigger",
@@ -57,7 +52,6 @@ export const upnpSourceNode: TriggerNodeType = {
     }),
 }
 
-/** Register the UPnP nodes into the default graph registry. Called on import. */
 export const registerUpnpNodes = (): void => {
     registerNode(upnpSourceNode)
 }

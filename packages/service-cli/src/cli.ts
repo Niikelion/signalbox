@@ -10,26 +10,17 @@ import {
 } from "@signalbox/core"
 import { createServiceManager, type ServiceScope } from "./systemd.js"
 
-/** The bit of an app the CLI needs to `run` it, without knowing its event map. */
 export interface Runnable {
     run: () => Promise<void>
 }
 
-/**
- * Everything a concrete app must supply for the shared CLI to drive it. The CLI
- * owns config, systemd, and the command surface; the app owns its schema and
- * what running actually does (`createApp` for the daemon).
- */
 export interface ServiceApp<TSchema extends ConfigSchema> {
     appName: string
-    /** One-line summary shown at the top of `--help`. */
     tagline: string
     schema: TSchema
     createStore: (path?: string) => ConfigStore<TSchema>
     createApp: (config: ConfigOf<TSchema>) => Runnable
-    /** Optional one-shot: back the `once` command, apply state a single time and exit. */
     runOnce?: (config: ConfigOf<TSchema>) => Promise<unknown>
-    /** Optional inbound port to open from the gateway at `setup` (e.g. a UPnP callback). */
     firewallPort?: (config: Partial<ConfigOf<TSchema>>) => number | undefined
 }
 
@@ -58,7 +49,6 @@ options
   -h, --help           show this
 `
 
-/** Config values are unknown at runtime, so render them without assuming a shape. */
 const renderValue = (value: unknown): string => {
     if (Array.isArray(value)) return value.join(",")
     if (typeof value === "string") return value
@@ -148,11 +138,6 @@ const configCommand = async <TSchema extends ConfigSchema>(
     }
 }
 
-/**
- * Run the shared service command-line interface for one app. This owns argument
- * parsing, the config commands, and the systemd lifecycle; the `app` descriptor
- * supplies the schema and what running the app actually does.
- */
 export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSchema>, argv: string[]): Promise<void> => {
     const { values, positionals } = parseArgs({
         args: argv,
@@ -182,7 +167,7 @@ export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSche
             return
 
         case "setup": {
-            const config = store.load() // fail before touching systemd
+            const config = store.load()
             service.setupService({ scope, configPath: store.path, watchPort: app.firewallPort?.(config) })
             return
         }
@@ -227,7 +212,6 @@ export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSche
     }
 }
 
-/** Wrap `runCli` with the standard FlowKitError-aware error reporting. */
 export const runCliMain = async <TSchema extends ConfigSchema>(app: ServiceApp<TSchema>): Promise<void> => {
     try {
         await runCli(app, process.argv.slice(2))

@@ -1,28 +1,17 @@
 const ENDPOINT = "https://www.ovh.com/nic/update"
 
-// dyndns2 servers reject a request with no User-Agent as `badagent`.
 const USER_AGENT = "flowkit-ddns/0.1"
 
 export interface OvhDynHostCredentials {
-    /** The DynHost username created in the OVH panel (looks like `zone.tld-suffix`). */
     username: string
     password: string
 }
 
 export interface DynHostUpdate {
-    /** True when OVH accepted a new address (`good`), false when it was already set (`nochg`). */
     changed: boolean
     ip: string
 }
 
-/**
- * Point one OVH DynHost record at an address via the dyndns2 protocol.
- *
- * Unlike a full DNS API, DynHost cannot create a record or read its current
- * value: the record must already exist in the OVH panel, and the server itself
- * reports whether the address moved (`good`) or was already current (`nochg`).
- * Every other response is an error we surface rather than silently ignore.
- */
 export const updateDynHost = async (
     credentials: OvhDynHostCredentials,
     hostname: string,
@@ -41,7 +30,6 @@ export const updateDynHost = async (
         throw new Error(`OVH DynHost ${hostname} -> HTTP ${String(response.status)}: ${body}`)
     }
 
-    // responses look like `good 1.2.3.4` / `nochg 1.2.3.4` / `badauth`
     const code = body.split(/\s+/)[0]?.toLowerCase() ?? ""
     switch (code) {
         case "good":

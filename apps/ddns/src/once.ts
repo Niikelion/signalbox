@@ -3,11 +3,6 @@ import { createARecord, findARecord, patchARecord } from "@signalbox/cloudflare"
 import type { DdnsConfig } from "./config.js"
 import { publicIPv4 } from "./publicIp.js"
 
-/**
- * Update every record once and return. Unlike `run`, this is a direct awaited
- * pass — no UPnP subscription, no bus — so it finishes before the process exits.
- * The right pre-flight: it proves the token and zone by doing one real write.
- */
 export const runOnce = async (config: DdnsConfig): Promise<boolean> => {
     const ip = await publicIPv4((message) => {
         write("warn", message)

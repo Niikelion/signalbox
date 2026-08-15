@@ -1,32 +1,22 @@
 import { definePlugin } from "@signalbox/core"
 import { createARecord, findARecord, patchARecord, verifyZone, type CloudflareCredentials } from "./api.js"
 
-/** Events this plugin publishes. An app's event map must include them. */
 export type CloudflareEvents = {
     "dns:updated": { record: string; previous: string | null; current: string }
     "dns:unchanged": { ip: string }
 }
 
 export interface CloudflareOptions extends CloudflareCredentials {
-    /** Fully qualified hostnames to keep pointed at the current address. */
     records: string[]
     ttl: number
     proxied: boolean
 }
 
 export interface CloudflareApi {
-    /** Point every configured record at `ip`. Resolves to true if anything changed. */
     update: (ip: string) => Promise<boolean>
     verify: () => Promise<{ name: string }>
 }
 
-/**
- * Applies an address to Cloudflare DNS.
- *
- * Each run re-reads the record from Cloudflare rather than trusting a local
- * cache, so a record edited by hand elsewhere is still corrected, and an
- * unchanged address costs one GET and no write.
- */
 export const cloudflarePlugin = (options: CloudflareOptions) =>
     definePlugin<CloudflareApi, CloudflareEvents>({
         name: "cloudflare",
@@ -47,7 +37,6 @@ export const cloudflarePlugin = (options: CloudflareOptions) =>
 
                     if (existing.content === ip) continue
 
-                    // preserve whatever ttl/proxied the record already had
                     await patchARecord(options, existing.id, {
                         name,
                         content: ip,

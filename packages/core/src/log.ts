@@ -15,14 +15,12 @@ export const toError = (value: unknown): Error => (value instanceof Error ? valu
 
 const stamp = (): string => new Date().toISOString().replace("T", " ").slice(0, 19)
 
-/** Timestamped write to stdout/stderr. Under systemd this lands in the journal. */
 export const write = (level: LogLevel, message: string): void => {
     const line = `${stamp()}  ${message}\n`
     if (level === "error") process.stderr.write(line)
     else process.stdout.write(line)
 }
 
-/** Print every `log` and `error` event the bus carries. Returns an unsubscribe. */
 export const attachConsoleLogger = <TEvents extends EventMap>(bus: AppBus<TEvents>): (() => void) => {
     const offLog = bus.on("log", ({ level, message, scope }) => {
         write(level, scope ? `[${scope}] ${message}` : message)

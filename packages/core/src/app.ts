@@ -8,7 +8,6 @@ export interface AppOptions<TEvents extends EventMap, TPlugins extends Record<st
     name: string
     plugins: TPlugins
     workflows: WorkflowDefinition<TEvents, PluginApis<TPlugins>>[]
-    /** Print `log`/`error` events to the console. Default true. */
     logging?: boolean
 }
 
@@ -17,39 +16,19 @@ export interface App<TEvents extends EventMap> {
     readonly bus: AppBus<TEvents>
     start: () => Promise<void>
     stop: (reason?: string) => Promise<void>
-    /** start(), then block until SIGINT/SIGTERM, then stop(). */
     run: () => Promise<void>
 }
 
-/**
- * Wires plugins and workflows onto one bus and owns their lifetime.
- *
- * Plugins run first, in declaration order, and expose an API. Workflows run
- * second and are handed those APIs plus the bus. Everything registered through
- * `onStop`/`interval` is torn down in reverse order on stop, so a workflow can
- * never outlive the plugin it depends on.
- */
 export const createApp = <TEvents extends EventMap, TPlugins extends Record<string, AnyPluginDefinition>>(
     options: AppOptions<TEvents, TPlugins>,
 ): App<TEvents> => {
     const bus = createEventBus<TEvents & Record<string, unknown>>({
-        // Start paused. A plugin can raise an event before the workflow that
-        // handles it has been registered; buffering until everything is wired
-        // makes that ordering irrelevant instead of merely unlikely.
         paused: true,
         onListenerError: (error, event) => {
-            // never route listener failures back through `error`: a throwing
-            // error-listener would loop forever
             write("error", `[bus] listener for "${event}" failed: ${error.message}`)
         },
     }) as AppBus<TEvents>
 
-    /*
-     * Same object, narrower view. On AppBus<TEvents> a framework payload types as
-     * `TEvents["log"] & FrameworkEvents["log"]`, which TS cannot prove a literal
-     * satisfies while TEvents is still generic. Apps never redeclare these keys,
-     * so emitting them through the framework-only view is sound.
-     */
     const frameworkBus = bus as unknown as EventBus<FrameworkEvents & Record<string, unknown>>
 
     const cleanups: Cleanup[] = []
@@ -92,7 +71,6 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
 
         if (options.logging !== false) detachLogger = attachConsoleLogger(bus)
 
-        // phase 1: plugins acquire resources and expose their APIs
         const apis: Record<string, unknown> = {}
         const contexts = new Map<string, PluginContext<TEvents>>()
         for (const [key, plugin] of Object.entries(options.plugins)) {
@@ -102,7 +80,6 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
         }
         const plugins = apis as PluginApis<TPlugins>
 
-        // phase 2: workflows subscribe
         for (const workflow of options.workflows) {
             const scope = scopedContext(workflow.name)
             const context: WorkflowContext<TEvents, PluginApis<TPlugins>> = {
@@ -117,7 +94,6 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
             await workflow.setup(context)
         }
 
-        // phase 3: plugins start producing, now that every listener exists
         for (const [key, plugin] of Object.entries(options.plugins)) {
             const context = contexts.get(key)
             if (!plugin.setup || !context) continue
@@ -131,7 +107,6 @@ export const createApp = <TEvents extends EventMap, TPlugins extends Record<stri
             workflows: options.workflows.map((workflow) => workflow.name),
         })
 
-        // phase 4: release anything raised during phases 1-3, in emit order
         bus.resume()
     }
 

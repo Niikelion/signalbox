@@ -27,7 +27,6 @@ export const createDdnsOvhConfigStore = (path?: string) =>
         schema: configSchema,
         defaults: {
             records: [],
-            // one higher than the Cloudflare app's 5959, so both can run on one host
             watchPort: 5960,
             fallbackMinutes: 15,
         },

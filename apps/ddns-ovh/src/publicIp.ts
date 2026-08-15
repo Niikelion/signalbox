@@ -8,10 +8,6 @@ const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1
 
 export const isIPv4 = (value: string): boolean => IPV4.test(value)
 
-/**
- * Ask the internet what our address looks like from outside, trying each source
- * in turn. This is the fallback path; the UPnP plugin is the fast one.
- */
 export const publicIPv4 = async (onSourceFailure?: (message: string) => void): Promise<string> => {
     for (const { url, parse } of SOURCES) {
         try {

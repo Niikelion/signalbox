@@ -4,27 +4,18 @@ import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { isRoot, FlowKitError, write } from "@signalbox/core"
 
-/**
- * A system unit needs root: a service account, /etc/systemd/system, a firewall
- * rule. A user unit needs none of that — the callback port is unprivileged and
- * the config already lives under $HOME — so `user` is the lighter default for a
- * single-user box. The trade is isolation and boot behaviour (see `linger`).
- */
 export type ServiceScope = "system" | "user"
 
 export interface SetupOptions {
     scope: ServiceScope
     configPath: string
-    /** If set, open this TCP port from the default gateway (for an inbound callback). */
     watchPort?: number
 }
 
 export interface TeardownOptions {
     scope: ServiceScope
-    /** Also delete the config directory, and the service user for a system install. */
     purge: boolean
     configPath: string
-    /** The port opened at setup, removed again here. */
     watchPort?: number
 }
 
@@ -58,23 +49,16 @@ const userExists = (name: string): boolean => tryRun("id", ["-u", name]) !== nul
 
 const ufwIsActive = (): boolean => (tryRun("ufw", ["status"]) ?? "").includes("Status: active")
 
-/** Absolute path to the installed CLI entry point, for the unit's ExecStart. */
 const cliEntry = (): string => {
     const argv1 = process.argv[1]
     if (!argv1) throw new FlowKitError("cannot determine the path to this CLI")
     return realpathSync(argv1)
 }
 
-/**
- * The systemd service commands for one app, bound to its name. Everything that
- * varies between apps — the unit path, the config env var, the directories a
- * `--purge` is allowed to delete — is derived from `appName` once, here.
- */
 export const createServiceManager = (appName: string): ServiceManager => {
     const configEnv = `${appName.toUpperCase().replace(/-/g, "_")}_CONFIG`
     const systemUnitPath = `/etc/systemd/system/${appName}.service`
     const userUnitPath = join(homedir(), ".config", "systemd", "user", `${appName}.service`)
-    // The only directories `teardown --purge` is allowed to delete recursively.
     const ownedConfigDirs = [resolve(`/etc/${appName}`), resolve(join(homedir(), ".config", appName))]
 
     const unitPath = (scope: ServiceScope): string => (scope === "system" ? systemUnitPath : userUnitPath)
@@ -98,8 +82,6 @@ export const createServiceManager = (appName: string): ServiceManager => {
 
     const unitContents = (scope: ServiceScope, configPath: string): string => {
         const account = scope === "system" ? `User=${SERVICE_USER}\nGroup=${SERVICE_USER}\n` : ""
-        // ProtectSystem/ProtectHome are meaningful for a system unit; for a user unit
-        // they buy little and can break access to $HOME, where its config lives.
         const hardening =
             scope === "system"
                 ? `NoNewPrivileges=yes
@@ -152,14 +134,12 @@ WantedBy=${scope === "system" ? "multi-user.target" : "default.target"}
                 write("info", `created system user ${SERVICE_USER}`)
             }
 
-            // the service account must be able to read the config, nothing more
             const configDir = dirname(options.configPath)
             mkdirSync(configDir, { recursive: true, mode: 0o750 })
             const gid = Number(run("id", ["-g", SERVICE_USER]).trim())
             chownSync(configDir, 0, gid)
             if (existsSync(options.configPath)) chownSync(options.configPath, 0, gid)
 
-            // let an inbound callback (e.g. the router's UPnP NOTIFY) reach us
             if (options.watchPort !== undefined && ufwIsActive()) {
                 const gateway = tryRun("ip", ["route", "show", "default"])?.trim().split(/\s+/)[2]
                 if (gateway) {
@@ -256,12 +236,6 @@ WantedBy=${scope === "system" ? "multi-user.target" : "default.target"}
             write("info", `removed ${options.configPath}`)
         }
 
-        /*
-         * Only ever recurse into a directory this app created. --config can point
-         * anywhere, and its parent may be $HOME, /tmp, or a directory full of
-         * unrelated files - purging that because a config happened to live there
-         * would be catastrophic. Anything else keeps its directory.
-         */
         const configDir = resolve(dirname(options.configPath))
         if (ownedConfigDirs.includes(configDir)) {
             if (existsSync(configDir)) {

@@ -11,6 +11,5 @@ await runCliMain({
     createStore: (path) => createDdnsConfigStore(path),
     createApp: (config) => createDdnsApp(config),
     runOnce,
-    // the router POSTs its UPnP NOTIFY back to this port
     firewallPort: (config) => config.watchPort ?? 5959,
 })

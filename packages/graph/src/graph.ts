@@ -7,15 +7,6 @@ import {
     type WorkflowDefinition,
 } from "@signalbox/core"
 
-/**
- * A workflow, expressed as data instead of a function.
- *
- * `compileGraph` turns one of these into an ordinary `WorkflowDefinition` whose
- * `setup` makes the very same `ctx.on` / `ctx.emit` / `ctx.plugins.x` calls a
- * hand-written workflow would. The bus, the app runtime and teardown are
- * unchanged — a compiled graph is indistinguishable from coded one at runtime.
- * The trade is that a graph is validated when it loads, not by the compiler.
- */
 export interface WorkflowGraph {
     name: string
     nodes: GraphNode[]
@@ -33,8 +24,6 @@ export interface GraphEdge {
     to: string
 }
 
-// --- node types -----------------------------------------------------------
-
 export type ConfigFieldType = "string" | "number" | "boolean" | "array" | "object" | "any"
 
 export interface ConfigField {
@@ -44,32 +33,19 @@ export interface ConfigField {
 
 export type NodeConfigSchema = Record<string, ConfigField>
 
-/**
- * The slice of a workflow's context a node is handed. Event names are strings
- * here rather than `keyof TEvents`: a graph is dynamic, so this is exactly the
- * boundary where type-checking gives way to load-time validation.
- */
 export interface GraphNodeContext {
     plugins: Record<string, unknown>
     on: (event: string, listener: (payload: unknown) => void) => Unsubscribe
     emit: (event: string, payload: unknown) => void
-    /** log with any secret values masked out first. */
     log: (message: string, level?: LogLevel) => void
     fail: (error: unknown) => void
     onStop: (cleanup: () => void | Promise<void>) => void
     interval: (ms: number, handler: () => void | Promise<void>) => void
-    /**
-     * Resolve a `{{ ... }}` template against the value flowing in plus the graph's
-     * config vars (`{{ $config.name }}`) and secrets (`{{ $secret.name }}`).
-     */
     resolve: (template: unknown, input: unknown) => unknown
-    /** Like `resolve`, but walks an object/array template resolving every string. */
     resolveDeep: (template: unknown, input: unknown) => unknown
 }
 
-/** A trigger instance, built for one graph node — hold per-node state in its closure. */
 export interface TriggerInstance {
-    /** Wire up a source; call `push` with a value to start a flow downstream. */
     start: (args: { config: Record<string, unknown>; ctx: GraphNodeContext; push: (value: unknown) => void }) => void
 }
 
@@ -77,34 +53,24 @@ export interface TriggerNodeType {
     type: string
     kind: "trigger"
     configSchema: NodeConfigSchema
-    /** Build a fresh instance per graph node. State is just locals in here. */
     create: () => TriggerInstance
 }
 
-/** Returned by an action to halt its branch — nothing flows downstream of it. */
 export const STOP: unique symbol = Symbol("flowkit.graph.stop")
 
 const FAN_OUT: unique symbol = Symbol("flowkit.graph.fanout")
 
-/** Returned by an action to send several values down its edge, one flow each. */
 export interface FanOut {
     readonly [FAN_OUT]: true
     readonly values: readonly unknown[]
 }
 
-/** Wrap a list of values so the compiler runs the downstream once per value. */
 export const fanOut = (values: readonly unknown[]): FanOut => ({ [FAN_OUT]: true, values })
 
 export const isFanOut = (value: unknown): value is FanOut =>
     typeof value === "object" && value !== null && (value as Record<PropertyKey, unknown>)[FAN_OUT] === true
 
-/** An action instance, built for one graph node — hold per-node state in its closure. */
 export interface ActionInstance {
-    /**
-     * Transform the value flowing in; whatever is returned flows downstream, or
-     * return `STOP` to end this branch. May be sync or async — the compiler
-     * awaits the result either way.
-     */
     run: (args: { config: Record<string, unknown>; input: unknown; ctx: GraphNodeContext }) => unknown
 }
 
@@ -112,13 +78,10 @@ export interface ActionNodeType {
     type: string
     kind: "action"
     configSchema: NodeConfigSchema
-    /** Build a fresh instance per graph node. State is just locals in here. */
     create: () => ActionInstance
 }
 
 export type NodeType = TriggerNodeType | ActionNodeType
-
-// --- registry -------------------------------------------------------------
 
 export interface NodeRegistry {
     register: (type: NodeType) => void
@@ -137,14 +100,11 @@ export const createNodeRegistry = (): NodeRegistry => {
     }
 }
 
-/** The registry the built-in nodes register into and `compileGraph` defaults to. */
 export const defaultRegistry = createNodeRegistry()
 
 export const registerNode = (type: NodeType): void => {
     defaultRegistry.register(type)
 }
-
-// --- data mapping ---------------------------------------------------------
 
 const getPath = (source: unknown, path: string): unknown => {
     let current = source
@@ -155,7 +115,6 @@ const getPath = (source: unknown, path: string): unknown => {
     return current
 }
 
-/** Render a resolved value for embedding in a string; objects become JSON. */
 const stringify = (value: unknown): string => {
     if (value === undefined || value === null) return ""
     if (typeof value === "string") return value
@@ -163,13 +122,9 @@ const stringify = (value: unknown): string => {
     return JSON.stringify(value)
 }
 
-/** Everything a `{{ ... }}` reference can point at. */
 export interface ResolveScope {
-    /** The value flowing into the node. */
     input: unknown
-    /** Non-secret configuration, reachable as `{{ $config.name }}`. */
     config?: Record<string, unknown>
-    /** Secrets, reachable as `{{ $secret.name }}`; masked in logs. */
     secret?: Record<string, unknown>
 }
 
@@ -180,13 +135,6 @@ const lookup = (path: string, scope: ResolveScope): unknown => {
     return getPath(scope.input, path.startsWith("input.") ? path.slice("input.".length) : path)
 }
 
-/**
- * Resolve `{{ path }}` references. A `path` reaches the flowing input by default,
- * the graph's config vars via `$config.x`, and its secrets via `$secret.x`.
- * A whole-string reference keeps the resolved value's type (a number stays a
- * number); references embedded in text interpolate as strings. Field references
- * only — deliberately not an expression language yet.
- */
 export const resolveTemplate = (template: unknown, scope: ResolveScope): unknown => {
     if (typeof template !== "string") return template
 
@@ -196,7 +144,6 @@ export const resolveTemplate = (template: unknown, scope: ResolveScope): unknown
     return template.replace(/\{\{\s*([\w.$]+)\s*\}\}/g, (_match, path: string) => stringify(lookup(path, scope)))
 }
 
-/** Recursively resolve every string in an object/array template — the `map` node's core. */
 export const resolveDeep = (template: unknown, scope: ResolveScope): unknown => {
     if (typeof template === "string") return resolveTemplate(template, scope)
     if (Array.isArray(template)) return template.map((item) => resolveDeep(item, scope))
@@ -207,8 +154,6 @@ export const resolveDeep = (template: unknown, scope: ResolveScope): unknown => 
     }
     return template
 }
-
-// --- validation -----------------------------------------------------------
 
 const matchesType = (value: unknown, type: ConfigFieldType): boolean => {
     switch (type) {
@@ -245,18 +190,12 @@ const validateConfig = (node: GraphNode, schema: NodeConfigSchema): void => {
     }
 }
 
-// --- compiler -------------------------------------------------------------
-
 export interface CompileOptions {
-    /** Registry to resolve node types against. Defaults to the shared one. */
     registry?: NodeRegistry
-    /** Non-secret values, reachable in templates as `{{ $config.name }}`. */
     config?: Record<string, unknown>
-    /** Secret values, reachable as `{{ $secret.name }}` and masked in logs. */
     secrets?: Record<string, unknown>
 }
 
-/** Replace each secret's value with `***` so it cannot leak through a log line. */
 const makeRedactor = (secrets: Record<string, unknown>): ((message: string) => string) => {
     const values = Object.values(secrets).filter(
         (value): value is string => typeof value === "string" && value.length > 0,
@@ -265,11 +204,6 @@ const makeRedactor = (secrets: Record<string, unknown>): ((message: string) => s
     return (message) => values.reduce((current, secret) => current.split(secret).join("***"), message)
 }
 
-/**
- * Compile a graph into a `WorkflowDefinition`. Validation happens here, at load
- * time: an unknown node type, a bad config field or a dangling edge throws a
- * `FlowKitError` before the definition is ever handed to an app.
- */
 export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Record<string, unknown>>(
     graph: WorkflowGraph,
     options: CompileOptions = {},
@@ -302,11 +236,6 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
     return {
         name: graph.name,
         setup: (ctx) => {
-            /*
-             * The one place the graph steps outside the type system: event names
-             * arrive as strings, so the typed `on`/`emit` are re-viewed as loose
-             * functions. Everything downstream of here is validated, not checked.
-             */
             const nodeCtx: GraphNodeContext = {
                 plugins: ctx.plugins as Record<string, unknown>,
                 on: (event, listener) => ctx.on(event as never, listener),
@@ -323,8 +252,6 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
                 resolveDeep: (template, input) => resolveDeep(template, { input, config, secret: secrets }),
             }
 
-            // one instance per graph node: a node's state lives in its own closure,
-            // so no state has to be threaded through `run`
             const actions = new Map<string, ActionInstance>()
             for (const node of graph.nodes) {
                 const type = registry.get(node.type)
@@ -339,9 +266,8 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
 
                     try {
                         const output = await action.run({ config: node.config ?? {}, input: value, ctx: nodeCtx })
-                        if (output === STOP) continue // this action ended its branch
+                        if (output === STOP) continue
                         if (isFanOut(output)) {
-                            // one value in, many out: run the rest of the branch per value
                             for (const each of output.values) await runFrom(nextId, each)
                             continue
                         }
@@ -366,8 +292,6 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
         },
     }
 }
-
-// --- built-in nodes -------------------------------------------------------
 
 registerNode({
     type: "event.on",
@@ -427,19 +351,6 @@ registerNode({
     }),
 })
 
-/**
- * Build a new object from a template, the way you would write an object literal
- * in code — except the values are `{{ ... }}` references resolved at run time:
- *
- * ```json
- * { "type": "map", "config": { "value": {
- *   "type": "A", "name": "{{ $config.record }}", "content": "{{ ip }}"
- * } } }
- * ```
- *
- * Nested objects and arrays are resolved recursively, so it doubles as the
- * remapping step between one node's output shape and the next node's input.
- */
 registerNode({
     type: "map",
     kind: "action",
@@ -449,18 +360,6 @@ registerNode({
     }),
 })
 
-/**
- * Fan out over a list: one value in, one flow out per item, all down the same
- * edge. This is how a graph handles several DNS records — `over` resolves to the
- * list, and each item is merged into the flowing value under `as`:
- *
- * ```json
- * { "type": "repeat", "config": { "over": "{{ $config.records }}", "as": "record" } }
- * // { ip } + ["a","b"]  ->  { ip, record: "a" }  and  { ip, record: "b" }
- * ```
- *
- * Put it after `dedupe` so a repeated address is dropped before the fan-out.
- */
 registerNode({
     type: "repeat",
     kind: "action",
@@ -481,15 +380,6 @@ registerNode({
     }),
 })
 
-/**
- * Pass a value on only when it differs from the last one this node saw. This is
- * how a graph avoids acting on a repeated observation — the role `trackWanIp`
- * plays in the coded DDNS app. `key` narrows the comparison to one field
- * (`"ip"`); omit it to compare the whole value.
- *
- * `last` is a plain local, so every graph node gets its own — the reason nodes
- * are factories rather than singletons.
- */
 registerNode({
     type: "dedupe",
     kind: "action",
@@ -503,7 +393,7 @@ registerNode({
                 const marker = JSON.stringify(compared ?? null)
                 if (marker === last) return STOP
                 last = marker
-                return input // unchanged: the original value flows on
+                return input
             },
         }
     },
@@ -520,7 +410,7 @@ registerNode({
         run: ({ config, input, ctx }) => {
             const level = config["level"] === "warn" || config["level"] === "error" ? config["level"] : "info"
             ctx.log(String(ctx.resolve(config["message"], input)), level)
-            return input // pass the value through unchanged
+            return input
         },
     }),
 })

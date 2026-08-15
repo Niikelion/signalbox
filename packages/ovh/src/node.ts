@@ -1,22 +1,6 @@
 import { registerNode, type ActionNodeType } from "@signalbox/graph"
 import { updateDynHost } from "./api.js"
 
-/**
- * Point one OVH DynHost record at an address. Credentials and the record are
- * templates, so a graph reads them from its config and secrets:
- *
- * ```json
- * { "type": "ovh.update", "config": {
- *   "username": "{{ $secret.ovhUser }}",
- *   "password": "{{ $secret.ovhPassword }}",
- *   "record":   "{{ $config.record }}",
- *   "content":  "{{ ip }}"
- * } }
- * ```
- *
- * DynHost reports whether the address moved, so this passes that straight through
- * as `changed`. Outputs `{ record, current, changed }`.
- */
 export const ovhUpdateNode: ActionNodeType = {
     type: "ovh.update",
     kind: "action",
@@ -42,7 +26,6 @@ export const ovhUpdateNode: ActionNodeType = {
     }),
 }
 
-/** Register the OVH nodes into the default graph registry. Called on import. */
 export const registerOvhNodes = (): void => {
     registerNode(ovhUpdateNode)
 }

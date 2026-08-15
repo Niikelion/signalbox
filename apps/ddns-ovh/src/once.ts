@@ -3,11 +3,6 @@ import { updateDynHost } from "@signalbox/ovh"
 import type { DdnsOvhConfig } from "./config.js"
 import { publicIPv4 } from "./publicIp.js"
 
-/**
- * Update every record once and return. Unlike `run`, this is a direct awaited
- * pass — no UPnP subscription, no bus — so it finishes before the process exits.
- * A good pre-flight: it proves the DynHost credentials by doing one real update.
- */
 export const runOnce = async (config: DdnsOvhConfig): Promise<boolean> => {
     const ip = await publicIPv4((message) => {
         write("warn", message)

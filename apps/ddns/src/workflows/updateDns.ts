@@ -1,6 +1,5 @@
 import { defineWorkflow } from "../defineWorkflow.js"
 
-/** The whole point of the app: a confirmed address change reaches Cloudflare. */
 export const updateDns = defineWorkflow("update-dns", (ctx) => {
     ctx.on("wan-ip:changed", async ({ current }) => {
         await ctx.plugins.cloudflare.update(current)

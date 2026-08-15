@@ -1,22 +1,6 @@
 import { registerNode, type ActionNodeType } from "@signalbox/graph"
 import { createARecord, findARecord, patchARecord } from "./api.js"
 
-/**
- * Point one Cloudflare A record at an address. Credentials and the record are
- * templates, so a graph reads them from its config and secrets:
- *
- * ```json
- * { "type": "cloudflare.update", "config": {
- *   "apiToken": "{{ $secret.cfToken }}",
- *   "zoneId":   "{{ $config.zoneId }}",
- *   "record":   "{{ $config.record }}",
- *   "content":  "{{ ip }}"
- * } }
- * ```
- *
- * Idempotent: it re-reads the record and only writes on a real difference, so a
- * repeated address costs one GET. Outputs `{ record, previous, current, changed }`.
- */
 export const cloudflareUpdateNode: ActionNodeType = {
     type: "cloudflare.update",
     kind: "action",
@@ -63,7 +47,6 @@ export const cloudflareUpdateNode: ActionNodeType = {
     }),
 }
 
-/** Register the Cloudflare nodes into the default graph registry. Called on import. */
 export const registerCloudflareNodes = (): void => {
     registerNode(cloudflareUpdateNode)
 }

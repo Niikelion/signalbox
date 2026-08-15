@@ -18,6 +18,7 @@ export const eslintConfig = defineConfig(
     },
     {
         rules: {
+            "no-empty": ["error", { allowEmptyCatch: true }],
             "@typescript-eslint/no-unused-vars": [
                 "error",
                 {

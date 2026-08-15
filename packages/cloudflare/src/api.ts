@@ -49,7 +49,6 @@ const call = async <TResult>(
     return payload.result
 }
 
-/** Confirm the token can see the zone. Used by `setup` to fail early. */
 export const verifyZone = async (credentials: CloudflareCredentials): Promise<{ name: string }> =>
     call<{ name: string }>(credentials, "GET", `/zones/${credentials.zoneId}`)
 

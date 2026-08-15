@@ -9,27 +9,15 @@ export interface EventBus<TEvents extends EventMap> {
     once<TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): Unsubscribe
     off<TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): void
     emit<TKey extends keyof TEvents>(event: TKey, payload: TEvents[TKey]): void
-    /** Buffer emitted events instead of dispatching them. */
     pause(): void
-    /** Dispatch everything buffered since `pause()`, in emit order, then run live. */
     resume(): void
     readonly paused: boolean
-    /** Number of events waiting to be flushed. */
     readonly buffered: number
     clear(): void
 }
 
 export interface EventBusOptions {
-    /**
-     * Start buffering instead of dispatching. An app uses this so events raised
-     * while it is still wiring itself up cannot be lost by arriving before their
-     * listeners exist.
-     */
     paused?: boolean
-    /**
-     * Called when a listener throws or rejects. A bus must never let one bad
-     * subscriber take down the process, so failures are reported, not thrown.
-     */
     onListenerError?: (error: Error, event: string) => void
 }
 
@@ -54,7 +42,6 @@ export const createEventBus = <TEvents extends EventMap>(options: EventBusOption
         const set = listeners.get(event as keyof TEvents)
         if (!set) return
 
-        // copy first: a listener may unsubscribe itself while we iterate
         for (const listener of [...set]) {
             try {
                 const result = (listener as Listener<unknown>)(payload)
@@ -114,8 +101,6 @@ export const createEventBus = <TEvents extends EventMap>(options: EventBusOption
 
             flushing = true
             try {
-                // drain by index-free shifting: a flushed listener may emit again,
-                // and those land at the back of the queue so causal order holds
                 while (queue.length > 0) {
                     const next = queue.shift()
                     if (!next) break

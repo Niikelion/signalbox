@@ -1,6 +1,5 @@
 import { defineWorkflow } from "@/defineWorkflow"
 
-/** The whole point of the app: a confirmed address change reaches OVH DynHost. */
 export const updateDns = defineWorkflow("update-dns", (ctx) => {
     ctx.on("wan-ip:changed", async ({ current }) => {
         await ctx.plugins.ovh.update(current)

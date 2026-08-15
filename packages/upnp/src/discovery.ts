@@ -10,7 +10,6 @@ export interface GatewayService {
     host: string
 }
 
-/** Read the default gateway out of /proc/net/route (Linux only). */
 export const defaultGateway = (): string => {
     let table: string
     try {
@@ -22,7 +21,6 @@ export const defaultGateway = (): string => {
     for (const line of table.split("\n").slice(1)) {
         const [, destination, gateway, flagsHex] = line.trim().split(/\s+/)
         if (!destination || !gateway || !flagsHex) continue
-        // default route (0.0.0.0) with RTF_GATEWAY set
         if (destination !== "00000000" || (parseInt(flagsHex, 16) & 0x2) === 0) continue
 
         const value = parseInt(gateway, 16)
@@ -31,11 +29,6 @@ export const defaultGateway = (): string => {
     throw new Error("no default gateway found")
 }
 
-/**
- * Which of our addresses the kernel would use to reach `host`. The SSDP socket
- * must be bound to this, otherwise the M-SEARCH can leave via an unrelated
- * adapter (tailscale, zerotier, docker) and nothing answers.
- */
 export const sourceIpToward = (host: string): Promise<string> =>
     new Promise((resolve, reject) => {
         const socket = createSocket("udp4")
@@ -53,7 +46,6 @@ export const sourceIpToward = (host: string): Promise<string> =>
 const tagValue = (xml: string, tag: string): string | undefined =>
     new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`, "i").exec(xml)?.[1]?.trim()
 
-/** Collect LOCATION headers advertised by the default gateway itself. */
 const ssdpSearch = (gateway: string, sourceIp: string, waitMs: number): Promise<string[]> =>
     new Promise((resolve, reject) => {
         const socket = createSocket({ type: "udp4", reuseAddr: true })
@@ -63,9 +55,7 @@ const ssdpSearch = (gateway: string, sourceIp: string, waitMs: number): Promise<
             clearTimeout(timer)
             try {
                 socket.close()
-            } catch {
-                /* already closed */
-            }
+            } catch {}
             resolve(locations)
         }
         const timer = setTimeout(finish, waitMs)
@@ -79,17 +69,12 @@ const ssdpSearch = (gateway: string, sourceIp: string, waitMs: number): Promise<
         socket.on("message", (buffer) => {
             const location = /^location:\s*(.+)$/im.exec(buffer.toString("utf8"))?.[1]?.trim()
             if (!location || locations.includes(location)) return
-            // only trust descriptions served by the gateway itself
             try {
                 if (new URL(location).hostname === gateway) locations.push(location)
-            } catch {
-                /* malformed LOCATION */
-            }
+            } catch {}
         })
 
         socket.bind(0, sourceIp, () => {
-            // ssdp:all rather than a versioned device ST: some routers advertise
-            // InternetGatewayDevice:2 and ignore a :1 search entirely
             const search = [
                 "M-SEARCH * HTTP/1.1",
                 `HOST: ${SSDP_ADDRESS}:${SSDP_PORT}`,
@@ -103,7 +88,6 @@ const ssdpSearch = (gateway: string, sourceIp: string, waitMs: number): Promise<
         })
     })
 
-/** Find the gateway's WAN connection service, whose ExternalIPAddress is evented. */
 export const discoverGateway = async (): Promise<GatewayService> => {
     const gateway = defaultGateway()
     const sourceIp = await sourceIpToward(gateway)

@@ -1,12 +1,5 @@
 import { defineWorkflow } from "../defineWorkflow.js"
 
-/**
- * Turns a stream of "someone saw an address" into "the address actually moved".
- *
- * Producers (the UPnP plugin, the fallback poll) emit `wan-ip:observed` without
- * knowing what came before. This workflow owns that memory, so every consumer
- * downstream can trust `wan-ip:changed` and skip de-duplicating for itself.
- */
 export const trackWanIp = defineWorkflow("track-wan-ip", (ctx) => {
     let previous: string | null = null
 
