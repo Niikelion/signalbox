@@ -1,26 +1,24 @@
 {
-    "name": "@signalbox/ddns-ovh",
+    "name": "@signalbox/commons",
     "version": "0.1.0",
-    "private": true,
     "license": "MIT",
-    "description": "OVH DynHost dynamic DNS for home connections, driven by your router's UPnP events",
+    "description": "FlowKit commons: reusable polling and dedupe workflow building blocks",
     "type": "module",
-    "bin": {
-        "flowkit-ddns-ovh": "dist/cli.js"
-    },
-    "main": "dist/index.js",
+    "main": "dist/index.cjs",
+    "module": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
         "/dist"
     ],
     "exports": {
-        ".": {
+        "import": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
+        },
+        "require": {
+            "types": "./dist/index.d.cts",
+            "require": "./dist/index.cjs"
         }
-    },
-    "engines": {
-        "node": ">=20"
     },
     "scripts": {
         "build": "tsc --noEmit && tsdown",
@@ -30,13 +28,10 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/commons": "^0.1.0",
-        "@signalbox/core": "^0.1.0",
-        "@signalbox/ovh": "^0.1.0",
-        "@signalbox/service-cli": "^0.1.0",
-        "@signalbox/upnp": "^0.1.0"
+        "@signalbox/core": "^0.1.0"
     },
     "devDependencies": {
+        "@arethetypeswrong/core": "^0.18.2",
         "@gamedev-sensei/ts-config": "^2.1.0",
         "@signalbox/shared-config": "^0.1.0",
         "@types/node": "^22.10.2",

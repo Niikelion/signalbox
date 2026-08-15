@@ -1,17 +1,11 @@
-import { defineWorkflow } from "../defineWorkflow.js"
+import { dedupe } from "../defineWorkflow.js"
 
-export const trackWanIp = defineWorkflow("track-wan-ip", (ctx) => {
-    let previous: string | null = null
-
-    ctx.on("wan-ip:observed", ({ ip, source }) => {
-        if (ip === previous) return
-
-        const wasKnown = previous
-        previous = ip
-
-        if (wasKnown === null) ctx.log(`WAN IP is ${ip} (via ${source})`)
-        else ctx.log(`WAN IP changed ${wasKnown} -> ${ip} (via ${source})`)
-
-        ctx.emit("wan-ip:changed", { previous: wasKnown, current: ip, source })
-    })
+export const trackWanIp = dedupe({
+    name: "track-wan-ip",
+    on: "wan-ip:observed",
+    emit: "wan-ip:changed",
+    key: ({ ip }) => ip,
+    toPayload: ({ ip, source }, previous) => ({ previous, current: ip, source }),
+    message: ({ ip, source }, previous) =>
+        previous === null ? `WAN IP is ${ip} (via ${source})` : `WAN IP changed ${previous} -> ${ip} (via ${source})`,
 })

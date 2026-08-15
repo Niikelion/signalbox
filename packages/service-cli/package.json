@@ -28,12 +28,12 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "workspace:^"
+        "@signalbox/core": "^0.1.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",
         "@gamedev-sensei/ts-config": "^2.1.0",
-        "@signalbox/shared-config": "workspace:^",
+        "@signalbox/shared-config": "^0.1.0",
         "@types/node": "^22.10.2",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",

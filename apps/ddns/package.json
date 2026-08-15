@@ -30,14 +30,15 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/cloudflare": "workspace:^",
-        "@signalbox/core": "workspace:^",
-        "@signalbox/service-cli": "workspace:^",
-        "@signalbox/upnp": "workspace:^"
+        "@signalbox/cloudflare": "^0.1.0",
+        "@signalbox/commons": "^0.1.0",
+        "@signalbox/core": "^0.1.0",
+        "@signalbox/service-cli": "^0.1.0",
+        "@signalbox/upnp": "^0.1.0"
     },
     "devDependencies": {
         "@gamedev-sensei/ts-config": "^2.1.0",
-        "@signalbox/shared-config": "workspace:^",
+        "@signalbox/shared-config": "^0.1.0",
         "@types/node": "^22.10.2",
         "eslint": "^9.39.2",
         "prettier": "^3.8.1",
