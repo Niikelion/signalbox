@@ -1,7 +1,7 @@
 import { write } from "@signalbox/core"
 import { createARecord, findARecord, patchARecord } from "@signalbox/cloudflare"
 import type { DdnsConfig } from "./config.js"
-import { publicIPv4 } from "./publicIp.js"
+import { publicIPv4 } from "@signalbox/commons"
 
 export const runOnce = async (config: DdnsConfig): Promise<boolean> => {
     const ip = await publicIPv4((message) => {

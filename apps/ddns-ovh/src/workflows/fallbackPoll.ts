@@ -1,5 +1,5 @@
 import { poll } from "../defineWorkflow.js"
-import { publicIPv4 } from "../publicIp.js"
+import { publicIPv4 } from "@signalbox/commons"
 
 const phaseSource = { startup: "startup", interval: "http", retry: "reconnect" } as const
 

@@ -1,7 +1,7 @@
 import { write } from "@signalbox/core"
 import { updateDynHost } from "@signalbox/ovh"
 import type { DdnsOvhConfig } from "./config.js"
-import { publicIPv4 } from "./publicIp.js"
+import { publicIPv4 } from "@signalbox/commons"
 
 export const runOnce = async (config: DdnsOvhConfig): Promise<boolean> => {
     const ip = await publicIPv4((message) => {
