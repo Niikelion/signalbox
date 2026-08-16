@@ -1,5 +1,5 @@
-import { dedupe, poll, publicIPv4 } from "@signalbox/commons"
 import { createWorkflowDefiner, merge, type NoEvents } from "@signalbox/core"
+import { dedupe, poll, publicIPv4 } from "@signalbox/commons"
 import type { DdnsCfConfig } from "./config.js"
 import type { DdnsCfPlugins } from "./plugins.js"
 

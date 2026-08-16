@@ -8,8 +8,8 @@ await runCliMain({
     appName: APP_NAME,
     tagline: "Cloudflare dynamic DNS driven by your router's UPnP events",
     schema: configSchema,
-    createStore: (path) => createDdnsCfConfigStore(path),
-    createApp: (config) => createDdnsCfApp(config),
+    createStore: createDdnsCfConfigStore,
+    createApp: createDdnsCfApp,
     runOnce,
     firewallPort: (config) => config.watchPort ?? 5959,
 })
