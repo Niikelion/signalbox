@@ -1,20 +1,14 @@
 import { createInterface } from "node:readline/promises"
 import { parseArgs } from "node:util"
-import {
-    FlowKitError,
-    write,
-    type ConfigOf,
-    type ConfigSchema,
-    type ConfigStore,
-    type FieldSpec,
-} from "@signalbox/core"
+import { describeOf, isRequired, isSecret, type ConfigOf, type ConfigStore, type z } from "@signalbox/config"
+import { FlowKitError, write } from "@signalbox/core"
 import { createServiceManager, type ServiceScope } from "./systemd.js"
 
 export interface Runnable {
     run: () => Promise<void>
 }
 
-export interface ServiceApp<TSchema extends ConfigSchema> {
+export interface ServiceApp<TSchema extends z.ZodObject> {
     appName: string
     tagline: string
     schema: TSchema
@@ -66,16 +60,16 @@ const readSecretly = async (question: string): Promise<string> => {
     }
 }
 
-const configCommand = async <TSchema extends ConfigSchema>(
+const configCommand = async <TSchema extends z.ZodObject>(
     store: ConfigStore<TSchema>,
     args: string[],
 ): Promise<void> => {
-    const schema = store.schema
-    const schemaFields = Object.entries(schema) as [keyof TSchema & string, FieldSpec][]
+    const shape = store.schema.shape as Record<string, z.ZodType>
+    const fields = Object.entries(shape)
 
-    const requireKey = (value: string | undefined): keyof TSchema & string => {
-        if (value && value in schema) return value
-        throw new FlowKitError(`unknown config key "${value ?? ""}"`, `known keys: ${Object.keys(schema).join(", ")}`)
+    const requireKey = (value: string | undefined): string => {
+        if (value && value in shape) return value
+        throw new FlowKitError(`unknown config key "${value ?? ""}"`, `known keys: ${Object.keys(shape).join(", ")}`)
     }
 
     const [action, key, ...rest] = args
@@ -115,14 +109,18 @@ const configCommand = async <TSchema extends ConfigSchema>(
 
         case "init": {
             const current = store.readPartial() as Record<string, unknown>
-            for (const [field, spec] of schemaFields) {
-                if (!spec.required) continue
+            for (const [field, fieldSchema] of fields) {
+                if (!isRequired(fieldSchema)) continue
 
                 const existing = current[field]
                 const shown =
-                    spec.secret && existing ? "(set)" : Array.isArray(existing) ? existing.join(",") : existing
+                    isSecret(fieldSchema) && existing
+                        ? "(set)"
+                        : Array.isArray(existing)
+                          ? existing.join(",")
+                          : existing
                 const suffix = existing ? ` [${String(shown)}]` : ""
-                const answer = await readSecretly(`${field} - ${spec.description ?? ""}${suffix}: `)
+                const answer = await readSecretly(`${field} - ${describeOf(fieldSchema) ?? ""}${suffix}: `)
                 if (answer) current[field] = store.coerce(field, answer)
             }
             store.save(current as Partial<ConfigOf<TSchema>>)
@@ -138,7 +136,7 @@ const configCommand = async <TSchema extends ConfigSchema>(
     }
 }
 
-export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSchema>, argv: string[]): Promise<void> => {
+export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchema>, argv: string[]): Promise<void> => {
     const { values, positionals } = parseArgs({
         args: argv,
         options: {
@@ -212,7 +210,7 @@ export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSche
     }
 }
 
-export const runCliMain = async <TSchema extends ConfigSchema>(app: ServiceApp<TSchema>): Promise<void> => {
+export const runCliMain = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchema>): Promise<void> => {
     try {
         await runCli(app, process.argv.slice(2))
     } catch (error) {

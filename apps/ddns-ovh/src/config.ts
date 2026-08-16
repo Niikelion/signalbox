@@ -1,34 +1,16 @@
-import { createConfigStore, type ConfigOf } from "@signalbox/core"
+import { config, createConfigStore, field, type Infer } from "@signalbox/config"
 
 export const APP_NAME = "flowkit-ddns-ovh"
 
-export const configSchema = {
-    dynhostUser: {
-        type: "string",
-        required: true,
-        description: "DynHost username created in the OVH panel (e.g. example.com-home)",
-    },
-    dynhostPassword: {
-        type: "string",
-        required: true,
-        secret: true,
-        description: "Password set for that DynHost username",
-    },
-    records: { type: "list", required: true, description: "Comma-separated DynHost hostnames to keep updated" },
-    watchPort: { type: "int", description: "TCP port the UPnP NOTIFY callback listens on" },
-    fallbackMinutes: { type: "int", description: "Safety-net re-check interval" },
-} as const satisfies Parameters<typeof createConfigStore>[0]["schema"]
+export const configSchema = config({
+    dynhostUser: field().string().min(1).describe("DynHost username created in the OVH panel (e.g. example.com-home)"),
+    dynhostPassword: field().string().min(1).secret().describe("Password set for that DynHost username"),
+    records: field().list().nonempty().describe("Comma-separated DynHost hostnames to keep updated"),
+    watchPort: field().int().positive().default(5960).describe("TCP port the UPnP NOTIFY callback listens on"),
+    fallbackMinutes: field().int().positive().default(15).describe("Safety-net re-check interval"),
+})
 
-export type DdnsOvhConfig = ConfigOf<typeof configSchema>
+export type DdnsOvhConfig = Infer<typeof configSchema>
 
 export const createDdnsOvhConfigStore = (path?: string) =>
-    createConfigStore({
-        appName: APP_NAME,
-        schema: configSchema,
-        defaults: {
-            records: [],
-            watchPort: 5960,
-            fallbackMinutes: 15,
-        },
-        ...(path ? { path } : {}),
-    })
+    createConfigStore({ appName: APP_NAME, schema: configSchema, ...(path ? { path } : {}) })

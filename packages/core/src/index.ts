@@ -18,5 +18,4 @@ export type { WorkflowContext, WorkflowDefinition } from "./workflow.js"
 export { createApp } from "./app.js"
 export type { App, AppOptions } from "./app.js"
 
-export { createConfigStore, isRoot } from "./config.js"
-export type { ConfigOf, ConfigSchema, ConfigStore, ConfigStoreOptions, FieldSpec, FieldType } from "./config.js"
+export { isRoot } from "./platform.js"

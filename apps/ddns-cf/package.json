@@ -24,6 +24,7 @@
     "dependencies": {
         "@signalbox/cloudflare": "^0.1.0",
         "@signalbox/commons": "^0.1.0",
+        "@signalbox/config": "^0.1.0",
         "@signalbox/core": "^0.1.0",
         "@signalbox/service-cli": "^0.1.0",
         "@signalbox/upnp": "^0.1.0"

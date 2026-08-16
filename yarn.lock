@@ -1108,6 +1108,24 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@signalbox/config@npm:^0.1.0, @signalbox/config@workspace:packages/config":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/config@workspace:packages/config"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/shared-config": "npm:^0.1.0"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
+    zod: "npm:^4.0.0"
+  languageName: unknown
+  linkType: soft
+
 "@signalbox/core@npm:^0.1.0, @signalbox/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@signalbox/core@workspace:packages/core"
@@ -1130,6 +1148,7 @@ __metadata:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@signalbox/cloudflare": "npm:^0.1.0"
     "@signalbox/commons": "npm:^0.1.0"
+    "@signalbox/config": "npm:^0.1.0"
     "@signalbox/core": "npm:^0.1.0"
     "@signalbox/service-cli": "npm:^0.1.0"
     "@signalbox/shared-config": "npm:^0.1.0"
@@ -1150,6 +1169,7 @@ __metadata:
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@signalbox/commons": "npm:^0.1.0"
+    "@signalbox/config": "npm:^0.1.0"
     "@signalbox/core": "npm:^0.1.0"
     "@signalbox/ovh": "npm:^0.1.0"
     "@signalbox/service-cli": "npm:^0.1.0"
@@ -1204,6 +1224,7 @@ __metadata:
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/config": "npm:^0.1.0"
     "@signalbox/core": "npm:^0.1.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
@@ -3900,5 +3921,12 @@ __metadata:
   version: 0.1.0
   resolution: "yocto-queue@npm:0.1.0"
   checksum: 10c0/dceb44c28578b31641e13695d200d34ec4ab3966a5729814d5445b194933c096b7ced71494ce53a0e8820685d1d010df8b2422e5bf2cdea7e469d97ffbea306f
+  languageName: node
+  linkType: hard
+
+"zod@npm:^4.0.0":
+  version: 4.4.3
+  resolution: "zod@npm:4.4.3"
+  checksum: 10c0/7ea31b558e88f9faf44f31dd185e2e1cbf51fed3081787fb96cc2534749b50c0acfc6da7f0922a7353ed092dd358c7d50c28ea96c94d04af64191bd33152eca3
   languageName: node
   linkType: hard
