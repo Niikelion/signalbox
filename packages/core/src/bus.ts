@@ -1,3 +1,5 @@
+import { makeFlow, type Flow } from "./flow.js"
+
 export type EventMap = Record<string, unknown>
 
 export type Listener<TPayload> = (payload: TPayload) => void | Promise<void>
@@ -8,6 +10,7 @@ export interface ReadChannel<TEvents extends EventMap> {
     on<TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): Unsubscribe
     once<TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): Unsubscribe
     off<TKey extends keyof TEvents>(event: TKey, listener: Listener<TEvents[TKey]>): void
+    flow<TKey extends keyof TEvents>(event: TKey): Flow<TEvents[TKey]>
 }
 
 export interface Channel<TEvents extends EventMap> extends ReadChannel<TEvents> {
@@ -94,6 +97,12 @@ export const createBus = (options: BusOptions = {}): Bus => {
         return {
             on,
             off,
+            flow: (event) =>
+                makeFlow((emit) => {
+                    on(event, (payload) => {
+                        emit(payload)
+                    })
+                }),
             once: (event, listener) => {
                 const unsubscribe = on(event, (payload) => {
                     unsubscribe()

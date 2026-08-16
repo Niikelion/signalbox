@@ -1,7 +1,6 @@
-export { createPoll } from "./poll.js"
-export type { PollOptions, PollPhase } from "./poll.js"
+export { poll } from "./poll.js"
+export type { FlowTrigger, PollContext, PollOptions, PollPhase } from "./poll.js"
 
-export { createDedupe } from "./dedupe.js"
-export type { DedupeOptions } from "./dedupe.js"
+export { dedupe } from "./dedupe.js"
 
 export { isIPv4, publicIPv4 } from "./publicIp.js"

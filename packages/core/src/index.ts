@@ -1,6 +1,9 @@
 export { createBus } from "./bus.js"
 export type { Bus, BusOptions, Channel, EventMap, Listener, ReadChannel, Unsubscribe } from "./bus.js"
 
+export { makeFlow, merge } from "./flow.js"
+export type { Flow, FlowSink, Operator } from "./flow.js"
+
 export { FRAMEWORK_CHANNEL } from "./events.js"
 export type { FrameworkEvents, LogLevel } from "./events.js"
 
