@@ -1,16 +1,18 @@
 import { createApp, createWorkflowDefiner, type NoEvents, type PluginApis } from "@signalbox/core"
+import { httpPlugin } from "@signalbox/http"
 import { describe, expect, it } from "vitest"
 import { webhookPlugin, type WebhookRequest } from "../src/index.js"
 
-describe("webhook plugin", () => {
+describe("webhook plugin (mounted on shared http)", () => {
     it("routes requests to channel events, parses JSON, enforces secrets", async () => {
-        const port = 39187
+        const port = 39188
         const received: WebhookRequest[] = []
 
+        const http = httpPlugin({ port, host: "127.0.0.1" })
         const plugins = {
-            hook: webhookPlugin({
-                port,
-                host: "127.0.0.1",
+            http,
+            webhook: webhookPlugin({
+                http,
                 routes: {
                     chat: { path: "/chat" },
                     secure: { path: "/secure", secret: "sekret" },
@@ -25,7 +27,7 @@ describe("webhook plugin", () => {
             plugins,
             workflows: [
                 defineWorkflow("capture", (ctx) => {
-                    ctx.plugins.hook.events.flow("chat").run((request) => {
+                    ctx.plugins.webhook.events.flow("chat").run((request) => {
                         received.push(request)
                     })
                 }),
