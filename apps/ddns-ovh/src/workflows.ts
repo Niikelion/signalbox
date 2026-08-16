@@ -1,9 +1,7 @@
 import { dedupe, poll, publicIPv4 } from "@signalbox/commons"
-import { createWorkflowDefiner, merge, type NoEvents } from "@signalbox/core"
+import { merge } from "@signalbox/core"
 import type { DdnsOvhConfig } from "./config.js"
-import type { DdnsOvhPlugins } from "./plugins.js"
-
-const defineWorkflow = createWorkflowDefiner<NoEvents, DdnsOvhPlugins>()
+import { defineWorkflow } from "./defineWorkflow.js"
 
 type WanIpSource = "upnp" | "http" | "startup" | "reconnect"
 interface Observation {
