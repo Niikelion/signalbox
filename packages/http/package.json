@@ -32,7 +32,8 @@
     "dependencies": {
         "@hono/node-server": "^1.13.0",
         "@signalbox/core": "^0.1.0",
-        "hono": "^4.6.0"
+        "hono": "^4.6.0",
+        "zod": "^4.0.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",
