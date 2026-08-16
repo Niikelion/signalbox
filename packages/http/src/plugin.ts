@@ -3,58 +3,109 @@ import { definePlugin, type NoEvents, type PluginDefinition } from "@signalbox/c
 import { Hono } from "hono"
 import { z } from "zod"
 
+/** The request passed to a low-level {@link HttpHandler}. */
 export interface HttpContext {
+    /** The HTTP method. */
     method: string
+    /** The request path. */
     path: string
+    /** Parsed query-string parameters. */
     query: Record<string, string>
+    /** Request headers, lower-cased. */
     headers: Record<string, string>
+    /** Read the raw request body as text. */
     text: () => Promise<string>
 }
 
+/** The response a low-level {@link HttpHandler} returns. */
 export interface HttpResult {
+    /** HTTP status code. */
     status: number
+    /** Response body. */
     body?: string
+    /** Response headers. */
     headers?: Record<string, string>
 }
 
+/** A low-level request handler. */
 export type HttpHandler = (context: HttpContext) => HttpResult | Promise<HttpResult>
 
 type Input<T> = T extends z.ZodType ? z.infer<T> : undefined
 type Output<T> = T extends z.ZodType ? z.infer<T> : void
 
+/**
+ * A typed route declaration for {@link HttpMount.route}.
+ * @typeParam TReq the request-body schema, or `undefined` for none
+ * @typeParam TRes the response-body schema, or `undefined` for none
+ */
 export interface RouteSpec<TReq extends z.ZodType | undefined, TRes extends z.ZodType | undefined> {
+    /** HTTP method. */
     method: string
+    /** URL path. */
     path: string
+    /** Zod schema the request body is validated against (400 on failure). */
     request?: TReq
+    /** Zod schema documenting the response (used for OpenAPI). */
     response?: TRes
+    /** OpenAPI summary. */
     summary?: string
+    /** OpenAPI description. */
     description?: string
+    /** OpenAPI tags. */
     tags?: string[]
+    /**
+     * The handler; receives the validated request body.
+     * @param input the parsed request body (typed by `request`), or `undefined`
+     * @param context the raw request context
+     */
     handle: (input: Input<TReq>, context: HttpContext) => Output<TRes> | Promise<Output<TRes>>
 }
 
+/** The mount point other plugins use to add routes to the shared server. */
 export interface HttpMount {
+    /**
+     * Register a low-level handler for a method + path.
+     * @param method the HTTP method
+     * @param path the URL path
+     * @param handler the request handler
+     */
     handle: (method: string, path: string, handler: HttpHandler) => void
+    /**
+     * Register a typed, Zod-validated route (also feeds the OpenAPI spec).
+     * @typeParam TReq the request-body schema, or `undefined`
+     * @typeParam TRes the response-body schema, or `undefined`
+     * @param spec the route declaration
+     */
     route: <TReq extends z.ZodType | undefined = undefined, TRes extends z.ZodType | undefined = undefined>(
         spec: RouteSpec<TReq, TRes>,
     ) => void
 }
 
+/** The http surface exposed to workflows as `ctx.plugins.http`. */
 export interface HttpApi extends HttpMount {
+    /** The underlying Hono app, for advanced routing/middleware. */
     readonly hono: Hono
 }
 
+/** Options for serving an OpenAPI document. */
 export interface OpenApiOptions {
+    /** Path to serve the spec at, e.g. `"/openapi.json"`. */
     path: string
+    /** The OpenAPI `info` block. */
     info: { title: string; version: string; description?: string }
 }
 
+/** Options for {@link httpPlugin}. */
 export interface HttpOptions {
+    /** Port to listen on. */
     port: number
+    /** Host/interface to bind (default all interfaces). */
     host?: string
+    /** If set, serve an OpenAPI 3.1 document built from the routes' Zod schemas. */
     openapi?: OpenApiOptions
 }
 
+/** The plugin instance returned by {@link httpPlugin}; also usable as a mount point at construction. */
 export type HttpPlugin = PluginDefinition<HttpApi, NoEvents> & HttpApi
 
 interface RouteDescriptor {
@@ -112,6 +163,11 @@ const buildOpenApi = (info: OpenApiOptions["info"], routes: RouteDescriptor[]): 
     return { openapi: "3.1.0", info, paths }
 }
 
+/**
+ * Plugin owning one shared HTTP server (Hono). Other plugins mount routes on it via
+ * the {@link HttpMount} it exposes at construction, so everything shares one port.
+ * @param options port, host, and optional OpenAPI serving
+ */
 export const httpPlugin = (options: HttpOptions): HttpPlugin => {
     const hono = new Hono()
     const descriptors: RouteDescriptor[] = []

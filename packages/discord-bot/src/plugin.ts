@@ -2,30 +2,62 @@ import { definePlugin, type ReadChannel } from "@signalbox/core"
 import { Client, GatewayIntentBits, MessageFlags, REST, Routes } from "discord.js"
 import { toApplicationCommand, type CommandSpec } from "./commands.js"
 
+/** A slash-command invocation, emitted on the bot's channel as the `command` event. */
 export interface CommandEvent {
+    /** The command name (without the leading `/`). */
     command: string
+    /** The supplied option values, keyed by option name. */
     options: Record<string, string | number | boolean>
+    /** Discord user id of the invoker. */
     userId: string
+    /** Channel id the command was used in. */
     channelId: string
+    /**
+     * Reply to the invocation (ephemeral).
+     * @param content the reply text
+     */
     reply: (content: string) => Promise<void>
 }
 
+/** The bot's event map. */
 export type DiscordBotEvents = {
+    /** Emitted whenever a registered slash command is invoked. */
     command: CommandEvent
 }
 
+/** Options for {@link discordBotPlugin}. */
 export interface DiscordBotOptions {
+    /** The Discord bot token. */
     token: string
+    /** Register commands to this guild (instant) instead of globally (~1h propagation). */
     guildId?: string
+    /** Slash commands to register on startup. */
     commands?: CommandSpec[]
 }
 
+/** The bot surface exposed to workflows as `ctx.plugins.<name>`. */
 export interface DiscordBotApi {
+    /** Subscribe to slash-command invocations via `events.flow("command")`. */
     events: ReadChannel<DiscordBotEvents>
+    /**
+     * Send a message to a channel.
+     * @param channelId the target channel id
+     * @param content the message text
+     */
     send: (channelId: string, content: string) => Promise<void>
+    /**
+     * Direct-message a user.
+     * @param userId the target user id
+     * @param content the message text
+     */
     dm: (userId: string, content: string) => Promise<void>
 }
 
+/**
+ * Plugin running a Discord gateway bot (discord.js): registers slash commands, emits
+ * each invocation on its channel, and can send channel messages or DMs.
+ * @param options the bot token, optional target guild, and commands to register
+ */
 export const discordBotPlugin = (options: DiscordBotOptions) => {
     const client = new Client({ intents: [GatewayIntentBits.Guilds] })
 

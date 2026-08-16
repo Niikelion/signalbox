@@ -5,22 +5,59 @@ import { FlowKitError } from "@signalbox/core"
 // via a static import, so load it through require (which they leave alone).
 const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as typeof import("node:sqlite")
 
+/**
+ * A typed collection of JSON documents keyed by `id`, backed by one SQLite table.
+ * @typeParam T the document shape; must carry a string `id`
+ */
 export interface Collection<T extends { id: string }> {
+    /** Every document in the collection. */
     all: () => T[]
+    /**
+     * The document with `id`, or `undefined` if absent.
+     * @param id the document id
+     */
     get: (id: string) => T | undefined
+    /**
+     * Insert a new document; throws if `item.id` already exists.
+     * @param item the document to store
+     */
     insert: (item: T) => void
+    /**
+     * Insert `item`, or replace the existing document with the same id.
+     * @param item the document to store
+     */
     upsert: (item: T) => void
+    /**
+     * Merge `patch` into the existing document; throws if `id` is absent.
+     * @param id the document id
+     * @param patch fields to overwrite (the `id` itself cannot change)
+     */
     update: (id: string, patch: Partial<Omit<T, "id">>) => void
+    /**
+     * Remove the document `id` (a no-op if absent).
+     * @param id the document id
+     */
     delete: (id: string) => void
 }
 
+/** A persistent document store backed by a SQLite database file. */
 export interface Store {
+    /**
+     * Get, creating on first use, a typed collection by name.
+     * @typeParam T the document shape stored in the collection
+     * @param name the collection name; letters, digits, and underscores only
+     */
     collection: <T extends { id: string }>(name: string) => Collection<T>
+    /** Close the underlying database. */
     close: () => void
 }
 
 const VALID_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/
 
+/**
+ * Open (or create) a document store at `path`.
+ * @param path SQLite file path, or `":memory:"` for an ephemeral store
+ */
 export const createStore = (path: string): Store => {
     const db = new DatabaseSync(path)
     db.exec("PRAGMA journal_mode = WAL")

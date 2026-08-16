@@ -5,27 +5,57 @@ import { FlowKitError, isRoot } from "@signalbox/core"
 import type { z } from "zod"
 import { baseKind, isSecret } from "./introspect.js"
 
+/**
+ * The config object type for a schema.
+ * @typeParam TSchema the Zod object schema
+ */
 export type ConfigOf<TSchema extends z.ZodObject> = z.infer<TSchema>
 
+/**
+ * A read/write config store for one app's schema.
+ * @typeParam TSchema the Zod object schema
+ */
 export interface ConfigStore<TSchema extends z.ZodObject> {
+    /** Resolved config file path. */
     readonly path: string
+    /** The schema this store validates against. */
     readonly schema: TSchema
+    /** Whether the config file exists. */
     exists: () => boolean
+    /** Read and validate the full config; throws on missing/invalid values. */
     load: () => ConfigOf<TSchema>
+    /** Read the raw file without validation (may be partial). */
     readPartial: () => Partial<ConfigOf<TSchema>>
+    /** Write the given values to the file. */
     save: (values: Partial<ConfigOf<TSchema>>) => void
+    /** Coerce, validate, and set a single key from a raw CLI string. */
     set: (key: string, rawValue: string) => void
+    /** Remove a single key. */
     unset: (key: string) => void
+    /** Coerce a raw CLI string to the field's type (without saving). */
     coerce: (key: string, rawValue: string) => unknown
+    /** Return a copy of `values` with secret fields masked. */
     redacted: (values: Record<string, unknown>) => Record<string, unknown>
 }
 
+/**
+ * Options for {@link createConfigStore}.
+ * @typeParam TSchema the Zod object schema
+ */
 export interface ConfigStoreOptions<TSchema extends z.ZodObject> {
+    /** App name; drives the default config path and env override. */
     appName: string
+    /** The config schema (build it with `config()` / `field()`). */
     schema: TSchema
+    /** Explicit config file path (overrides the default resolution). */
     path?: string
 }
 
+/**
+ * Create a config store for an app.
+ * @typeParam TSchema the Zod object schema
+ * @param options app name, schema, and optional path
+ */
 export const createConfigStore = <TSchema extends z.ZodObject>(
     options: ConfigStoreOptions<TSchema>,
 ): ConfigStore<TSchema> => {
