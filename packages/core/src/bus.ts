@@ -2,6 +2,9 @@ import { makeFlow, type Flow } from "./flow.js"
 
 export type EventMap = Record<string, unknown>
 
+/** The empty event map, for apps whose workflows own no app-level events. */
+export type NoEvents = Record<string, never>
+
 export type Listener<TPayload> = (payload: TPayload) => void | Promise<void>
 
 export type Unsubscribe = () => void
