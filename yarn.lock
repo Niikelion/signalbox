@@ -1194,6 +1194,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@signalbox/discord@workspace:packages/discord":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/discord@workspace:packages/discord"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/shared-config": "npm:^0.1.0"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
+  languageName: unknown
+  linkType: soft
+
 "@signalbox/graph@npm:^0.1.0, @signalbox/graph@workspace:packages/graph":
   version: 0.0.0-use.local
   resolution: "@signalbox/graph@workspace:packages/graph"
