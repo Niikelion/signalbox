@@ -30,7 +30,7 @@ export const ddnsPipeline = (config: DdnsConfig) =>
         merge<Observation>(observed, polled)
             .apply(dedupe((observation) => observation.ip))
             .run(async ({ ip, source }) => {
-                ctx.log(`WAN IP ${ip} (via ${source})`)
+                ctx.log(`WAN IP changed to ${ip} (via ${source})`)
                 await ctx.plugins.cloudflare.update(ip)
             })
 
