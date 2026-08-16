@@ -93,7 +93,6 @@ export const config = <S extends Record<string, FieldOrZod>>(shape: S): z.ZodObj
         }
     }
     const object = z.object(zodShape)
-    // register against the schemas that actually live in the built object's shape
     const built = object.shape as Record<string, z.ZodType>
     for (const key of secretKeys) {
         const fieldSchema = built[key]

@@ -7,11 +7,8 @@ export interface DiscordMessage {
 }
 
 export interface DiscordOptions {
-    /** A Discord channel webhook URL. */
     webhookUrl: string
-    /** Default username override for messages that don't set one. */
     username?: string
-    /** Retries on HTTP 429 rate limits (default 3). */
     maxRetries?: number
 }
 

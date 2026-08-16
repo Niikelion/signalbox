@@ -10,11 +10,8 @@ export interface CronOptions {
 }
 
 export interface ScheduleApi {
-    /** Run `fn` once at `date`. */
     at: (date: Date, fn: () => void | Promise<void>) => ScheduleHandle
-    /** Run `fn` on a cron schedule (timezone-aware). */
     cron: (expression: string, options: CronOptions, fn: () => void | Promise<void>) => ScheduleHandle
-    /** The next run of a cron expression at/after `from` (default now), or null. */
     next: (expression: string, options?: CronOptions, from?: Date) => Date | null
 }
 

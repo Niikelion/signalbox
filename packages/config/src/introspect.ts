@@ -33,7 +33,6 @@ export const baseKind = (schema: z.ZodType): BaseKind => {
     }
 }
 
-/** A field the user must supply: neither optional nor carrying a default. */
 export const isRequired = (schema: z.ZodType): boolean => {
     const t = def(schema).type
     return t !== "optional" && t !== "default"

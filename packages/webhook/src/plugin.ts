@@ -11,14 +11,11 @@ export interface WebhookRequest {
 
 export interface RouteConfig {
     path: string
-    /** HTTP method to accept; defaults to POST. */
     method?: string
-    /** If set, requests must carry a matching `x-webhook-secret` header. */
     secret?: string
 }
 
 export interface WebhookOptions<TRoutes extends Record<string, RouteConfig>> {
-    /** The shared HTTP server to mount these routes on. */
     http: HttpMount
     routes: TRoutes
 }

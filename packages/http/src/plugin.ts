@@ -33,7 +33,6 @@ export interface RouteSpec<TReq extends z.ZodType | undefined, TRes extends z.Zo
     handle: (input: Input<TReq>, context: HttpContext) => Output<TRes> | Promise<Output<TRes>>
 }
 
-/** Passed to sub-plugins (e.g. webhook) so they can mount routes on the shared server. */
 export interface HttpMount {
     handle: (method: string, path: string, handler: HttpHandler) => void
     route: <TReq extends z.ZodType | undefined = undefined, TRes extends z.ZodType | undefined = undefined>(

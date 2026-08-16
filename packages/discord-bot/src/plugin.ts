@@ -16,7 +16,6 @@ export type DiscordBotEvents = {
 
 export interface DiscordBotOptions {
     token: string
-    /** Register commands to a single guild (instant) instead of globally (~1h propagation). */
     guildId?: string
     commands?: CommandSpec[]
 }
