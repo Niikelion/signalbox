@@ -1,9 +1,9 @@
 import { applyRecords } from "@signalbox/cloudflare"
 import { publicIPv4 } from "@signalbox/commons"
 import { write } from "@signalbox/core"
-import type { DdnsConfig } from "./config.js"
+import type { DdnsCfConfig } from "./config.js"
 
-export const runOnce = async (config: DdnsConfig): Promise<boolean> => {
+export const runOnce = async (config: DdnsCfConfig): Promise<boolean> => {
     const ip = await publicIPv4((message) => {
         write("warn", message)
     })

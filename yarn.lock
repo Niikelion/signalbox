@@ -1123,6 +1123,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@signalbox/ddns-cf@workspace:apps/ddns-cf":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/ddns-cf@workspace:apps/ddns-cf"
+  dependencies:
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/cloudflare": "npm:^0.1.0"
+    "@signalbox/commons": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/service-cli": "npm:^0.1.0"
+    "@signalbox/shared-config": "npm:^0.1.0"
+    "@signalbox/upnp": "npm:^0.1.0"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+  bin:
+    flowkit-ddns-cf: dist/cli.js
+  languageName: unknown
+  linkType: soft
+
 "@signalbox/ddns-ovh@workspace:apps/ddns-ovh":
   version: 0.0.0-use.local
   resolution: "@signalbox/ddns-ovh@workspace:apps/ddns-ovh"
@@ -1141,27 +1162,6 @@ __metadata:
     typescript: "npm:^5.9.3"
   bin:
     flowkit-ddns-ovh: dist/cli.js
-  languageName: unknown
-  linkType: soft
-
-"@signalbox/ddns@workspace:apps/ddns":
-  version: 0.0.0-use.local
-  resolution: "@signalbox/ddns@workspace:apps/ddns"
-  dependencies:
-    "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/cloudflare": "npm:^0.1.0"
-    "@signalbox/commons": "npm:^0.1.0"
-    "@signalbox/core": "npm:^0.1.0"
-    "@signalbox/service-cli": "npm:^0.1.0"
-    "@signalbox/shared-config": "npm:^0.1.0"
-    "@signalbox/upnp": "npm:^0.1.0"
-    "@types/node": "npm:^22.10.2"
-    eslint: "npm:^9.39.2"
-    prettier: "npm:^3.8.1"
-    tsdown: "npm:^0.15.7"
-    typescript: "npm:^5.9.3"
-  bin:
-    flowkit-ddns: dist/cli.js
   languageName: unknown
   linkType: soft
 

@@ -1,6 +1,6 @@
 import { createConfigStore, type ConfigOf } from "@signalbox/core"
 
-export const APP_NAME = "flowkit-ddns"
+export const APP_NAME = "flowkit-ddns-cf"
 
 export const configSchema = {
     apiToken: {
@@ -17,9 +17,9 @@ export const configSchema = {
     fallbackMinutes: { type: "int", description: "Safety-net re-check interval" },
 } as const satisfies Parameters<typeof createConfigStore>[0]["schema"]
 
-export type DdnsConfig = ConfigOf<typeof configSchema>
+export type DdnsCfConfig = ConfigOf<typeof configSchema>
 
-export const createDdnsConfigStore = (path?: string) =>
+export const createDdnsCfConfigStore = (path?: string) =>
     createConfigStore({
         appName: APP_NAME,
         schema: configSchema,

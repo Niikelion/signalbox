@@ -1,6 +1,6 @@
 import { dedupe, poll, publicIPv4 } from "@signalbox/commons"
 import { merge } from "@signalbox/core"
-import type { DdnsConfig } from "../config.js"
+import type { DdnsCfConfig } from "../config.js"
 import { defineWorkflow } from "../defineWorkflow.js"
 
 type WanIpSource = "upnp" | "http" | "startup" | "reconnect"
@@ -11,7 +11,7 @@ interface Observation {
 
 const phaseSource = { startup: "startup", interval: "http", retry: "reconnect" } as const
 
-export const ddnsPipeline = (config: DdnsConfig) =>
+export const ddnsCfPipeline = (config: DdnsCfConfig) =>
     defineWorkflow("ddns", (ctx) => {
         const observed = ctx.plugins.upnp.events
             .flow("external-ip")

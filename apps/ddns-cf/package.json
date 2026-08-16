@@ -1,12 +1,12 @@
 {
-    "name": "@signalbox/ddns",
+    "name": "@signalbox/ddns-cf",
     "version": "0.1.0",
     "private": true,
     "license": "MIT",
     "description": "Cloudflare dynamic DNS for home connections, driven by your router's UPnP events",
     "type": "module",
     "bin": {
-        "flowkit-ddns": "dist/cli.js"
+        "flowkit-ddns-cf": "dist/cli.js"
     },
     "files": [
         "/dist"
