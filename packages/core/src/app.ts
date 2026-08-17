@@ -6,22 +6,42 @@ import type { WorkflowContext, WorkflowDefinition } from "./workflow.js"
 
 const APP_CHANNEL = "app"
 
+/**
+ * Options for {@link createApp}.
+ * @typeParam TAppEvents the app's own event map
+ * @typeParam TPlugins the plugins record
+ */
 export interface AppOptions<TAppEvents extends EventMap, TPlugins extends Record<string, AnyPluginDefinition>> {
+    /** App name (used in cleanup error messages). */
     name: string
+    /** Plugins, keyed by the name workflows reach them by (`ctx.plugins.<key>`). */
     plugins: TPlugins
+    /** Workflows to wire. */
     workflows: WorkflowDefinition<TAppEvents, PluginApis<TPlugins>>[]
+    /** Attach the console logger (default true). */
     logging?: boolean
 }
 
+/** A composed application. */
 export interface App {
+    /** The app name. */
     readonly name: string
+    /** Init plugins, wire workflows, then resume the bus and fire start hooks. */
     start: () => Promise<void>
+    /** Run teardown callbacks (reverse order), detach the logger, and clear the bus. */
     stop: (reason?: string) => Promise<void>
+    /** Start, then block until SIGINT/SIGTERM, then stop. */
     run: () => Promise<void>
 }
 
 type ScopedContext = Pick<PluginContext<EventMap>, "log" | "fail" | "onStart" | "onStop" | "interval">
 
+/**
+ * Compose plugins and workflows into a runnable app.
+ * @typeParam TAppEvents the app's own event map
+ * @typeParam TPlugins the plugins record
+ * @param options the app name, plugins, and workflows
+ */
 export const createApp = <TAppEvents extends EventMap, TPlugins extends Record<string, AnyPluginDefinition>>(
     options: AppOptions<TAppEvents, TPlugins>,
 ): App => {
