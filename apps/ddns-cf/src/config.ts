@@ -14,6 +14,18 @@ export const configSchema = config({
     proxied: field().bool().default(false).describe("Route through Cloudflare's proxy (HTTP/HTTPS only)"),
     watchPort: field().int().positive().default(5959).describe("TCP port the UPnP NOTIFY callback listens on"),
     fallbackMinutes: field().int().positive().default(15).describe("Safety-net re-check interval"),
+
+    // Webhook proxy (VS chat -> Discord)
+    discordWebhookUrl: field()
+        .string()
+        .min(1)
+        .secret()
+        .describe("Discord channel webhook URL to forward cleaned chat to"),
+    httpPort: field().int().positive().default(8099).describe("Port the inbound webhook server listens on"),
+    webhookPath: field()
+        .string()
+        .default("/vs-chat")
+        .describe("Path the VS mod POSTs chat to; set to something unguessable"),
 })
 
 export type DdnsCfConfig = Infer<typeof configSchema>

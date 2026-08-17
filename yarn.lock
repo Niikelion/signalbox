@@ -1264,9 +1264,12 @@ __metadata:
     "@signalbox/commons": "npm:^0.1.0"
     "@signalbox/config": "npm:^0.1.0"
     "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/discord": "npm:^0.1.0"
+    "@signalbox/http": "npm:^0.1.0"
     "@signalbox/service-cli": "npm:^0.1.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@signalbox/upnp": "npm:^0.1.0"
+    "@signalbox/webhook": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
@@ -1320,7 +1323,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/discord@workspace:packages/discord":
+"@signalbox/discord@npm:^0.1.0, @signalbox/discord@workspace:packages/discord":
   version: 0.0.0-use.local
   resolution: "@signalbox/discord@workspace:packages/discord"
   dependencies:
@@ -1478,7 +1481,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/webhook@workspace:packages/webhook":
+"@signalbox/webhook@npm:^0.1.0, @signalbox/webhook@workspace:packages/webhook":
   version: 0.0.0-use.local
   resolution: "@signalbox/webhook@workspace:packages/webhook"
   dependencies:
