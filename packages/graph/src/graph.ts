@@ -7,48 +7,72 @@ import {
     type WorkflowDefinition,
 } from "@signalbox/core"
 
+/** A workflow described as data: a set of nodes joined by edges. */
 export interface WorkflowGraph {
+    /** Workflow name. */
     name: string
+    /** The nodes. */
     nodes: GraphNode[]
+    /** The edges connecting node outputs to inputs. */
     edges: GraphEdge[]
 }
 
+/** One node in a {@link WorkflowGraph}. */
 export interface GraphNode {
+    /** Unique node id (referenced by edges). */
     id: string
+    /** The registered node type. */
     type: string
+    /** The node's configuration. */
     config?: Record<string, unknown>
 }
 
+/** A directed edge from one node's output to another's input. */
 export interface GraphEdge {
     from: string
     to: string
 }
 
+/** The value type of a node config field. */
 export type ConfigFieldType = "string" | "number" | "boolean" | "array" | "object" | "any"
 
+/** A node config field's schema. */
 export interface ConfigField {
     type: ConfigFieldType
     required?: boolean
 }
 
+/** A node's config schema: field name → {@link ConfigField}. */
 export type NodeConfigSchema = Record<string, ConfigField>
 
+/** What a graph node receives at runtime. */
 export interface GraphNodeContext {
+    /** The app's plugin APIs. */
     plugins: Record<string, unknown>
+    /** Subscribe to an app event. */
     on: (event: string, listener: (payload: unknown) => void) => Unsubscribe
+    /** Emit an app event. */
     emit: (event: string, payload: unknown) => void
+    /** Log a message. */
     log: (message: string, level?: LogLevel) => void
+    /** Report an error. */
     fail: (error: unknown) => void
+    /** Register a teardown callback. */
     onStop: (cleanup: () => void | Promise<void>) => void
+    /** Run a handler on an interval. */
     interval: (ms: number, handler: () => void | Promise<void>) => void
+    /** Resolve a `{{ template }}` against an input value. */
     resolve: (template: unknown, input: unknown) => unknown
+    /** Recursively resolve templates in an object/array. */
     resolveDeep: (template: unknown, input: unknown) => unknown
 }
 
+/** A running trigger node: a source that pushes values downstream. */
 export interface TriggerInstance {
     start: (args: { config: Record<string, unknown>; ctx: GraphNodeContext; push: (value: unknown) => void }) => void
 }
 
+/** A registered trigger node type (a source). */
 export interface TriggerNodeType {
     type: string
     kind: "trigger"
@@ -56,24 +80,36 @@ export interface TriggerNodeType {
     create: () => TriggerInstance
 }
 
+/** An action may return this to end its branch (emit nothing downstream). */
 export const STOP: unique symbol = Symbol("flowkit.graph.stop")
 
 const FAN_OUT: unique symbol = Symbol("flowkit.graph.fanout")
 
+/** An action result that fans one flow out into several (see {@link fanOut}). */
 export interface FanOut {
     readonly [FAN_OUT]: true
     readonly values: readonly unknown[]
 }
 
+/**
+ * Wrap several values so an action fans out one flow per value.
+ * @param values the values to fan out
+ */
 export const fanOut = (values: readonly unknown[]): FanOut => ({ [FAN_OUT]: true, values })
 
+/**
+ * Whether a value is a {@link FanOut}.
+ * @param value the value to test
+ */
 export const isFanOut = (value: unknown): value is FanOut =>
     typeof value === "object" && value !== null && (value as Record<PropertyKey, unknown>)[FAN_OUT] === true
 
+/** A running action node: transforms an input into an output (or STOP/FanOut). */
 export interface ActionInstance {
     run: (args: { config: Record<string, unknown>; input: unknown; ctx: GraphNodeContext }) => unknown
 }
 
+/** A registered action node type (a transform/sink). */
 export interface ActionNodeType {
     type: string
     kind: "action"
@@ -81,14 +117,17 @@ export interface ActionNodeType {
     create: () => ActionInstance
 }
 
+/** Any registered node type. */
 export type NodeType = TriggerNodeType | ActionNodeType
 
+/** A registry of node types. */
 export interface NodeRegistry {
     register: (type: NodeType) => void
     get: (type: string) => NodeType | undefined
     list: () => string[]
 }
 
+/** Create an empty node registry. */
 export const createNodeRegistry = (): NodeRegistry => {
     const types = new Map<string, NodeType>()
     return {
@@ -100,8 +139,13 @@ export const createNodeRegistry = (): NodeRegistry => {
     }
 }
 
+/** The default registry that {@link registerNode} and {@link compileGraph} use. */
 export const defaultRegistry = createNodeRegistry()
 
+/**
+ * Register a node type on the default registry.
+ * @param type the node type
+ */
 export const registerNode = (type: NodeType): void => {
     defaultRegistry.register(type)
 }
@@ -122,9 +166,13 @@ const stringify = (value: unknown): string => {
     return JSON.stringify(value)
 }
 
+/** The scopes a `{{ … }}` template resolves against. */
 export interface ResolveScope {
+    /** The current input value (`$input`, `input.x`, or bare `x`). */
     input: unknown
+    /** Config values (`$config.x`). */
     config?: Record<string, unknown>
+    /** Secret values (`$secret.x`). */
     secret?: Record<string, unknown>
 }
 
@@ -135,6 +183,12 @@ const lookup = (path: string, scope: ResolveScope): unknown => {
     return getPath(scope.input, path.startsWith("input.") ? path.slice("input.".length) : path)
 }
 
+/**
+ * Resolve a `{{ path }}` template string against a scope. Non-strings pass through.
+ * A whole-string `{{ x }}` returns the raw value; interpolations are stringified.
+ * @param template the template (or any value)
+ * @param scope the input/config/secret scopes
+ */
 export const resolveTemplate = (template: unknown, scope: ResolveScope): unknown => {
     if (typeof template !== "string") return template
 
@@ -144,6 +198,11 @@ export const resolveTemplate = (template: unknown, scope: ResolveScope): unknown
     return template.replace(/\{\{\s*([\w.$]+)\s*\}\}/g, (_match, path: string) => stringify(lookup(path, scope)))
 }
 
+/**
+ * Recursively {@link resolveTemplate} every string in an object/array.
+ * @param template the value to resolve
+ * @param scope the input/config/secret scopes
+ */
 export const resolveDeep = (template: unknown, scope: ResolveScope): unknown => {
     if (typeof template === "string") return resolveTemplate(template, scope)
     if (Array.isArray(template)) return template.map((item) => resolveDeep(item, scope))
@@ -190,9 +249,13 @@ const validateConfig = (node: GraphNode, schema: NodeConfigSchema): void => {
     }
 }
 
+/** Options for {@link compileGraph}. */
 export interface CompileOptions {
+    /** Node registry to resolve types against (default: {@link defaultRegistry}). */
     registry?: NodeRegistry
+    /** Config values available to `{{ $config.x }}` templates. */
     config?: Record<string, unknown>
+    /** Secret values available to `{{ $secret.x }}` (masked in logs). */
     secrets?: Record<string, unknown>
 }
 
@@ -204,6 +267,13 @@ const makeRedactor = (secrets: Record<string, unknown>): ((message: string) => s
     return (message) => values.reduce((current, secret) => current.split(secret).join("***"), message)
 }
 
+/**
+ * Compile a {@link WorkflowGraph} into a {@link WorkflowDefinition} that runs on the bus.
+ * @typeParam TEvents the app's event map
+ * @typeParam TPlugins the app's plugin APIs
+ * @param graph the graph to compile
+ * @param options registry, config, and secrets
+ */
 export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Record<string, unknown>>(
     graph: WorkflowGraph,
     options: CompileOptions = {},

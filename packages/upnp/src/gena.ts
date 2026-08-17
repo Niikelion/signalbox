@@ -1,22 +1,38 @@
 import { createServer, request, type Server } from "node:http"
 import { isPublicIPv4 } from "./ip.js"
 
+/** A GENA event subscription. */
 export interface Subscription {
+    /** The subscription id (SID header). */
     sid: string
+    /** How long the subscription lasts, in seconds. */
     timeoutSeconds: number
 }
 
+/** Severity for the NOTIFY server's log callback. */
 export type NotifyLevel = "info" | "warn" | "error"
 
+/** Options for {@link createNotifyServer}. */
 export interface NotifyServerOptions {
+    /** Port the NOTIFY callback server listens on. */
     port: number
+    /** Whether a NOTIFY's SID matches the live subscription (spoof/stale guard). */
     isCurrentSid: (sid: string | undefined) => boolean
+    /** Called with each new routable external IPv4. */
     onExternalIp: (ip: string) => void
+    /** Optional log sink. */
     log?: (message: string, level?: NotifyLevel) => void
 }
 
 const header = (value: string | string[] | undefined): string | undefined => (Array.isArray(value) ? value[0] : value)
 
+/**
+ * Send a GENA SUBSCRIBE/UNSUBSCRIBE request.
+ * @param url the event-subscription URL
+ * @param headers request headers (CALLBACK/NT/TIMEOUT or SID)
+ * @param method SUBSCRIBE (default) or UNSUBSCRIBE
+ * @returns the resulting subscription (SID and timeout)
+ */
 export const gena = (
     url: string,
     headers: Record<string, string>,
@@ -56,6 +72,12 @@ export const gena = (
     })
 }
 
+/**
+ * Start the HTTP server that receives GENA NOTIFY callbacks, validating SID and SEQ
+ * and surfacing routable external-IP changes.
+ * @param options port, SID guard, IP callback, and optional logger
+ * @returns the listening server
+ */
 export const createNotifyServer = (options: NotifyServerOptions): Promise<Server> => {
     const log = options.log ?? ((): void => undefined)
     const lastSeq = new Map<string, number>()

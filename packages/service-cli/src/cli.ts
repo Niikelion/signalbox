@@ -4,17 +4,41 @@ import { describeOf, isRequired, isSecret, type ConfigOf, type ConfigStore, type
 import { FlowKitError, write } from "@signalbox/core"
 import { createServiceManager, type ServiceScope } from "./systemd.js"
 
+/** Something the `run` command can start — an app's `run()`. */
 export interface Runnable {
     run: () => Promise<void>
 }
 
+/**
+ * The descriptor a concrete app supplies to drive the shared service CLI.
+ * @typeParam TSchema the app's Zod config schema
+ */
 export interface ServiceApp<TSchema extends z.ZodObject> {
+    /** Binary/app name (config path, systemd unit, usage header). */
     appName: string
+    /** One-line summary shown in `--help`. */
     tagline: string
+    /** The config schema. */
     schema: TSchema
+    /**
+     * Build the config store.
+     * @param path optional explicit config path
+     */
     createStore: (path?: string) => ConfigStore<TSchema>
+    /**
+     * Build the runnable app from validated config (backs `run`).
+     * @param config the validated config
+     */
     createApp: (config: ConfigOf<TSchema>) => Runnable
+    /**
+     * Optional one-shot that applies state once and exits (backs `once`).
+     * @param config the validated config
+     */
     runOnce?: (config: ConfigOf<TSchema>) => Promise<unknown>
+    /**
+     * Optional inbound port to open from the gateway at `setup`.
+     * @param config the (possibly partial) config
+     */
     firewallPort?: (config: Partial<ConfigOf<TSchema>>) => number | undefined
 }
 
@@ -136,6 +160,12 @@ const configCommand = async <TSchema extends z.ZodObject>(
     }
 }
 
+/**
+ * Run the shared service CLI (config commands, systemd lifecycle, run/once) for one app.
+ * @typeParam TSchema the app's Zod config schema
+ * @param app the app descriptor
+ * @param argv the CLI arguments (without node/script)
+ */
 export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchema>, argv: string[]): Promise<void> => {
     const { values, positionals } = parseArgs({
         args: argv,
@@ -210,6 +240,11 @@ export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchem
     }
 }
 
+/**
+ * {@link runCli} over `process.argv`, with FlowKitError-aware error reporting and exit code.
+ * @typeParam TSchema the app's Zod config schema
+ * @param app the app descriptor
+ */
 export const runCliMain = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchema>): Promise<void> => {
     try {
         await runCli(app, process.argv.slice(2))

@@ -1,6 +1,7 @@
 import { registerNode, type TriggerNodeType } from "@signalbox/graph"
 import { createUpnpWatcher } from "./watch.js"
 
+/** Graph trigger node (`upnp.source`) that pushes `{ ip, source: "upnp" }` on each external-IP change. */
 export const upnpSourceNode: TriggerNodeType = {
     type: "upnp.source",
     kind: "trigger",
@@ -52,6 +53,7 @@ export const upnpSourceNode: TriggerNodeType = {
     }),
 }
 
+/** Register this package's graph nodes ({@link upnpSourceNode}) on the default registry. */
 export const registerUpnpNodes = (): void => {
     registerNode(upnpSourceNode)
 }

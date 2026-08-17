@@ -2,35 +2,60 @@ import type { Server } from "node:http"
 import { discoverGateway, sourceIpToward, type GatewayService } from "./discovery.js"
 import { createNotifyServer, gena } from "./gena.js"
 
+/** Severity for the watcher's log hook. */
 export type WatchLevel = "info" | "warn" | "error"
 
+/** Callbacks the watcher fires as UPnP state changes. */
 export interface UpnpWatcherHooks {
+    /** A new external IPv4 was observed. */
     onObserved: (ip: string) => void
+    /** Subscribed to the gateway's WAN connection service. */
     onSubscribed?: (info: { sid: string; eventUrl: string; serviceType: string }) => void
+    /** UPnP became unavailable. */
     onUnavailable?: (reason: string) => void
+    /** The gateway came back after being unreachable. */
     onReconnected?: (info: { downSeconds: number; attempts: number }) => void
+    /** Optional log sink. */
     log?: (message: string, level?: WatchLevel) => void
 }
 
+/** Options for {@link createUpnpWatcher}. */
 export interface UpnpWatcherOptions {
+    /** Port the GENA NOTIFY callback server listens on. */
     port: number
+    /** Maximum reconnect backoff, in seconds. */
     retrySeconds?: number
+    /** Minimum reconnect backoff, in seconds. */
     minRetrySeconds?: number
+    /** Clock injection (for tests). */
     now?: () => number
+    /** State-change callbacks. */
     hooks: UpnpWatcherHooks
 }
 
+/** A running UPnP watcher: subscribe/renew loop with reconnect handling. */
 export interface UpnpWatcher {
+    /** Start the NOTIFY callback server. */
     listen: () => Promise<void>
+    /** Discover the gateway and subscribe (with reconnect on failure). */
     connect: () => Promise<void>
+    /** Tear everything down. */
     stop: () => Promise<void>
+    /** The last observed external IPv4, or `null`. */
     current: () => string | null
+    /** Whether currently subscribed. */
     subscribed: () => boolean
+    /** The discovered gateway, or `null`. */
     gateway: () => GatewayService | null
 }
 
 const REQUESTED_TIMEOUT = "Second-1800"
 
+/**
+ * Create a UPnP watcher that discovers the gateway, subscribes to WAN external-IP
+ * events, renews the subscription, and reconnects with backoff.
+ * @param options callback port, backoff, and state-change hooks
+ */
 export const createUpnpWatcher = (options: UpnpWatcherOptions): UpnpWatcher => {
     const maxRetryMs = (options.retrySeconds ?? 600) * 1000
     const minRetryMs = Math.min((options.minRetrySeconds ?? 5) * 1000, maxRetryMs)

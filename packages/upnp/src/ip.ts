@@ -1,3 +1,8 @@
+/**
+ * Whether `value` is a routable public IPv4 address (rejects empty, `0.0.0.0`,
+ * private, CGNAT, loopback, link-local, and multicast/reserved ranges).
+ * @param value the string to test
+ */
 export const isPublicIPv4 = (value: string): boolean => {
     const match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(value.trim())
     if (!match) return false

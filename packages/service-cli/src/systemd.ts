@@ -4,25 +4,38 @@ import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { isRoot, FlowKitError, write } from "@signalbox/core"
 
+/** Whether a systemd unit is system-wide (root) or per-user (rootless). */
 export type ServiceScope = "system" | "user"
 
+/** Options for installing the service. */
 export interface SetupOptions {
     scope: ServiceScope
+    /** Path to the config file the unit points at. */
     configPath: string
+    /** Inbound port to open in the firewall, if any. */
     watchPort?: number
 }
 
+/** Options for removing the service. */
 export interface TeardownOptions {
     scope: ServiceScope
+    /** Also delete the config file. */
     purge: boolean
+    /** Path to the config file. */
     configPath: string
+    /** Firewall port to close, if any. */
     watchPort?: number
 }
 
+/** Manages an app's systemd unit lifecycle. */
 export interface ServiceManager {
+    /** Install and start the unit. */
     setupService: (options: SetupOptions) => void
+    /** Stop and remove the unit (optionally purge config). */
     teardownService: (options: TeardownOptions) => void
+    /** Start/stop/restart the unit. */
     controlService: (scope: ServiceScope, action: "start" | "stop" | "restart") => void
+    /** Return the unit's status output. */
     serviceStatus: (scope: ServiceScope) => string
 }
 
@@ -55,6 +68,10 @@ const cliEntry = (): string => {
     return realpathSync(argv1)
 }
 
+/**
+ * Create a systemd service manager for an app.
+ * @param appName the app/unit name
+ */
 export const createServiceManager = (appName: string): ServiceManager => {
     const configEnv = `${appName.toUpperCase().replace(/-/g, "_")}_CONFIG`
     const systemUnitPath = `/etc/systemd/system/${appName}.service`

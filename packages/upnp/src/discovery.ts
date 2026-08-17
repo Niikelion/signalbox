@@ -4,12 +4,20 @@ import { readFileSync } from "node:fs"
 const SSDP_ADDRESS = "239.255.255.250"
 const SSDP_PORT = 1900
 
+/** A discovered UPnP WAN-connection service on the LAN gateway. */
 export interface GatewayService {
+    /** The GENA event-subscription URL. */
     eventUrl: string
+    /** The UPnP service type (WANIPConnection or WANPPPConnection). */
     serviceType: string
+    /** The gateway's LAN IP. */
     host: string
 }
 
+/**
+ * The default gateway IP from the routing table (Linux only).
+ * @throws if `/proc/net/route` can't be read or no default route exists
+ */
 export const defaultGateway = (): string => {
     let table: string
     try {
@@ -29,6 +37,10 @@ export const defaultGateway = (): string => {
     throw new Error("no default gateway found")
 }
 
+/**
+ * The local source IP the OS would use to reach `host`.
+ * @param host the destination host
+ */
 export const sourceIpToward = (host: string): Promise<string> =>
     new Promise((resolve, reject) => {
         const socket = createSocket("udp4")
@@ -88,6 +100,10 @@ const ssdpSearch = (gateway: string, sourceIp: string, waitMs: number): Promise<
         })
     })
 
+/**
+ * Discover the LAN gateway's UPnP WAN-connection service via SSDP M-SEARCH.
+ * @throws if no gateway with a WAN connection service is found
+ */
 export const discoverGateway = async (): Promise<GatewayService> => {
     const gateway = defaultGateway()
     const sourceIp = await sourceIpToward(gateway)
