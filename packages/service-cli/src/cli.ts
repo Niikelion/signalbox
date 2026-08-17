@@ -1,10 +1,10 @@
 import { createInterface } from "node:readline/promises"
 import { parseArgs } from "node:util"
 import { describeOf, isRequired, isSecret, type ConfigOf, type ConfigStore, type z } from "@signalbox/config"
-import { FlowKitError, write } from "@signalbox/core"
+import { SignalboxError, write } from "@signalbox/core"
 import { createServiceManager, type ServiceScope } from "./systemd.js"
 
-/** Something the `run` command can start — an app's `run()`. */
+/** Something the `run` command can start â€” an app's `run()`. */
 export interface Runnable {
     run: () => Promise<void>
 }
@@ -93,7 +93,7 @@ const configCommand = async <TSchema extends z.ZodObject>(
 
     const requireKey = (value: string | undefined): string => {
         if (value && value in shape) return value
-        throw new FlowKitError(`unknown config key "${value ?? ""}"`, `known keys: ${Object.keys(shape).join(", ")}`)
+        throw new SignalboxError(`unknown config key "${value ?? ""}"`, `known keys: ${Object.keys(shape).join(", ")}`)
     }
 
     const [action, key, ...rest] = args
@@ -110,14 +110,14 @@ const configCommand = async <TSchema extends z.ZodObject>(
         }
 
         case "get": {
-            if (!key) throw new FlowKitError("config get needs a key")
+            if (!key) throw new SignalboxError("config get needs a key")
             const value = (store.readPartial() as Record<string, unknown>)[key]
             process.stdout.write(`${renderValue(value)}\n`)
             return
         }
 
         case "set": {
-            if (rest.length === 0) throw new FlowKitError("config set needs a key and a value")
+            if (rest.length === 0) throw new SignalboxError("config set needs a key and a value")
             const field = requireKey(key)
             store.set(field, rest.join(" "))
             write("info", `set ${field} in ${store.path}`)
@@ -153,7 +153,7 @@ const configCommand = async <TSchema extends z.ZodObject>(
         }
 
         default:
-            throw new FlowKitError(
+            throw new SignalboxError(
                 `unknown config command "${action ?? ""}"`,
                 "expected one of: init, list, get, set, unset, path",
             )
@@ -229,19 +229,19 @@ export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchem
 
         case "once": {
             if (!app.runOnce) {
-                throw new FlowKitError(`${app.appName} does not support the once command`)
+                throw new SignalboxError(`${app.appName} does not support the once command`)
             }
             await app.runOnce(store.load())
             return
         }
 
         default:
-            throw new FlowKitError(`unknown command "${command}"`, "run with --help to see the available commands")
+            throw new SignalboxError(`unknown command "${command}"`, "run with --help to see the available commands")
     }
 }
 
 /**
- * {@link runCli} over `process.argv`, with FlowKitError-aware error reporting and exit code.
+ * {@link runCli} over `process.argv`, with SignalboxError-aware error reporting and exit code.
  * @typeParam TSchema the app's Zod config schema
  * @param app the app descriptor
  */
@@ -249,7 +249,7 @@ export const runCliMain = async <TSchema extends z.ZodObject>(app: ServiceApp<TS
     try {
         await runCli(app, process.argv.slice(2))
     } catch (error) {
-        if (error instanceof FlowKitError) {
+        if (error instanceof SignalboxError) {
             write("error", error.message)
             if (error.hint) write("error", `hint: ${error.hint}`)
         } else {

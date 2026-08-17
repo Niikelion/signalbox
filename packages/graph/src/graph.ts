@@ -1,5 +1,5 @@
 import {
-    FlowKitError,
+    SignalboxError,
     toError,
     type EventMap,
     type LogLevel,
@@ -42,7 +42,7 @@ export interface ConfigField {
     required?: boolean
 }
 
-/** A node's config schema: field name → {@link ConfigField}. */
+/** A node's config schema: field name â†’ {@link ConfigField}. */
 export type NodeConfigSchema = Record<string, ConfigField>
 
 /** What a graph node receives at runtime. */
@@ -81,9 +81,9 @@ export interface TriggerNodeType {
 }
 
 /** An action may return this to end its branch (emit nothing downstream). */
-export const STOP: unique symbol = Symbol("flowkit.graph.stop")
+export const STOP: unique symbol = Symbol("signalbox.graph.stop")
 
-const FAN_OUT: unique symbol = Symbol("flowkit.graph.fanout")
+const FAN_OUT: unique symbol = Symbol("signalbox.graph.fanout")
 
 /** An action result that fans one flow out into several (see {@link fanOut}). */
 export interface FanOut {
@@ -166,7 +166,7 @@ const stringify = (value: unknown): string => {
     return JSON.stringify(value)
 }
 
-/** The scopes a `{{ … }}` template resolves against. */
+/** The scopes a `{{ â€¦ }}` template resolves against. */
 export interface ResolveScope {
     /** The current input value (`$input`, `input.x`, or bare `x`). */
     input: unknown
@@ -245,7 +245,7 @@ const validateConfig = (node: GraphNode, schema: NodeConfigSchema): void => {
     }
 
     if (problems.length > 0) {
-        throw new FlowKitError(`node "${node.id}" (${node.type}): ${problems.join(", ")}`)
+        throw new SignalboxError(`node "${node.id}" (${node.type}): ${problems.join(", ")}`)
     }
 }
 
@@ -287,7 +287,7 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
     for (const node of graph.nodes) {
         const type = registry.get(node.type)
         if (!type) {
-            throw new FlowKitError(
+            throw new SignalboxError(
                 `unknown node type "${node.type}" (node "${node.id}")`,
                 `registered types: ${registry.list().join(", ")}`,
             )
@@ -298,8 +298,8 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
 
     const downstream = new Map<string, string[]>()
     for (const edge of graph.edges) {
-        if (!nodeById.has(edge.from)) throw new FlowKitError(`edge from unknown node "${edge.from}"`)
-        if (!nodeById.has(edge.to)) throw new FlowKitError(`edge to unknown node "${edge.to}"`)
+        if (!nodeById.has(edge.from)) throw new SignalboxError(`edge from unknown node "${edge.from}"`)
+        if (!nodeById.has(edge.to)) throw new SignalboxError(`edge to unknown node "${edge.to}"`)
         downstream.set(edge.from, [...(downstream.get(edge.from) ?? []), edge.to])
     }
 
@@ -391,11 +391,11 @@ registerNode({
 
             const plugin = ctx.plugins[pluginName]
             if (plugin === null || typeof plugin !== "object") {
-                throw new FlowKitError(`plugin "${pluginName}" is not available`)
+                throw new SignalboxError(`plugin "${pluginName}" is not available`)
             }
             const method = (plugin as Record<string, unknown>)[methodName]
             if (typeof method !== "function") {
-                throw new FlowKitError(`"${pluginName}.${methodName}" is not a method`)
+                throw new SignalboxError(`"${pluginName}.${methodName}" is not a method`)
             }
 
             const rawArgs = Array.isArray(config["args"]) ? (config["args"] as unknown[]) : []

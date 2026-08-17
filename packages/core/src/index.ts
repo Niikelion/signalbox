@@ -7,7 +7,7 @@ export type { Flow, FlowSink, Operator } from "./flow.js"
 export { FRAMEWORK_CHANNEL } from "./events.js"
 export type { FrameworkEvents, LogLevel } from "./events.js"
 
-export { attachConsoleLogger, toError, FlowKitError, write } from "./log.js"
+export { attachConsoleLogger, toError, SignalboxError, write } from "./log.js"
 
 export { definePlugin } from "./plugin.js"
 export type { AnyPluginDefinition, Cleanup, PluginApis, PluginContext, PluginDefinition } from "./plugin.js"

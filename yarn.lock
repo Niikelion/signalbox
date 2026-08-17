@@ -2640,17 +2640,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"flowkit@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "flowkit@workspace:."
-  dependencies:
-    "@changesets/cli": "npm:^2.29.7"
-    tsdown: "npm:^0.15.7"
-    turbo: "npm:^2.8.20"
-    typescript: "npm:^5.9.3"
-  languageName: unknown
-  linkType: soft
-
 "fs-extra@npm:^7.0.1":
   version: 7.0.1
   resolution: "fs-extra@npm:7.0.1"
@@ -3687,6 +3676,17 @@ __metadata:
   checksum: 10c0/41602dce540e46d599edba9d9860193398d135f7ff72cab629db5171516cfae628d21e7bfccde1bbfdf11c48726bc2a6d1a8fb8701125852fbfda7cf19c6aa83
   languageName: node
   linkType: hard
+
+"signalbox@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "signalbox@workspace:."
+  dependencies:
+    "@changesets/cli": "npm:^2.29.7"
+    tsdown: "npm:^0.15.7"
+    turbo: "npm:^2.8.20"
+    typescript: "npm:^5.9.3"
+  languageName: unknown
+  linkType: soft
 
 "slash@npm:^3.0.0":
   version: 3.0.0

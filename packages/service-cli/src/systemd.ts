@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process"
 import { chownSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
-import { isRoot, FlowKitError, write } from "@signalbox/core"
+import { isRoot, SignalboxError, write } from "@signalbox/core"
 
 /** Whether a systemd unit is system-wide (root) or per-user (rootless). */
 export type ServiceScope = "system" | "user"
@@ -46,7 +46,7 @@ const run = (command: string, args: string[]): string => {
         return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
     } catch (error) {
         const detail = error instanceof Error ? error.message : String(error)
-        throw new FlowKitError(`${command} ${args.join(" ")} failed: ${detail}`)
+        throw new SignalboxError(`${command} ${args.join(" ")} failed: ${detail}`)
     }
 }
 
@@ -64,7 +64,7 @@ const ufwIsActive = (): boolean => (tryRun("ufw", ["status"]) ?? "").includes("S
 
 const cliEntry = (): string => {
     const argv1 = process.argv[1]
-    if (!argv1) throw new FlowKitError("cannot determine the path to this CLI")
+    if (!argv1) throw new SignalboxError("cannot determine the path to this CLI")
     return realpathSync(argv1)
 }
 
@@ -84,13 +84,13 @@ export const createServiceManager = (appName: string): ServiceManager => {
 
     const requireScopePrivileges = (scope: ServiceScope, action: string): void => {
         if (scope === "system" && !isRoot()) {
-            throw new FlowKitError(
+            throw new SignalboxError(
                 `${action} of a system service needs root`,
                 `either \`sudo ${appName} ${action}\`, or \`${appName} ${action} --user\` which needs no root at all`,
             )
         }
         if (scope === "user" && isRoot()) {
-            throw new FlowKitError(
+            throw new SignalboxError(
                 `${action} --user as root would install into root's home`,
                 `drop the sudo, or use \`sudo ${appName} ${action}\` for a system service`,
             )

@@ -2,7 +2,7 @@
     "name": "@signalbox/service-cli",
     "version": "0.1.0",
     "license": "MIT",
-    "description": "FlowKit service CLI: config-driven command line and systemd lifecycle management for a long-running app, with no domain logic baked in",
+    "description": "signalbox service CLI: config-driven command line and systemd lifecycle management for a long-running app, with no domain logic baked in",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/Niikelion/signalbox.git",

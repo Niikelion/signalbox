@@ -2,7 +2,7 @@
     "name": "@signalbox/ovh",
     "version": "0.1.0",
     "license": "MIT",
-    "description": "FlowKit plugin: keep an OVH DynHost record pointed at a changing address",
+    "description": "signalbox plugin: keep an OVH DynHost record pointed at a changing address",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/Niikelion/signalbox.git",

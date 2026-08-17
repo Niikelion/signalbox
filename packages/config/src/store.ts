@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
-import { FlowKitError, isRoot } from "@signalbox/core"
+import { SignalboxError, isRoot } from "@signalbox/core"
 import type { z } from "zod"
 import { baseKind, isSecret } from "./introspect.js"
 
@@ -65,7 +65,7 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
 
     const fieldOf = (key: string): z.ZodType => {
         const field = shape[key]
-        if (!field) throw new FlowKitError(`unknown config key "${key}"`, `known keys: ${keys.join(", ")}`)
+        if (!field) throw new SignalboxError(`unknown config key "${key}"`, `known keys: ${keys.join(", ")}`)
         return field
     }
 
@@ -95,11 +95,11 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
                     .filter(Boolean)
             case "number": {
                 const parsed = Number(rawValue)
-                if (!Number.isFinite(parsed)) throw new FlowKitError(`${key} must be a number`)
+                if (!Number.isFinite(parsed)) throw new SignalboxError(`${key} must be a number`)
                 return parsed
             }
             case "boolean": {
-                if (rawValue !== "true" && rawValue !== "false") throw new FlowKitError(`${key} must be true or false`)
+                if (rawValue !== "true" && rawValue !== "false") throw new SignalboxError(`${key} must be true or false`)
                 return rawValue === "true"
             }
             default:
@@ -112,7 +112,7 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
         try {
             return JSON.parse(readFileSync(path, "utf8")) as Partial<ConfigOf<TSchema>>
         } catch (error) {
-            throw new FlowKitError(`config at ${path} is not valid JSON: ${(error as Error).message}`)
+            throw new SignalboxError(`config at ${path} is not valid JSON: ${(error as Error).message}`)
         }
     }
 
@@ -124,12 +124,12 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
 
     const load = (): ConfigOf<TSchema> => {
         if (!existsSync(path)) {
-            throw new FlowKitError(`no config at ${path}`, `run \`${appName} config init\` to create one`)
+            throw new SignalboxError(`no config at ${path}`, `run \`${appName} config init\` to create one`)
         }
         const result = schema.safeParse(readPartial())
         if (!result.success) {
             const problems = result.error.issues.map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
-            throw new FlowKitError(`config at ${path} is invalid: ${problems.join("; ")}`)
+            throw new SignalboxError(`config at ${path} is invalid: ${problems.join("; ")}`)
         }
         return result.data
     }
@@ -147,7 +147,7 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
             const coerced = coerce(key, rawValue)
             const result = field.safeParse(coerced)
             if (!result.success) {
-                throw new FlowKitError(
+                throw new SignalboxError(
                     `invalid value for ${key}: ${result.error.issues.map((i) => i.message).join(", ")}`,
                 )
             }

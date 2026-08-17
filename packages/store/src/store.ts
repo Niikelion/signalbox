@@ -1,5 +1,5 @@
 import { createRequire } from "node:module"
-import { FlowKitError } from "@signalbox/core"
+import { SignalboxError } from "@signalbox/core"
 
 // node:sqlite is a recent builtin that some bundlers/test runners don't yet resolve
 // via a static import, so load it through require (which they leave alone).
@@ -66,7 +66,7 @@ export const createStore = (path: string): Store => {
 
     const build = <T extends { id: string }>(name: string): Collection<T> => {
         if (!VALID_NAME.test(name)) {
-            throw new FlowKitError(`invalid collection name "${name}"`, "use letters, digits, and underscores")
+            throw new SignalboxError(`invalid collection name "${name}"`, "use letters, digits, and underscores")
         }
         db.exec(`CREATE TABLE IF NOT EXISTS "${name}" (id TEXT PRIMARY KEY, data TEXT NOT NULL)`)
 
@@ -96,7 +96,7 @@ export const createStore = (path: string): Store => {
             },
             update: (id, patch) => {
                 const existing = get(id)
-                if (!existing) throw new FlowKitError(`no item "${id}" in "${name}"`)
+                if (!existing) throw new SignalboxError(`no item "${id}" in "${name}"`)
                 upsertStmt.run(id, JSON.stringify({ ...existing, ...patch, id }))
             },
             delete: (id) => {

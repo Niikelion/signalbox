@@ -1,4 +1,4 @@
-# FlowKit
+# signalbox
 
 An event-based application framework for Node, plus the app it was extracted from:
 Cloudflare dynamic DNS that reacts to your router instead of polling it.

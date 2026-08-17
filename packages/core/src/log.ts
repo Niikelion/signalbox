@@ -2,7 +2,7 @@ import type { ReadChannel } from "./bus.js"
 import type { FrameworkEvents, LogLevel } from "./events.js"
 
 /** An error carrying an optional user-facing hint (shown by the CLI). */
-export class FlowKitError extends Error {
+export class SignalboxError extends Error {
     /**
      * @param message the error message
      * @param hint an optional actionable hint
@@ -12,7 +12,7 @@ export class FlowKitError extends Error {
         readonly hint?: string,
     ) {
         super(message)
-        this.name = "FlowKitError"
+        this.name = "SignalboxError"
     }
 }
 

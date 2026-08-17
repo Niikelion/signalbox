@@ -2,7 +2,7 @@
     "name": "@signalbox/commons",
     "version": "0.1.0",
     "license": "MIT",
-    "description": "FlowKit commons: reusable polling and dedupe workflow building blocks",
+    "description": "signalbox commons: reusable polling and dedupe workflow building blocks",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/Niikelion/signalbox.git",

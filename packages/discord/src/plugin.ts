@@ -1,4 +1,4 @@
-import { definePlugin, FlowKitError, type NoEvents } from "@signalbox/core"
+import { definePlugin, SignalboxError, type NoEvents } from "@signalbox/core"
 
 /** A message to post to Discord. */
 export interface DiscordMessage {
@@ -64,7 +64,7 @@ export const discordPlugin = (options: DiscordOptions) =>
                         continue
                     }
 
-                    throw new FlowKitError(
+                    throw new SignalboxError(
                         `discord webhook failed: ${String(response.status)} ${await response.text()}`,
                     )
                 }
