@@ -3,6 +3,11 @@
     "version": "0.1.0",
     "license": "MIT",
     "description": "signalbox: a small persistent typed document store backed by node:sqlite",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Niikelion/signalbox.git",
+        "directory": "packages/store"
+    },
     "type": "module",
     "main": "dist/index.cjs",
     "module": "dist/index.js",

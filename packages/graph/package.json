@@ -3,6 +3,11 @@
     "version": "0.1.0",
     "license": "MIT",
     "description": "FlowKit workflows as data: a node registry and a compiler that turns a JSON graph into a workflow",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Niikelion/signalbox.git",
+        "directory": "packages/graph"
+    },
     "type": "module",
     "main": "dist/index.cjs",
     "module": "dist/index.js",

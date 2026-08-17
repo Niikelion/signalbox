@@ -3,6 +3,11 @@
     "version": "0.1.0",
     "license": "MIT",
     "description": "signalbox plugin: a Discord gateway bot (slash commands, send, DM) via discord.js",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Niikelion/signalbox.git",
+        "directory": "packages/discord-bot"
+    },
     "type": "module",
     "main": "dist/index.cjs",
     "module": "dist/index.js",

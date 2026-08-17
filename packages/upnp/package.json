@@ -3,6 +3,11 @@
     "version": "0.1.0",
     "license": "MIT",
     "description": "FlowKit plugin: push-based WAN address discovery via UPnP IGD event subscriptions",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Niikelion/signalbox.git",
+        "directory": "packages/upnp"
+    },
     "type": "module",
     "main": "dist/index.cjs",
     "module": "dist/index.js",

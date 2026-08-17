@@ -3,6 +3,11 @@
     "version": "0.1.0",
     "license": "MIT",
     "description": "signalbox plugin: schedule one-shot and cron jobs (timezone-aware, via Croner)",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Niikelion/signalbox.git",
+        "directory": "packages/schedule"
+    },
     "type": "module",
     "main": "dist/index.cjs",
     "module": "dist/index.js",
