@@ -1,22 +1,37 @@
 import { definePlugin, type ReadChannel } from "@signalbox/core"
 import { createARecord, findARecord, patchARecord, verifyZone, type CloudflareCredentials } from "./api.js"
 
+/** Events emitted by the Cloudflare plugin. */
 export type CloudflareEvents = {
+    /** A record was created or its content changed. */
     "dns:updated": { record: string; previous: string | null; current: string }
+    /** No record needed changing. */
     "dns:unchanged": { ip: string }
 }
 
+/** Options for {@link cloudflarePlugin} and {@link applyRecords}. */
 export interface CloudflareOptions extends CloudflareCredentials {
+    /** Hostnames (A records) to keep pointed at the IP. */
     records: string[]
+    /** TTL for records this tool creates. */
     ttl: number
+    /** Whether new records route through Cloudflare's proxy. */
     proxied: boolean
 }
 
+/** The outcome for a single record from {@link applyRecords}. */
 export type RecordOutcome =
     | { record: string; action: "created"; current: string }
     | { record: string; action: "updated"; previous: string; current: string }
     | { record: string; action: "unchanged"; current: string }
 
+/**
+ * Point every configured A record at `ip`, creating or patching as needed.
+ * @param options credentials, records, TTL, and proxied flag
+ * @param ip the target IPv4 address
+ * @param onRecord called with each record's outcome
+ * @returns whether anything changed
+ */
 export const applyRecords = async (
     options: CloudflareOptions,
     ip: string,
@@ -52,12 +67,27 @@ export const applyRecords = async (
     return changed
 }
 
+/** The Cloudflare surface exposed to workflows as `ctx.plugins.cloudflare`. */
 export interface CloudflareApi {
+    /** Subscribe to `dns:updated` / `dns:unchanged`. */
     events: ReadChannel<CloudflareEvents>
+    /**
+     * Point the configured records at `ip`.
+     * @param ip the target IPv4 address
+     * @returns whether anything changed
+     */
     update: (ip: string) => Promise<boolean>
+    /**
+     * Verify the zone credentials.
+     * @returns the zone name
+     */
     verify: () => Promise<{ name: string }>
 }
 
+/**
+ * Plugin that keeps Cloudflare A records pointed at the current address.
+ * @param options credentials and records
+ */
 export const cloudflarePlugin = (options: CloudflareOptions) =>
     definePlugin<CloudflareApi, CloudflareEvents>({
         name: "cloudflare",

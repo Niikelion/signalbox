@@ -2,16 +2,30 @@ const ENDPOINT = "https://www.ovh.com/nic/update"
 
 const USER_AGENT = "flowkit-ddns/0.1"
 
+/** OVH DynHost credentials. */
 export interface OvhDynHostCredentials {
+    /** DynHost username created in the OVH panel. */
     username: string
+    /** Password for that DynHost username. */
     password: string
 }
 
+/** The result of a DynHost update. */
 export interface DynHostUpdate {
+    /** Whether the record's address changed (`good` vs `nochg`). */
     changed: boolean
+    /** The address that was set. */
     ip: string
 }
 
+/**
+ * Point a DynHost record at an address over the dyndns2 protocol.
+ * @param credentials DynHost username and password
+ * @param hostname the DynHost hostname to update
+ * @param ip the target IPv4 address
+ * @returns whether the address changed
+ * @throws with a descriptive message on any dyndns2 error response
+ */
 export const updateDynHost = async (
     credentials: OvhDynHostCredentials,
     hostname: string,

@@ -1,26 +1,61 @@
 import { makeFlow, type Flow, type LogLevel } from "@signalbox/core"
 
+/** Which trigger produced a poll value. */
 export type PollPhase = "startup" | "interval" | "retry"
 
 type PollLog = (message: string, level?: LogLevel) => void
 
+/** The lifecycle and logging bits {@link poll} needs from a workflow context. */
 export interface PollContext {
+    /**
+     * Register a start callback.
+     * @param fn the callback
+     */
     onStart: (fn: () => void | Promise<void>) => void
+    /**
+     * Register a teardown callback.
+     * @param cleanup the teardown
+     */
     onStop: (cleanup: () => void | Promise<void>) => void
+    /**
+     * Run a handler on an interval.
+     * @param ms interval in milliseconds
+     * @param handler the handler
+     */
     interval: (ms: number, handler: () => void | Promise<void>) => void
+    /**
+     * Log a message.
+     * @param message the message
+     * @param level severity
+     */
     log: (message: string, level?: LogLevel) => void
 }
 
+/** Something that fires a callback — typically a {@link Flow}'s `run`. */
 export interface FlowTrigger {
+    /**
+     * Subscribe to the trigger.
+     * @param sink called on each fire
+     */
     run(sink: () => void | Promise<void>): void
 }
 
+/**
+ * Options for {@link poll}.
+ * @typeParam T the probed value type
+ */
 export interface PollOptions<T> {
+    /** The workflow context (lifecycle + logging). */
     ctx: PollContext
+    /** Interval between probes, in milliseconds. */
     every: number
+    /** Fetch the current value; receives a scoped logger. */
     probe: (log: PollLog) => Promise<T>
+    /** Probe once at startup (default true). */
     atStartup?: boolean
+    /** When this fires, re-probe with backoff. */
     retryOn?: FlowTrigger
+    /** Backoff delays in seconds for retries. Defaults to `[5, 15, 30, 60]`. */
     backoff?: readonly number[]
 }
 
@@ -29,6 +64,12 @@ const sleep = (ms: number): Promise<void> =>
         setTimeout(resolve, ms).unref()
     })
 
+/**
+ * A polling flow: probes at startup, on an interval, and on a retry trigger (with
+ * backoff), emitting `{ value, phase }` each time.
+ * @typeParam T the probed value type
+ * @param options the poll options
+ */
 export const poll = <T>(options: PollOptions<T>): Flow<{ value: T; phase: PollPhase }> =>
     makeFlow((emit) => {
         const { ctx } = options
