@@ -26,6 +26,12 @@ export interface Flow<T> {
      */
     map<U>(fn: (value: T) => U): Flow<U>
     /**
+     * Keep only values that pass the type guard, narrowing the value type.
+     * @typeParam S the narrowed type
+     * @param predicate the type guard
+     */
+    filter<S extends T>(predicate: (value: T) => value is S): Flow<S>
+    /**
      * Keep only values that pass the predicate.
      * @param predicate the test
      */
@@ -58,32 +64,36 @@ const settle = (result: void | Promise<void>): void => {
  * @typeParam T the value type
  * @param start wires the source to a downstream emit when the flow is run
  */
-export const makeFlow = <T>(start: Start<T>): Flow<T> => ({
-    map: (fn) =>
-        makeFlow((emit) => {
+export const makeFlow = <T>(start: Start<T>): Flow<T> => {
+    const flow = {
+        map: <U>(fn: (value: T) => U): Flow<U> =>
+            makeFlow((emit) => {
+                start((value) => {
+                    emit(fn(value))
+                })
+            }),
+        filter: (predicate: (value: T) => boolean): Flow<T> =>
+            makeFlow((emit) => {
+                start((value) => {
+                    if (predicate(value)) emit(value)
+                })
+            }),
+        apply: <U>(operator: Operator<T, U>): Flow<U> =>
+            makeFlow((emit) => {
+                const step = operator(emit)
+                start((value) => {
+                    settle(step(value))
+                })
+            }),
+        run: (sink: FlowSink<T>): void => {
             start((value) => {
-                emit(fn(value))
+                settle(sink(value))
             })
-        }),
-    filter: (predicate) =>
-        makeFlow((emit) => {
-            start((value) => {
-                if (predicate(value)) emit(value)
-            })
-        }),
-    apply: (operator) =>
-        makeFlow((emit) => {
-            const step = operator(emit)
-            start((value) => {
-                settle(step(value))
-            })
-        }),
-    run: (sink) => {
-        start((value) => {
-            settle(sink(value))
-        })
-    },
-})
+        },
+    }
+    // `filter`'s implementation is one function serving both overloads; the cast bridges it.
+    return flow as Flow<T>
+}
 
 /**
  * Merge several flows into one, interleaving all their values.

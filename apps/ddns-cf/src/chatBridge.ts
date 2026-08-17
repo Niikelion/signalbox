@@ -14,18 +14,17 @@ const clean = (content: string): string =>
         .replace(LEADING_PREFIX, "")
         .trim()
 
-const toMessage = (body: unknown): WebhookExecute => {
+const parse = (body: unknown): WebhookExecute | null => {
     const b = body as Partial<WebhookExecute>
-    return {
-        username: typeof b.username === "string" ? b.username : undefined,
-        content: typeof b.content === "string" ? clean(b.content) : "",
-    }
+    return typeof b.content === "string" ? { content: b.content, username: b.username } : null
 }
 
 export const chatBridge = defineWorkflow("chat-bridge", (ctx) => {
     ctx.plugins.webhook.events
         .flow("vs-chat")
-        .map((request) => toMessage(request.body))
+        .map((request) => parse(request.body))
+        .filter((payload): payload is WebhookExecute => payload !== null)
+        .map((payload) => ({ username: payload.username, content: clean(payload.content) }))
         .filter(({ content }) => content.length > 0)
         .run(({ content, username }) => ctx.plugins.discord.send({ content, username }))
 })
