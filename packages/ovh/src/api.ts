@@ -1,6 +1,6 @@
 const ENDPOINT = "https://www.ovh.com/nic/update"
 
-const USER_AGENT = "flowkit-ddns/0.1"
+const USER_AGENT = "signalbox-ddns/0.1"
 
 /** OVH DynHost credentials. */
 export interface OvhDynHostCredentials {

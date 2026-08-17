@@ -6,7 +6,7 @@
     "description": "Cloudflare dynamic DNS for home connections, driven by your router's UPnP events",
     "type": "module",
     "bin": {
-        "flowkit-ddns-cf": "dist/cli.js"
+        "signalbox-ddns-cf": "dist/cli.js"
     },
     "files": [
         "/dist"

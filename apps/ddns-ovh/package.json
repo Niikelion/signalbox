@@ -6,7 +6,7 @@
     "description": "OVH DynHost dynamic DNS for home connections, driven by your router's UPnP events",
     "type": "module",
     "bin": {
-        "flowkit-ddns-ovh": "dist/cli.js"
+        "signalbox-ddns-ovh": "dist/cli.js"
     },
     "files": [
         "/dist"

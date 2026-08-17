@@ -1,6 +1,6 @@
 import { config, createConfigStore, field, type Infer } from "@signalbox/config"
 
-export const APP_NAME = "flowkit-ddns-cf"
+export const APP_NAME = "signalbox-ddns-cf"
 
 export const configSchema = config({
     apiToken: field()

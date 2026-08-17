@@ -1276,7 +1276,7 @@ __metadata:
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
   bin:
-    flowkit-ddns-cf: dist/cli.js
+    signalbox-ddns-cf: dist/cli.js
   languageName: unknown
   linkType: soft
 
@@ -1301,7 +1301,7 @@ __metadata:
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
   bin:
-    flowkit-ddns-ovh: dist/cli.js
+    signalbox-ddns-ovh: dist/cli.js
   languageName: unknown
   linkType: soft
 

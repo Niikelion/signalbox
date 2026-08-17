@@ -39,7 +39,7 @@ export interface ServiceManager {
     serviceStatus: (scope: ServiceScope) => string
 }
 
-const SERVICE_USER = "flowkit"
+const SERVICE_USER = "signalbox"
 
 const run = (command: string, args: string[]): string => {
     try {
@@ -116,7 +116,7 @@ PrivateTmp=yes
 `
 
         return `[Unit]
-Description=FlowKit dynamic DNS (UPnP push)
+Description=signalbox dynamic DNS (UPnP push)
 After=network-online.target
 Wants=network-online.target
 
