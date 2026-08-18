@@ -7,8 +7,6 @@
 
 <h1 align="center">signalbox</h1>
 
-<p align="center"><em>One typed bus. Everything reacts.</em></p>
-
 An event-based application framework for Node. An app is two lists — **plugins** that
 produce events and expose APIs, and **workflows** that react to them — wired together by a
 single typed bus and a strict start/stop lifecycle.
