@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/graph",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "license": "MIT",
     "description": "signalbox workflows as data: a node registry and a compiler that turns a JSON graph into a workflow",
     "repository": {
@@ -33,7 +33,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.1.0"
+        "@signalbox/core": "^0.2.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

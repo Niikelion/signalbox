@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/config",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "license": "MIT",
     "description": "Zod-based config schema and store for signalbox apps",
     "repository": {
@@ -35,7 +35,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.1.0",
+        "@signalbox/core": "^0.2.0",
         "zod": "^4.0.0"
     },
     "devDependencies": {

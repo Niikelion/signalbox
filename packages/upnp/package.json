@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/upnp",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "license": "MIT",
     "description": "signalbox plugin: push-based WAN address discovery via UPnP IGD event subscriptions",
     "repository": {
@@ -35,8 +35,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.1.0",
-        "@signalbox/graph": "^0.1.0"
+        "@signalbox/core": "^0.2.0",
+        "@signalbox/graph": "^0.2.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

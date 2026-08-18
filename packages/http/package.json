@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/http",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "license": "MIT",
     "description": "signalbox plugin: one shared HTTP server (Hono) that other plugins mount routes on",
     "repository": {
@@ -36,7 +36,7 @@
     },
     "dependencies": {
         "@hono/node-server": "^1.13.0",
-        "@signalbox/core": "^0.1.0",
+        "@signalbox/core": "^0.2.0",
         "hono": "^4.6.0",
         "zod": "^4.0.0"
     },

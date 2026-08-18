@@ -1189,14 +1189,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@signalbox/cloudflare@npm:^0.1.0, @signalbox/cloudflare@workspace:packages/cloudflare":
+"@signalbox/cloudflare@npm:^0.2.0, @signalbox/cloudflare@workspace:packages/cloudflare":
   version: 0.0.0-use.local
   resolution: "@signalbox/cloudflare@workspace:packages/cloudflare"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
-    "@signalbox/graph": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/graph": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1206,13 +1206,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/commons@npm:^0.1.0, @signalbox/commons@workspace:packages/commons":
+"@signalbox/commons@npm:^0.2.0, @signalbox/commons@workspace:packages/commons":
   version: 0.0.0-use.local
   resolution: "@signalbox/commons@workspace:packages/commons"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1222,13 +1222,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/config@npm:^0.1.0, @signalbox/config@workspace:packages/config":
+"@signalbox/config@npm:^0.2.0, @signalbox/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@signalbox/config@workspace:packages/config"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1240,7 +1240,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/core@npm:^0.1.0, @signalbox/core@workspace:packages/core":
+"@signalbox/core@npm:^0.2.0, @signalbox/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@signalbox/core@workspace:packages/core"
   dependencies:
@@ -1260,16 +1260,16 @@ __metadata:
   resolution: "@signalbox/ddns-cf@workspace:apps/ddns-cf"
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/cloudflare": "npm:^0.1.0"
-    "@signalbox/commons": "npm:^0.1.0"
-    "@signalbox/config": "npm:^0.1.0"
-    "@signalbox/core": "npm:^0.1.0"
-    "@signalbox/discord": "npm:^0.1.0"
-    "@signalbox/http": "npm:^0.1.0"
-    "@signalbox/service-cli": "npm:^0.1.0"
+    "@signalbox/cloudflare": "npm:^0.2.0"
+    "@signalbox/commons": "npm:^0.2.0"
+    "@signalbox/config": "npm:^0.2.0"
+    "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/discord": "npm:^0.2.0"
+    "@signalbox/http": "npm:^0.2.0"
+    "@signalbox/service-cli": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
-    "@signalbox/upnp": "npm:^0.1.0"
-    "@signalbox/webhook": "npm:^0.1.0"
+    "@signalbox/upnp": "npm:^0.2.0"
+    "@signalbox/webhook": "npm:^0.2.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
@@ -1285,16 +1285,16 @@ __metadata:
   resolution: "@signalbox/ddns-ovh@workspace:apps/ddns-ovh"
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/commons": "npm:^0.1.0"
-    "@signalbox/config": "npm:^0.1.0"
-    "@signalbox/core": "npm:^0.1.0"
-    "@signalbox/discord-bot": "npm:^0.1.0"
-    "@signalbox/ovh": "npm:^0.1.0"
-    "@signalbox/schedule": "npm:^0.1.0"
-    "@signalbox/service-cli": "npm:^0.1.0"
+    "@signalbox/commons": "npm:^0.2.0"
+    "@signalbox/config": "npm:^0.2.0"
+    "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/discord-bot": "npm:^0.2.0"
+    "@signalbox/ovh": "npm:^0.2.0"
+    "@signalbox/schedule": "npm:^0.2.0"
+    "@signalbox/service-cli": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
-    "@signalbox/store": "npm:^0.1.0"
-    "@signalbox/upnp": "npm:^0.1.0"
+    "@signalbox/store": "npm:^0.2.0"
+    "@signalbox/upnp": "npm:^0.2.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
@@ -1305,13 +1305,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/discord-bot@npm:^0.1.0, @signalbox/discord-bot@workspace:packages/discord-bot":
+"@signalbox/discord-bot@npm:^0.2.0, @signalbox/discord-bot@workspace:packages/discord-bot":
   version: 0.0.0-use.local
   resolution: "@signalbox/discord-bot@workspace:packages/discord-bot"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     discord.js: "npm:^14.16.0"
@@ -1323,13 +1323,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/discord@npm:^0.1.0, @signalbox/discord@workspace:packages/discord":
+"@signalbox/discord@npm:^0.2.0, @signalbox/discord@workspace:packages/discord":
   version: 0.0.0-use.local
   resolution: "@signalbox/discord@workspace:packages/discord"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1340,13 +1340,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/graph@npm:^0.1.0, @signalbox/graph@workspace:packages/graph":
+"@signalbox/graph@npm:^0.2.0, @signalbox/graph@workspace:packages/graph":
   version: 0.0.0-use.local
   resolution: "@signalbox/graph@workspace:packages/graph"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1356,14 +1356,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/http@npm:^0.1.0, @signalbox/http@workspace:packages/http":
+"@signalbox/http@npm:^0.2.0, @signalbox/http@workspace:packages/http":
   version: 0.0.0-use.local
   resolution: "@signalbox/http@workspace:packages/http"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@hono/node-server": "npm:^1.13.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1376,14 +1376,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/ovh@npm:^0.1.0, @signalbox/ovh@workspace:packages/ovh":
+"@signalbox/ovh@npm:^0.2.0, @signalbox/ovh@workspace:packages/ovh":
   version: 0.0.0-use.local
   resolution: "@signalbox/ovh@workspace:packages/ovh"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
-    "@signalbox/graph": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/graph": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1393,13 +1393,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/schedule@npm:^0.1.0, @signalbox/schedule@workspace:packages/schedule":
+"@signalbox/schedule@npm:^0.2.0, @signalbox/schedule@workspace:packages/schedule":
   version: 0.0.0-use.local
   resolution: "@signalbox/schedule@workspace:packages/schedule"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     croner: "npm:^9.0.0"
@@ -1411,14 +1411,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/service-cli@npm:^0.1.0, @signalbox/service-cli@workspace:packages/service-cli":
+"@signalbox/service-cli@npm:^0.2.0, @signalbox/service-cli@workspace:packages/service-cli":
   version: 0.0.0-use.local
   resolution: "@signalbox/service-cli@workspace:packages/service-cli"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/config": "npm:^0.1.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/config": "npm:^0.2.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1446,13 +1446,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/store@npm:^0.1.0, @signalbox/store@workspace:packages/store":
+"@signalbox/store@npm:^0.2.0, @signalbox/store@workspace:packages/store":
   version: 0.0.0-use.local
   resolution: "@signalbox/store@workspace:packages/store"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1463,14 +1463,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/upnp@npm:^0.1.0, @signalbox/upnp@workspace:packages/upnp":
+"@signalbox/upnp@npm:^0.2.0, @signalbox/upnp@workspace:packages/upnp":
   version: 0.0.0-use.local
   resolution: "@signalbox/upnp@workspace:packages/upnp"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
-    "@signalbox/graph": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/graph": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1481,14 +1481,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/webhook@npm:^0.1.0, @signalbox/webhook@workspace:packages/webhook":
+"@signalbox/webhook@npm:^0.2.0, @signalbox/webhook@workspace:packages/webhook":
   version: 0.0.0-use.local
   resolution: "@signalbox/webhook@workspace:packages/webhook"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.1.0"
-    "@signalbox/http": "npm:^0.1.0"
+    "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/http": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"

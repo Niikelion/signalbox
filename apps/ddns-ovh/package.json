@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/ddns-ovh",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "private": true,
     "license": "MIT",
     "description": "OVH DynHost dynamic DNS for home connections, driven by your router's UPnP events",
@@ -22,15 +22,15 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/commons": "^0.1.0",
-        "@signalbox/config": "^0.1.0",
-        "@signalbox/core": "^0.1.0",
-        "@signalbox/discord-bot": "^0.1.0",
-        "@signalbox/ovh": "^0.1.0",
-        "@signalbox/schedule": "^0.1.0",
-        "@signalbox/service-cli": "^0.1.0",
-        "@signalbox/store": "^0.1.0",
-        "@signalbox/upnp": "^0.1.0"
+        "@signalbox/commons": "^0.2.0",
+        "@signalbox/config": "^0.2.0",
+        "@signalbox/core": "^0.2.0",
+        "@signalbox/discord-bot": "^0.2.0",
+        "@signalbox/ovh": "^0.2.0",
+        "@signalbox/schedule": "^0.2.0",
+        "@signalbox/service-cli": "^0.2.0",
+        "@signalbox/store": "^0.2.0",
+        "@signalbox/upnp": "^0.2.0"
     },
     "devDependencies": {
         "@gamedev-sensei/ts-config": "^2.1.0",
