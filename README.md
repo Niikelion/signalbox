@@ -1,4 +1,13 @@
-# signalbox
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img alt="signalbox" src="assets/logo-light.svg" width="96" height="96">
+  </picture>
+</p>
+
+<h1 align="center">signalbox</h1>
+
+<p align="center"><em>One typed bus. Everything reacts.</em></p>
 
 An event-based application framework for Node. An app is two lists — **plugins** that
 produce events and expose APIs, and **workflows** that react to them — wired together by a
