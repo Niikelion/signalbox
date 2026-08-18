@@ -21,7 +21,7 @@ import { createApp, createWorkflowDefiner, type PluginApis } from "@signalbox/co
 type MyEvents = { "job:done": { id: string } }
 
 const plugins = {
-    // each plugin's setup return becomes ctx.plugins[name]
+    // each plugin's init return becomes ctx.plugins[name]
 }
 
 const defineWorkflow = createWorkflowDefiner<MyEvents, PluginApis<typeof plugins>>()

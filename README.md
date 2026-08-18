@@ -5,11 +5,10 @@
   </picture>
 </p>
 
-<h1 align="center">signalbox</h1>
-
-An event-based application framework for Node. An app is two lists — **plugins** that
-produce events and expose APIs, and **workflows** that react to them — wired together by a
-single typed bus and a strict start/stop lifecycle.
+An event-based application framework for Node. You compose an app from **plugins** — which
+bridge the outside world to the bus in both directions — and **workflows** — which react to
+events and emit their own. One typed bus carries everything between them; a strict lifecycle
+brings them up in order and tears them down in reverse.
 
 ```ts
 import { createApp, createWorkflowDefiner, type PluginApis } from "@signalbox/core"
@@ -17,7 +16,7 @@ import { createApp, createWorkflowDefiner, type PluginApis } from "@signalbox/co
 type MyEvents = { "job:done": { id: string } }
 
 const plugins = {
-    // each plugin's setup return becomes ctx.plugins[name]
+    // each plugin's init return becomes ctx.plugins[name]
 }
 
 const defineWorkflow = createWorkflowDefiner<MyEvents, PluginApis<typeof plugins>>()
@@ -34,11 +33,11 @@ const worker = defineWorkflow("worker", (ctx) => {
 await createApp({ name: "my-app", plugins, workflows: [worker] }).run()
 ```
 
-**Plugins** run first, in declaration order, and whatever `init` returns becomes
-`ctx.plugins[name]`. **Workflows** run second and get those APIs, the app channel
-`ctx.app`, and lifecycle hooks. Everything registered via `onStop` or `interval` is torn
-down in reverse order, so a workflow can never outlive a plugin it depends on. `run()`
-blocks until `SIGINT`/`SIGTERM`, then stops cleanly.
+Plugins start first, in declaration order, and whatever a plugin's `init` returns becomes
+`ctx.plugins[name]` for workflows to call. Workflows start next, reacting on the app channel
+`ctx.app` and driving those plugin APIs. Anything a workflow registers with `onStop` or
+`interval` is cleaned up in reverse order, so it can never outlive a plugin it depends on.
+`run()` blocks until `SIGINT`/`SIGTERM`, then shuts everything down cleanly.
 
 > Event maps must be `type` aliases, not `interface`s — an interface has no implicit index
 > signature and won't satisfy the `EventMap` constraint.
