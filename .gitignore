@@ -17,4 +17,4 @@ yarn-error.log
 .idea/
 
 # Working docs / roadmap (not part of the published repo)
-docs/
+.notes/
