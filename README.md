@@ -5,39 +5,44 @@
   </picture>
 </p>
 
-An event-based application framework for Node. You compose an app from **plugins** — which
-bridge the outside world to the bus in both directions — and **workflows** — which react to
-events and emit their own. One typed bus carries everything between them; a strict lifecycle
-brings them up in order and tears them down in reverse.
+An event-based application framework for Node. It lets you easily build workflows — from
+one-liners to complex pipelines — and all of that on top of handy plugins. Ideal for
+bolting missing features onto a pre-built system, wiring one API to another, or surfacing
+your alerts and configuration in Slack or Discord.
 
 ```ts
-import { createApp, createWorkflowDefiner, type PluginApis } from "@signalbox/core"
-
-type MyEvents = { "job:done": { id: string } }
+import { createApp, createWorkflowDefiner, merge, type NoEvents, type PluginApis } from "@signalbox/core"
+import { poll, dedupe, publicIPv4 } from "@signalbox/commons"
+import { upnpPlugin } from "@signalbox/upnp"
+import { cloudflarePlugin } from "@signalbox/cloudflare"
 
 const plugins = {
-    // each plugin's init return becomes ctx.plugins[name]
+    upnp: upnpPlugin({ port: 5959 }),
+    cloudflare: cloudflarePlugin({ apiToken, zoneId, records: ["home.example.com"] }),
 }
 
-const defineWorkflow = createWorkflowDefiner<MyEvents, PluginApis<typeof plugins>>()
+const defineWorkflow = createWorkflowDefiner<NoEvents, PluginApis<typeof plugins>>()
 
-const worker = defineWorkflow("worker", (ctx) => {
-    ctx.onStart(() => {
-        ctx.app.emit("job:done", { id: "1" })
-    })
-    ctx.app.flow("job:done").run(({ id }) => {
-        ctx.log(`done ${id}`)
-    })
+const ddns = defineWorkflow("ddns", ctx => {
+    const pushed = ctx.plugins.upnp.events.flow("external-ip").map(({ ip }) => ip)
+    const polled = poll({ ctx, every: 15 * 60 * 1000, probe: publicIPv4 }).map(({ value }) => value)
+
+    merge(pushed, polled)
+        .apply(dedupe())
+        .run(async ip => {
+            if (await ctx.plugins.cloudflare.update(ip)) ctx.log(`updated records to ${ip}`)
+        })
 })
 
-await createApp({ name: "my-app", plugins, workflows: [worker] }).run()
+await createApp({ name: "ddns", plugins, workflows: [ddns] }).run()
 ```
 
-Plugins start first, in declaration order, and whatever a plugin's `init` returns becomes
-`ctx.plugins[name]` for workflows to call. Workflows start next, reacting on the app channel
-`ctx.app` and driving those plugin APIs. Anything a workflow registers with `onStop` or
-`interval` is cleaned up in reverse order, so it can never outlive a plugin it depends on.
-`run()` blocks until `SIGINT`/`SIGTERM`, then shuts everything down cleanly.
+Plugins start first, in declaration order; whatever a plugin's `init` returns becomes
+`ctx.plugins[name]`. Workflows start next and operate over those APIs, reacting to plugin
+events (`ctx.plugins.<name>.events`) and the app's own (`ctx.app`). Anything a workflow
+registers with `onStop` or `interval` is cleaned up in reverse order, so it can never
+outlive a plugin it depends on. `run()` blocks until `SIGINT`/`SIGTERM`, then shuts
+everything down cleanly.
 
 > Event maps must be `type` aliases, not `interface`s — an interface has no implicit index
 > signature and won't satisfy the `EventMap` constraint.
