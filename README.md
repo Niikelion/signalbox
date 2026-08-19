@@ -37,34 +37,33 @@ const ddns = defineWorkflow("ddns", ctx => {
 await createApp({ name: "ddns", plugins, workflows: [ddns] }).run()
 ```
 
-Plugins start first, in declaration order; whatever a plugin's `init` returns becomes
-`ctx.plugins[name]`. Workflows start next and operate over those APIs, reacting to plugin
-events (`ctx.plugins.<name>.events`) and the app's own (`ctx.app`). Anything a workflow
-registers with `onStop` or `interval` is cleaned up in reverse order, so it can never
-outlive a plugin it depends on. `run()` blocks until `SIGINT`/`SIGTERM`, then shuts
-everything down cleanly.
-
-> Event maps must be `type` aliases, not `interface`s — an interface has no implicit index
-> signature and won't satisfy the `EventMap` constraint.
-
 ## Packages
+
+The framework and its supporting libraries.
 
 | package | what it does |
 | --- | --- |
 | [`@signalbox/core`](packages/core) | the framework: typed event bus, plugins, workflows, lifecycle, `Flow` streams |
 | [`@signalbox/config`](packages/config) | Zod-based config schema (`field()` builder, secrets) and a file-backed store |
-| [`@signalbox/store`](packages/store) | a small persistent typed document store backed by `node:sqlite` |
-| [`@signalbox/schedule`](packages/schedule) | one-shot and cron jobs, timezone-aware, via Croner |
+| [`@signalbox/commons`](packages/commons) | reusable workflow blocks: polling, de-duplication, public-IP discovery |
+| [`@signalbox/graph`](packages/graph) | workflows as data: a node registry and a JSON-graph compiler |
+| [`@signalbox/service-cli`](packages/service-cli) | a config-driven CLI and systemd lifecycle manager for a long-running app |
+
+## Integrations
+
+Plugins that wrap an external capability, exposing it as events and an API.
+
+| plugin | what it does |
+| --- | --- |
 | [`@signalbox/http`](packages/http) | one shared HTTP server (Hono) that other plugins mount routes on |
 | [`@signalbox/webhook`](packages/webhook) | receive inbound HTTP webhooks and emit them as events |
 | [`@signalbox/discord`](packages/discord) | send messages to Discord via a channel webhook |
 | [`@signalbox/discord-bot`](packages/discord-bot) | a Discord gateway bot (slash commands, send, DM) via discord.js |
-| [`@signalbox/commons`](packages/commons) | reusable workflow blocks: polling, de-duplication, public-IP discovery |
-| [`@signalbox/upnp`](packages/upnp) | push-based WAN address discovery via UPnP IGD event subscriptions |
 | [`@signalbox/cloudflare`](packages/cloudflare) | keep Cloudflare DNS A records pointed at a changing address |
 | [`@signalbox/ovh`](packages/ovh) | keep an OVH DynHost record pointed at a changing address |
-| [`@signalbox/graph`](packages/graph) | workflows as data: a node registry and a JSON-graph compiler |
-| [`@signalbox/service-cli`](packages/service-cli) | a config-driven CLI and systemd lifecycle manager for a long-running app |
+| [`@signalbox/upnp`](packages/upnp) | push-based WAN address discovery via UPnP IGD event subscriptions |
+| [`@signalbox/schedule`](packages/schedule) | one-shot and cron jobs, timezone-aware, via Croner |
+| [`@signalbox/store`](packages/store) | a small persistent typed document store backed by `node:sqlite` |
 
 Each package has its own README with a usage example. Libraries ship ESM + CJS with
 `attw` checks; the CLI is ESM only.
