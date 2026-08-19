@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
-    <img alt="signalbox" src="assets/logo-light.svg" width="96" height="96">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-lockup-dark.svg">
+    <img alt="signalbox" src="assets/logo-lockup-light.svg" width="280">
   </picture>
 </p>
 
