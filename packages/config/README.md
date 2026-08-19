@@ -2,7 +2,7 @@
 
 Zod-based config schema and store for signalbox apps: a fluent `field()` builder, secret marking, and a file-backed store with sensible path resolution.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

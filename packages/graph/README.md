@@ -2,7 +2,7 @@
 
 signalbox workflows as data: a node registry and a compiler that turns a JSON graph into a runnable workflow.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

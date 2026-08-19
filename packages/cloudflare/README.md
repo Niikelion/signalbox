@@ -2,7 +2,7 @@
 
 signalbox plugin: keep Cloudflare DNS A records pointed at a changing address.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

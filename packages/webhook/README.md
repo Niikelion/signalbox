@@ -2,7 +2,7 @@
 
 signalbox plugin: receive inbound HTTP webhooks and emit them as events. Mounts on the shared `@signalbox/http` server.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

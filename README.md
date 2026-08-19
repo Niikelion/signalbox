@@ -37,6 +37,8 @@ const ddns = defineWorkflow("ddns", ctx => {
 await createApp({ name: "ddns", plugins, workflows: [ddns] }).run()
 ```
 
+Read the [documentation](docs/index.md) for the concepts (apps, plugins, workflows, events, flow, config) and guides.
+
 ## Packages
 
 The framework and its supporting libraries.

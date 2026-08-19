@@ -34,7 +34,7 @@ const standup = defineWorkflow("standup", ctx => {
 await createApp({ name: "standup-bot", plugins, workflows: [standup] }).run()
 ```
 
-A plugin gives you a capability (`schedule`), another delivers output (`discord`), and the workflow wires them together — nine to five, Monday to Friday.
+A plugin gives you a capability (`schedule`), another delivers output (`discord`), and the workflow wires them together.
 
 ## Next
 

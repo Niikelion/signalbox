@@ -2,7 +2,7 @@
 
 A small persistent typed document store for signalbox, backed by `node:sqlite`.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

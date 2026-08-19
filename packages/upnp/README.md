@@ -2,7 +2,7 @@
 
 signalbox plugin: push-based WAN address discovery via UPnP IGD event subscriptions.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

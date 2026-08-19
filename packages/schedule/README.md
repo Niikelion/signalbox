@@ -2,7 +2,7 @@
 
 signalbox plugin: schedule one-shot and cron jobs, timezone-aware, via [Croner](https://github.com/hexagon/croner).
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

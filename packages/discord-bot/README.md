@@ -2,7 +2,7 @@
 
 signalbox plugin: a Discord gateway bot (slash commands, send, DM) via [discord.js](https://discord.js.org).
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 A config-driven command line and systemd lifecycle manager for a long-running signalbox app — with no domain logic baked in.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

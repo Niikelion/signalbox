@@ -2,7 +2,7 @@
 
 signalbox plugin: one shared HTTP server ([Hono](https://hono.dev) + `@hono/node-server`) that other plugins and workflows mount routes on.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 

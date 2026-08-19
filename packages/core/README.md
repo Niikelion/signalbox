@@ -2,7 +2,7 @@
 
 Event-based application framework for Node: a typed event bus, plugins, workflows, lifecycle, and config wiring.
 
-Part of [signalbox](https://github.com/Niikelion/signalbox).
+Part of [signalbox](https://github.com/Niikelion/signalbox) — see the [full documentation](https://github.com/Niikelion/signalbox/tree/master/docs).
 
 ## Install
 
