@@ -1,0 +1,65 @@
+name: Publish Packages to npmjs
+on:
+    workflow_dispatch:
+permissions:
+    id-token: write
+    contents: write
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        environment: Production
+        permissions:
+            contents: write
+            id-token: write
+        steps:
+            -   name: Enable Corepack
+                run: corepack enable
+            -   uses: actions/checkout@v6
+            -   name: Use Node.js 24.x
+                uses: actions/setup-node@v6
+                with:
+                    node-version: '24.x'
+                    registry-url: 'https://registry.npmjs.org'
+            -   name: Install dependencies
+                run: yarn install --immutable
+            -   name: Build packages
+                run: yarn build
+            -   name: Find packages to publish
+                run: |
+                    PKGS=""
+                    for PKG_DIR in packages/*/; do
+                        PKG_JSON="${PKG_DIR}package.json"
+                        [ -f "$PKG_JSON" ] || continue
+                        [ "$(jq -r '.private // false' "$PKG_JSON")" = "true" ] && continue
+                        NAME=$(jq -r .name "$PKG_JSON")
+                        VERSION=$(jq -r .version "$PKG_JSON")
+                        if ! npm show "$NAME@$VERSION" version > /dev/null 2>&1; then
+                            PKGS="$PKGS $PKG_DIR"
+                        fi
+                    done
+                    echo "PKGS_TO_RELEASE=$PKGS" >> $GITHUB_ENV
+            -   name: Publish to npm
+                run: yarn changeset publish
+                env:
+                    NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+                    NPM_CONFIG_PROVENANCE: true
+            -   name: Push tags
+                run: git push --tags
+            -   name: Create GitHub Releases
+                env:
+                    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                run: |
+                    for PKG_DIR in $PKGS_TO_RELEASE; do
+                        PKG_JSON="${PKG_DIR}package.json"
+                        NAME=$(jq -r .name "$PKG_JSON")
+                        VERSION=$(jq -r .version "$PKG_JSON")
+                        TAG="${NAME}@${VERSION}"
+                        NOTES_FILE=$(mktemp)
+                        CHANGELOG="${PKG_DIR}CHANGELOG.md"
+                        [ -f "$CHANGELOG" ] && \
+                            awk '/^## /{if(found) exit; found=1} found{print}' "$CHANGELOG" > "$NOTES_FILE"
+                        gh release create "$TAG" \
+                            --title "Release $TAG" \
+                            --notes-file "$NOTES_FILE"
+                        rm -f "$NOTES_FILE"
+                    done

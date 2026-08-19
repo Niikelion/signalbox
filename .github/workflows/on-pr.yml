@@ -1,0 +1,90 @@
+name: PR checks
+on: [ pull_request ]
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            -   name: Enable Corepack
+                run: corepack enable
+            -   uses: actions/checkout@v6
+            -   name: Use Node.js 24.x
+                uses: actions/setup-node@v6
+                with:
+                    node-version: '24.x'
+                    cache: 'yarn'
+            -   name: Install dependencies
+                run: yarn install --immutable
+            -   name: Build packages
+                run: yarn build
+            -   name: Save build artifacts
+                uses: actions/cache/save@v5
+                with:
+                    path: |
+                        packages/*/dist
+                        apps/*/dist
+                    key: build-${{ github.sha }}
+    lint:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            -   name: Enable Corepack
+                run: corepack enable
+            -   uses: actions/checkout@v6
+            -   name: Restore build artifacts
+                uses: actions/cache/restore@v5
+                with:
+                    path: |
+                        packages/*/dist
+                        apps/*/dist
+                    key: build-${{ github.sha }}
+            -   name: Use Node.js 24.x
+                uses: actions/setup-node@v6
+                with:
+                    node-version: '24.x'
+                    cache: 'yarn'
+            -   name: Install dependencies
+                run: yarn install --immutable
+            -   name: Lint packages
+                run: yarn lint
+    test:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            -   name: Enable Corepack
+                run: corepack enable
+            -   uses: actions/checkout@v6
+            -   name: Restore build artifacts
+                uses: actions/cache/restore@v5
+                with:
+                    path: |
+                        packages/*/dist
+                        apps/*/dist
+                    key: build-${{ github.sha }}
+            -   name: Use Node.js 24.x
+                uses: actions/setup-node@v6
+                with:
+                    node-version: '24.x'
+                    cache: 'yarn'
+            -   name: Install dependencies
+                run: yarn install --immutable
+            -   name: Run tests
+                run: yarn turbo test
+    changeset:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Check for changeset
+                run: |
+                    count=$(find .changeset -maxdepth 1 -name "*.md" ! -name "README.md" | wc -l)
+                    if [ "$count" -eq 0 ]; then
+                        echo "No changeset found. Add one with 'yarn changeset' (or an empty changeset for changes that don't affect published packages)."
+                        exit 1
+                    fi
