@@ -26,8 +26,8 @@ describe("webhook plugin (mounted on shared http)", () => {
             logging: false,
             plugins,
             workflows: [
-                defineWorkflow("capture", (ctx) => {
-                    ctx.plugins.webhook.events.flow("chat").run((request) => {
+                defineWorkflow("capture", ctx => {
+                    ctx.plugins.webhook.events.flow("chat").run(request => {
                         received.push(request)
                     })
                 }),

@@ -173,7 +173,7 @@ export const httpPlugin = (options: HttpOptions): HttpPlugin => {
     const descriptors: RouteDescriptor[] = []
 
     const handle: HttpMount["handle"] = (method, path, handler) => {
-        hono.on(method.toUpperCase(), path, async (c) => {
+        hono.on(method.toUpperCase(), path, async c => {
             const result = await handler({
                 method: c.req.method,
                 path: c.req.path,
@@ -185,7 +185,7 @@ export const httpPlugin = (options: HttpOptions): HttpPlugin => {
         })
     }
 
-    const route: HttpMount["route"] = (spec) => {
+    const route: HttpMount["route"] = spec => {
         descriptors.push({
             method: spec.method,
             path: spec.path,
@@ -196,7 +196,7 @@ export const httpPlugin = (options: HttpOptions): HttpPlugin => {
             tags: spec.tags,
         })
 
-        handle(spec.method, spec.path, async (context) => {
+        handle(spec.method, spec.path, async context => {
             let input: unknown
             if (spec.request) {
                 const raw = await context.text()
@@ -229,21 +229,21 @@ export const httpPlugin = (options: HttpOptions): HttpPlugin => {
     const definition = definePlugin<HttpApi, NoEvents>({
         name: "http",
         init: () => ({ hono, handle, route }),
-        setup: (ctx) =>
+        setup: ctx =>
             new Promise<void>((resolve, reject) => {
                 if (options.openapi) {
                     const doc = JSON.stringify(buildOpenApi(options.openapi.info, descriptors))
                     handle("GET", options.openapi.path, () => ({ status: 200, body: doc, headers: jsonHeaders() }))
                 }
 
-                const server = serve({ fetch: hono.fetch, port: options.port, hostname: options.host }, (info) => {
+                const server = serve({ fetch: hono.fetch, port: options.port, hostname: options.host }, info => {
                     ctx.log(`listening on ${options.host ?? info.address}:${String(info.port)}`)
                     resolve()
                 })
                 server.on("error", reject)
                 ctx.onStop(
                     () =>
-                        new Promise<void>((done) => {
+                        new Promise<void>(done => {
                             server.close(() => {
                                 done()
                             })

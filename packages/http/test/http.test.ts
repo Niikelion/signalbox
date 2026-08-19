@@ -15,7 +15,7 @@ describe("http plugin", () => {
             logging: false,
             plugins,
             workflows: [
-                defineWorkflow("routes", (ctx) => {
+                defineWorkflow("routes", ctx => {
                     ctx.plugins.http.handle("GET", "/ping", () => ({
                         status: 200,
                         body: JSON.stringify({ ok: true }),
@@ -52,14 +52,14 @@ describe("http plugin", () => {
             logging: false,
             plugins,
             workflows: [
-                defineWorkflow("routes", (ctx) => {
+                defineWorkflow("routes", ctx => {
                     ctx.plugins.http.route({
                         method: "POST",
                         path: "/echo",
                         summary: "Greet someone",
                         request: z.object({ name: z.string() }),
                         response: z.object({ greeting: z.string() }),
-                        handle: (input) => ({ greeting: `hi ${input.name}` }),
+                        handle: input => ({ greeting: `hi ${input.name}` }),
                     })
                 }),
             ],

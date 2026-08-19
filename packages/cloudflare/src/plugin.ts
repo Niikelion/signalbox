@@ -91,11 +91,11 @@ export interface CloudflareApi {
 export const cloudflarePlugin = (options: CloudflareOptions) =>
     definePlugin<CloudflareApi, CloudflareEvents>({
         name: "cloudflare",
-        init: (ctx) => ({
+        init: ctx => ({
             events: ctx.channel,
             verify: () => verifyZone(options),
             update: async (ip: string) => {
-                const changed = await applyRecords(options, ip, (outcome) => {
+                const changed = await applyRecords(options, ip, outcome => {
                     if (outcome.action === "unchanged") return
                     ctx.channel.emit("dns:updated", {
                         record: outcome.record,

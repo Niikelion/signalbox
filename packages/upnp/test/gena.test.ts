@@ -13,13 +13,10 @@ const body = (ip: string): string =>
 /** POST a NOTIFY at the callback server exactly as a router would. */
 const notify = (port: number, headers: Record<string, string>, payload: string): Promise<number> =>
     new Promise((resolve, reject) => {
-        const req = request(
-            { method: "NOTIFY", hostname: "127.0.0.1", port, path: "/", headers },
-            (res) => {
-                res.resume()
-                res.on("end", () => resolve(res.statusCode ?? 0))
-            },
-        )
+        const req = request({ method: "NOTIFY", hostname: "127.0.0.1", port, path: "/", headers }, res => {
+            res.resume()
+            res.on("end", () => resolve(res.statusCode ?? 0))
+        })
         req.once("error", reject)
         req.end(payload)
     })
@@ -28,7 +25,7 @@ describe("createNotifyServer", () => {
     let server: Server | undefined
 
     afterEach(async () => {
-        if (server) await new Promise<void>((resolve) => server?.close(() => resolve()))
+        if (server) await new Promise<void>(resolve => server?.close(() => resolve()))
         server = undefined
     })
 
@@ -37,8 +34,8 @@ describe("createNotifyServer", () => {
         const warnings: string[] = []
         server = await createNotifyServer({
             port: 0, // let the OS pick a free port
-            isCurrentSid: (sid) => sid === LIVE_SID,
-            onExternalIp: (ip) => observed.push(ip),
+            isCurrentSid: sid => sid === LIVE_SID,
+            onExternalIp: ip => observed.push(ip),
             log: (message, level) => {
                 if (level === "warn") warnings.push(message)
             },
@@ -58,7 +55,7 @@ describe("createNotifyServer", () => {
         const { port, observed, warnings } = await start()
         await notify(port, { SID: "uuid:someone-else", SEQ: "0" }, body("203.0.113.7"))
         expect(observed).toEqual([])
-        expect(warnings.some((w) => w.includes("unknown SID"))).toBe(true)
+        expect(warnings.some(w => w.includes("unknown SID"))).toBe(true)
     })
 
     it("ignores a NOTIFY with no SID at all", async () => {
@@ -71,7 +68,7 @@ describe("createNotifyServer", () => {
         const { port, observed, warnings } = await start()
         await notify(port, { SID: LIVE_SID, SEQ: "0" }, body("0.0.0.0"))
         expect(observed).toEqual([])
-        expect(warnings.some((w) => w.includes("non-routable"))).toBe(true)
+        expect(warnings.some(w => w.includes("non-routable"))).toBe(true)
     })
 
     it("drops an out-of-order SEQ so a stale address cannot win", async () => {

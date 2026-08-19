@@ -25,20 +25,20 @@ await runCliMain({
     appName: "my-service",
     tagline: "does the thing",
     schema,
-    createStore: (path) => createConfigStore({ appName: "my-service", schema, ...(path ? { path } : {}) }),
-    createApp: (config) => createMyApp(config), // returns something with run()
+    createStore: path => createConfigStore({ appName: "my-service", schema, ...(path ? { path } : {}) }),
+    createApp: config => createMyApp(config), // returns something with run()
 })
 ```
 
 That gives you:
 
-| command | does |
-| --- | --- |
-| `config init \| list \| get \| set \| unset \| path` | manage the config file |
-| `setup` / `teardown [--purge]` | install or remove the systemd service |
-| `start \| stop \| restart \| status` | control it |
-| `run` | run in the foreground (what systemd calls) |
-| `once` | apply state a single time and exit (if `runOnce` is provided) |
+| command                                              | does                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------- |
+| `config init \| list \| get \| set \| unset \| path` | manage the config file                                        |
+| `setup` / `teardown [--purge]`                       | install or remove the systemd service                         |
+| `start \| stop \| restart \| status`                 | control it                                                    |
+| `run`                                                | run in the foreground (what systemd calls)                    |
+| `once`                                               | apply state a single time and exit (if `runOnce` is provided) |
 
 The service runs as a dedicated system user under systemd hardening, not as root. Config lives at `/etc/<appName>/config.json` as root, otherwise `~/.config/<appName>/config.json`, written `0640` when it holds secrets. Use `createServiceManager` directly for programmatic control.
 

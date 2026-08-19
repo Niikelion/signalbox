@@ -184,8 +184,8 @@ export const createUpnpWatcher = (options: UpnpWatcherOptions): UpnpWatcher => {
             if (server) return
             server = await createNotifyServer({
                 port: options.port,
-                isCurrentSid: (incoming) => sid !== null && incoming === sid,
-                onExternalIp: (ip) => {
+                isCurrentSid: incoming => sid !== null && incoming === sid,
+                onExternalIp: ip => {
                     current = ip
                     options.hooks.onObserved(ip)
                 },
@@ -202,7 +202,7 @@ export const createUpnpWatcher = (options: UpnpWatcherOptions): UpnpWatcher => {
             const active = server
             server = null
             if (active) {
-                await new Promise<void>((resolve) =>
+                await new Promise<void>(resolve =>
                     active.close(() => {
                         resolve()
                     }),

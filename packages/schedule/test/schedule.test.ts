@@ -6,7 +6,7 @@ const stubCtx = { onStop: () => undefined, fail: () => undefined } as any
 
 const makeApi = async (): Promise<ScheduleApi> => (await schedulePlugin().init(stubCtx)) as ScheduleApi
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms))
 
 describe("schedule", () => {
     it("runs a one-shot at a date", async () => {

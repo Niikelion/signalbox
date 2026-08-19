@@ -64,10 +64,10 @@ export interface OvhApi {
 export const ovhPlugin = (options: OvhOptions) =>
     definePlugin<OvhApi, OvhEvents>({
         name: "ovh",
-        init: (ctx) => ({
+        init: ctx => ({
             events: ctx.channel,
             update: async (ip: string) => {
-                const changed = await applyRecords(options, ip, (outcome) => {
+                const changed = await applyRecords(options, ip, outcome => {
                     if (outcome.changed)
                         ctx.channel.emit("dns:updated", { record: outcome.record, previous: null, current: ip })
                 })

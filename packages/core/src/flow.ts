@@ -67,26 +67,26 @@ const settle = (result: void | Promise<void>): void => {
 export const makeFlow = <T>(start: Start<T>): Flow<T> => {
     const flow = {
         map: <U>(fn: (value: T) => U): Flow<U> =>
-            makeFlow((emit) => {
-                start((value) => {
+            makeFlow(emit => {
+                start(value => {
                     emit(fn(value))
                 })
             }),
         filter: (predicate: (value: T) => boolean): Flow<T> =>
-            makeFlow((emit) => {
-                start((value) => {
+            makeFlow(emit => {
+                start(value => {
                     if (predicate(value)) emit(value)
                 })
             }),
         apply: <U>(operator: Operator<T, U>): Flow<U> =>
-            makeFlow((emit) => {
+            makeFlow(emit => {
                 const step = operator(emit)
-                start((value) => {
+                start(value => {
                     settle(step(value))
                 })
             }),
         run: (sink: FlowSink<T>): void => {
-            start((value) => {
+            start(value => {
                 settle(sink(value))
             })
         },
@@ -101,6 +101,6 @@ export const makeFlow = <T>(start: Start<T>): Flow<T> => {
  * @param flows the flows to merge
  */
 export const merge = <T>(...flows: Flow<T>[]): Flow<T> =>
-    makeFlow((emit) => {
+    makeFlow(emit => {
         for (const flow of flows) flow.run(emit)
     })

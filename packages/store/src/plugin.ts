@@ -18,7 +18,7 @@ export type StoreApi = Pick<Store, "collection">
 export const storePlugin = (options: StorePluginOptions) =>
     definePlugin<StoreApi, NoEvents>({
         name: "store",
-        init: (ctx) => {
+        init: ctx => {
             const store = createStore(options.path)
             ctx.onStop(() => {
                 store.close()

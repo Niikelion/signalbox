@@ -88,10 +88,10 @@ export const createStore = (path: string): Store => {
         return {
             all: () => allStmt.all().map(parse),
             get,
-            insert: (item) => {
+            insert: item => {
                 insertStmt.run(item.id, JSON.stringify(item))
             },
-            upsert: (item) => {
+            upsert: item => {
                 upsertStmt.run(item.id, JSON.stringify(item))
             },
             update: (id, patch) => {
@@ -99,7 +99,7 @@ export const createStore = (path: string): Store => {
                 if (!existing) throw new SignalboxError(`no item "${id}" in "${name}"`)
                 upsertStmt.run(id, JSON.stringify({ ...existing, ...patch, id }))
             },
-            delete: (id) => {
+            delete: id => {
                 deleteStmt.run(id)
             },
         }

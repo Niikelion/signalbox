@@ -60,7 +60,7 @@ export interface PollOptions<T> {
 }
 
 const sleep = (ms: number): Promise<void> =>
-    new Promise((resolve) => {
+    new Promise(resolve => {
         setTimeout(resolve, ms).unref()
     })
 
@@ -71,7 +71,7 @@ const sleep = (ms: number): Promise<void> =>
  * @param options the poll options
  */
 export const poll = <T>(options: PollOptions<T>): Flow<{ value: T; phase: PollPhase }> =>
-    makeFlow((emit) => {
+    makeFlow(emit => {
         const { ctx } = options
 
         const probeInto = async (phase: PollPhase): Promise<void> => {

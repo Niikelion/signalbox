@@ -115,7 +115,7 @@ describe("createUpnpWatcher", () => {
     it("does not subscribe or emit if stopped mid-discovery", async () => {
         let resolveDiscover: (g: typeof GATEWAY) => void = () => undefined
         discover.mockReturnValue(
-            new Promise((resolve) => {
+            new Promise(resolve => {
                 resolveDiscover = resolve
             }),
         )

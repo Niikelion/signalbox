@@ -162,14 +162,14 @@ export const createBus = (options: BusOptions = {}): Bus => {
         return {
             on,
             off,
-            flow: (event) =>
-                makeFlow((emit) => {
-                    on(event, (payload) => {
+            flow: event =>
+                makeFlow(emit => {
+                    on(event, payload => {
                         emit(payload)
                     })
                 }),
             once: (event, listener) => {
-                const unsubscribe = on(event, (payload) => {
+                const unsubscribe = on(event, payload => {
                     unsubscribe()
                     return listener(payload)
                 })

@@ -50,7 +50,7 @@ export const gena = (
                 headers,
                 timeout: 10_000,
             },
-            (response) => {
+            response => {
                 response.resume()
                 if ((response.statusCode ?? 500) >= 300) {
                     reject(new Error(`${method} ${url} -> HTTP ${String(response.statusCode)}`))

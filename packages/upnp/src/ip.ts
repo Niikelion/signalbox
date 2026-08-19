@@ -8,7 +8,7 @@ export const isPublicIPv4 = (value: string): boolean => {
     if (!match) return false
 
     const octets = match.slice(1, 5).map(Number)
-    if (octets.some((octet) => octet > 255)) return false
+    if (octets.some(octet => octet > 255)) return false
 
     const [a, b] = octets as [number, number, number, number]
     if (a === 0) return false

@@ -22,13 +22,13 @@ export const upnpSourceNode: TriggerNodeType = {
                 retrySeconds,
                 minRetrySeconds,
                 hooks: {
-                    onObserved: (ip) => {
+                    onObserved: ip => {
                         push({ ip, source: "upnp" })
                     },
-                    onSubscribed: (info) => {
+                    onSubscribed: info => {
                         ctx.log(`subscribed to ${info.serviceType}`)
                     },
-                    onUnavailable: (reason) => {
+                    onUnavailable: reason => {
                         ctx.log(`UPnP unavailable: ${reason}`, "warn")
                     },
                     onReconnected: ({ downSeconds }) => {

@@ -44,7 +44,7 @@ export const defaultGateway = (): string => {
 export const sourceIpToward = (host: string): Promise<string> =>
     new Promise((resolve, reject) => {
         const socket = createSocket("udp4")
-        socket.once("error", (error) => {
+        socket.once("error", error => {
             socket.close()
             reject(error)
         })
@@ -72,13 +72,13 @@ const ssdpSearch = (gateway: string, sourceIp: string, waitMs: number): Promise<
         }
         const timer = setTimeout(finish, waitMs)
 
-        socket.once("error", (error) => {
+        socket.once("error", error => {
             clearTimeout(timer)
             socket.close()
             reject(error)
         })
 
-        socket.on("message", (buffer) => {
+        socket.on("message", buffer => {
             const location = /^location:\s*(.+)$/im.exec(buffer.toString("utf8"))?.[1]?.trim()
             if (!location || locations.includes(location)) return
             try {

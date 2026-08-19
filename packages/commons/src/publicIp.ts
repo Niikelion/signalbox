@@ -1,7 +1,7 @@
 const SOURCES: readonly { url: string; parse: (body: string) => string }[] = [
-    { url: "https://cloudflare.com/cdn-cgi/trace", parse: (body) => /^ip=(.+)$/m.exec(body)?.[1]?.trim() ?? "" },
-    { url: "https://api.ipify.org", parse: (body) => body.trim() },
-    { url: "https://ifconfig.me/ip", parse: (body) => body.trim() },
+    { url: "https://cloudflare.com/cdn-cgi/trace", parse: body => /^ip=(.+)$/m.exec(body)?.[1]?.trim() ?? "" },
+    { url: "https://api.ipify.org", parse: body => body.trim() },
+    { url: "https://ifconfig.me/ip", parse: body => body.trim() },
 ]
 
 const IPV4 = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/

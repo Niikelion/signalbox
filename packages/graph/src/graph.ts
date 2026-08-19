@@ -131,10 +131,10 @@ export interface NodeRegistry {
 export const createNodeRegistry = (): NodeRegistry => {
     const types = new Map<string, NodeType>()
     return {
-        register: (type) => {
+        register: type => {
             types.set(type.type, type)
         },
-        get: (type) => types.get(type),
+        get: type => types.get(type),
         list: () => [...types.keys()],
     }
 }
@@ -205,7 +205,7 @@ export const resolveTemplate = (template: unknown, scope: ResolveScope): unknown
  */
 export const resolveDeep = (template: unknown, scope: ResolveScope): unknown => {
     if (typeof template === "string") return resolveTemplate(template, scope)
-    if (Array.isArray(template)) return template.map((item) => resolveDeep(item, scope))
+    if (Array.isArray(template)) return template.map(item => resolveDeep(item, scope))
     if (template !== null && typeof template === "object") {
         const output: Record<string, unknown> = {}
         for (const [key, value] of Object.entries(template)) output[key] = resolveDeep(value, scope)
@@ -263,8 +263,8 @@ const makeRedactor = (secrets: Record<string, unknown>): ((message: string) => s
     const values = Object.values(secrets).filter(
         (value): value is string => typeof value === "string" && value.length > 0,
     )
-    if (values.length === 0) return (message) => message
-    return (message) => values.reduce((current, secret) => current.split(secret).join("***"), message)
+    if (values.length === 0) return message => message
+    return message => values.reduce((current, secret) => current.split(secret).join("***"), message)
 }
 
 /**
@@ -305,7 +305,7 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
 
     return {
         name: graph.name,
-        setup: (ctx) => {
+        setup: ctx => {
             const nodeCtx: GraphNodeContext = {
                 plugins: ctx.plugins as Record<string, unknown>,
                 on: (event, listener) => ctx.app.on(event as never, listener),
@@ -354,7 +354,7 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
                 type.create().start({
                     config: node.config ?? {},
                     ctx: nodeCtx,
-                    push: (value) => {
+                    push: value => {
                         void runFrom(node.id, value)
                     },
                 })
@@ -369,7 +369,7 @@ registerNode({
     configSchema: { event: { type: "string", required: true } },
     create: () => ({
         start: ({ config, ctx, push }) => {
-            ctx.on(String(config["event"]), (payload) => {
+            ctx.on(String(config["event"]), payload => {
                 push(payload)
             })
         },
@@ -399,7 +399,7 @@ registerNode({
             }
 
             const rawArgs = Array.isArray(config["args"]) ? (config["args"] as unknown[]) : []
-            const args = rawArgs.map((arg) => ctx.resolve(arg, input))
+            const args = rawArgs.map(arg => ctx.resolve(arg, input))
             return (method as (...callArgs: unknown[]) => unknown)(...args)
         },
     }),
@@ -445,7 +445,7 @@ registerNode({
                 input !== null && typeof input === "object" && !Array.isArray(input)
                     ? (input as Record<string, unknown>)
                     : {}
-            return fanOut(items.map((item) => ({ ...base, [as]: item })))
+            return fanOut(items.map(item => ({ ...base, [as]: item })))
         },
     }),
 })

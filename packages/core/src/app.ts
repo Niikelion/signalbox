@@ -67,7 +67,7 @@ export const createApp = <TAppEvents extends EventMap, TPlugins extends Record<s
         fail: (error: unknown) => {
             framework.emit("error", { scope, error: toError(error) })
         },
-        onStart: (fn) => {
+        onStart: fn => {
             startHooks.push(() => {
                 try {
                     const result = fn()
@@ -164,7 +164,7 @@ export const createApp = <TAppEvents extends EventMap, TPlugins extends Record<s
     const run = async (): Promise<void> => {
         await start()
 
-        await new Promise<void>((resolve) => {
+        await new Promise<void>(resolve => {
             const shutdown = (signal: string): void => {
                 void stop(signal).then(resolve, resolve)
             }

@@ -30,7 +30,7 @@ export interface DiscordApi {
 }
 
 const sleep = (ms: number): Promise<void> =>
-    new Promise((resolve) => {
+    new Promise(resolve => {
         setTimeout(resolve, ms).unref()
     })
 
@@ -42,7 +42,7 @@ export const discordPlugin = (options: DiscordOptions) =>
     definePlugin<DiscordApi, NoEvents>({
         name: "discord",
         init: () => ({
-            send: async (message) => {
+            send: async message => {
                 const body = JSON.stringify({
                     content: message.content,
                     username: message.username ?? options.username,

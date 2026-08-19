@@ -46,22 +46,22 @@ export const upnpPlugin = (options: UpnpOptions) => {
 
     return definePlugin<UpnpApi, UpnpEvents>({
         name: "upnp",
-        init: async (ctx) => {
+        init: async ctx => {
             watcher = createUpnpWatcher({
                 port: options.port,
                 retrySeconds: options.retrySeconds,
                 minRetrySeconds: options.minRetrySeconds,
                 hooks: {
-                    onObserved: (ip) => {
+                    onObserved: ip => {
                         ctx.channel.emit("external-ip", { ip })
                     },
-                    onSubscribed: (info) => {
+                    onSubscribed: info => {
                         ctx.channel.emit("subscribed", info)
                     },
-                    onUnavailable: (reason) => {
+                    onUnavailable: reason => {
                         ctx.channel.emit("unavailable", { reason })
                     },
-                    onReconnected: (info) => {
+                    onReconnected: info => {
                         ctx.channel.emit("reconnected", info)
                     },
                     log: (message, level) => {

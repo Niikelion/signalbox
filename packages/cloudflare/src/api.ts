@@ -47,7 +47,7 @@ const call = async <TResult>(
 
     const payload = JSON.parse(text) as CfEnvelope<TResult>
     if (!payload.success) {
-        const detail = payload.errors.map((error) => `${String(error.code)} ${error.message}`).join("; ") || text
+        const detail = payload.errors.map(error => `${String(error.code)} ${error.message}`).join("; ") || text
         throw new Error(`Cloudflare ${method} ${path} failed: ${detail}`)
     }
     return payload.result

@@ -63,8 +63,8 @@ export const discordBotPlugin = (options: DiscordBotOptions) => {
 
     return definePlugin<DiscordBotApi, DiscordBotEvents>({
         name: "discord-bot",
-        init: (ctx) => {
-            client.on("interactionCreate", (interaction) => {
+        init: ctx => {
+            client.on("interactionCreate", interaction => {
                 if (!interaction.isChatInputCommand()) return
 
                 const values: Record<string, string | number | boolean> = {}
@@ -77,13 +77,13 @@ export const discordBotPlugin = (options: DiscordBotOptions) => {
                     options: values,
                     userId: interaction.user.id,
                     channelId: interaction.channelId,
-                    reply: async (content) => {
+                    reply: async content => {
                         await interaction.reply({ content, flags: MessageFlags.Ephemeral })
                     },
                 })
             })
 
-            client.on("error", (error) => {
+            client.on("error", error => {
                 ctx.fail(error)
             })
 
@@ -101,7 +101,7 @@ export const discordBotPlugin = (options: DiscordBotOptions) => {
 
             return { events: ctx.channel, send, dm }
         },
-        setup: async (ctx) => {
+        setup: async ctx => {
             await client.login(options.token)
 
             const appId = client.application?.id

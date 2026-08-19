@@ -12,7 +12,7 @@ interface Observation {
 const phaseSource = { startup: "startup", interval: "http", retry: "reconnect" } as const
 
 export const ddnsOvhPipeline = (config: DdnsOvhConfig) =>
-    defineWorkflow("ddns", (ctx) => {
+    defineWorkflow("ddns", ctx => {
         const observed = ctx.plugins.upnp.events
             .flow("external-ip")
             .map(({ ip }): Observation => ({ ip, source: "upnp" }))
@@ -20,15 +20,15 @@ export const ddnsOvhPipeline = (config: DdnsOvhConfig) =>
         const polled = poll({
             ctx,
             every: config.fallbackMinutes * 60 * 1000,
-            probe: (log) =>
-                publicIPv4((message) => {
+            probe: log =>
+                publicIPv4(message => {
                     log(message, "warn")
                 }),
             retryOn: ctx.plugins.upnp.events.flow("reconnected"),
         }).map(({ value: ip, phase }): Observation => ({ ip, source: phaseSource[phase] }))
 
         merge<Observation>(observed, polled)
-            .apply(dedupe((observation) => observation.ip))
+            .apply(dedupe(observation => observation.ip))
             .run(async ({ ip, source }) => {
                 ctx.log(`WAN IP changed to ${ip} (via ${source})`)
                 await ctx.plugins.ovh.update(ip)

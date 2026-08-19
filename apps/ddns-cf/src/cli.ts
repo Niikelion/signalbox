@@ -11,5 +11,5 @@ await runCliMain({
     createStore: createDdnsCfConfigStore,
     createApp: createDdnsCfApp,
     runOnce,
-    firewallPort: (config) => config.watchPort ?? 5959,
+    firewallPort: config => config.watchPort ?? 5959,
 })

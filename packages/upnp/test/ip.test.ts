@@ -10,7 +10,7 @@ describe("isPublicIPv4", () => {
         "172.32.0.1", // just above the private block
         "223.255.255.255", // last address before multicast
         "  8.8.8.8  ", // surrounding whitespace is tolerated
-    ])("accepts routable address %s", (ip) => {
+    ])("accepts routable address %s", ip => {
         expect(isPublicIPv4(ip)).toBe(true)
     })
 
@@ -33,7 +33,7 @@ describe("isPublicIPv4", () => {
         ["1.2.3.256", "octet out of range"],
         ["abc", "not numeric"],
         ["1.2.3.-1", "negative octet"],
-    ])("rejects %s (%s)", (ip) => {
+    ])("rejects %s (%s)", ip => {
         expect(isPublicIPv4(ip)).toBe(false)
     })
 })

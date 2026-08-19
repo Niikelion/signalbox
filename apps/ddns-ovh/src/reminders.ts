@@ -14,7 +14,7 @@ interface Reminder {
 }
 
 export const reminders = (config: DdnsOvhConfig) =>
-    defineWorkflow("reminders", (ctx) => {
+    defineWorkflow("reminders", ctx => {
         const collection = ctx.plugins.store.collection<Reminder>("reminders")
 
         const fire = (reminder: Reminder): void => {
@@ -42,7 +42,7 @@ export const reminders = (config: DdnsOvhConfig) =>
         })
 
         // handle /remind
-        ctx.plugins.discordBot.events.flow("command").run(async (command) => {
+        ctx.plugins.discordBot.events.flow("command").run(async command => {
             if (command.command !== REMIND_COMMAND.name) return
 
             const message = typeof command.options["message"] === "string" ? command.options["message"] : ""

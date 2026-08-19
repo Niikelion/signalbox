@@ -44,7 +44,7 @@ export interface ScheduleApi {
 export const schedulePlugin = () =>
     definePlugin<ScheduleApi, NoEvents>({
         name: "schedule",
-        init: (ctx) => {
+        init: ctx => {
             const jobs = new Set<Cron>()
 
             const wrap = (fn: () => void | Promise<void>) => () => {

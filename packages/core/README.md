@@ -26,7 +26,7 @@ const plugins = {
 
 const defineWorkflow = createWorkflowDefiner<MyEvents, PluginApis<typeof plugins>>()
 
-const worker = defineWorkflow("worker", (ctx) => {
+const worker = defineWorkflow("worker", ctx => {
     ctx.onStart(() => {
         ctx.log("up")
         ctx.app.emit("job:done", { id: "1" })

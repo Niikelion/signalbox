@@ -91,7 +91,7 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
             case "array":
                 return rawValue
                     .split(",")
-                    .map((entry) => entry.trim())
+                    .map(entry => entry.trim())
                     .filter(Boolean)
             case "number": {
                 const parsed = Number(rawValue)
@@ -99,7 +99,8 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
                 return parsed
             }
             case "boolean": {
-                if (rawValue !== "true" && rawValue !== "false") throw new SignalboxError(`${key} must be true or false`)
+                if (rawValue !== "true" && rawValue !== "false")
+                    throw new SignalboxError(`${key} must be true or false`)
                 return rawValue === "true"
             }
             default:
@@ -128,7 +129,7 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
         }
         const result = schema.safeParse(readPartial())
         if (!result.success) {
-            const problems = result.error.issues.map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+            const problems = result.error.issues.map(issue => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
             throw new SignalboxError(`config at ${path} is invalid: ${problems.join("; ")}`)
         }
         return result.data
@@ -148,19 +149,19 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
             const result = field.safeParse(coerced)
             if (!result.success) {
                 throw new SignalboxError(
-                    `invalid value for ${key}: ${result.error.issues.map((i) => i.message).join(", ")}`,
+                    `invalid value for ${key}: ${result.error.issues.map(i => i.message).join(", ")}`,
                 )
             }
             const current = readPartial() as Record<string, unknown>
             current[key] = result.data
             save(current as Partial<ConfigOf<TSchema>>)
         },
-        unset: (key) => {
+        unset: key => {
             fieldOf(key)
             const { [key]: _removed, ...rest } = readPartial() as Record<string, unknown>
             save(rest as Partial<ConfigOf<TSchema>>)
         },
-        redacted: (values) => {
+        redacted: values => {
             const output: Record<string, unknown> = { ...values }
             for (const [key, fieldSchema] of Object.entries(shape)) {
                 if (!isSecret(fieldSchema)) continue

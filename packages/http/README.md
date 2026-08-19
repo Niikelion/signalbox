@@ -26,7 +26,7 @@ ctx.plugins.http.route({
     path: "/echo",
     request: z.object({ msg: z.string() }),
     response: z.object({ echoed: z.string() }),
-    handle: (input) => ({ echoed: input.msg }), // input is the validated body
+    handle: input => ({ echoed: input.msg }), // input is the validated body
 })
 
 // or a low-level handler:

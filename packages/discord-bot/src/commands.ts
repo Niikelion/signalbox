@@ -37,7 +37,7 @@ export interface ApplicationCommand {
 export const toApplicationCommand = (spec: CommandSpec): ApplicationCommand => ({
     name: spec.name,
     description: spec.description,
-    options: (spec.options ?? []).map((option) => ({
+    options: (spec.options ?? []).map(option => ({
         type: OPTION_TYPE[option.type],
         name: option.name,
         description: option.description,

@@ -69,13 +69,13 @@ const parseBody = (raw: string, contentType: string): unknown => {
 export const webhookPlugin = <TRoutes extends Record<string, RouteConfig>>(options: WebhookOptions<TRoutes>) =>
     definePlugin<WebhookApi<TRoutes>, WebhookEvents<TRoutes>>({
         name: "webhook",
-        init: (ctx) => {
+        init: ctx => {
             for (const [routeName, route] of Object.entries(options.routes)) {
                 const name = routeName as keyof TRoutes & string
                 const method = (route.method ?? "POST").toUpperCase()
                 const { secret } = route
 
-                options.http.handle(method, route.path, async (c) => {
+                options.http.handle(method, route.path, async c => {
                     if (secret !== undefined && c.headers["x-webhook-secret"] !== secret) {
                         return { status: 401, body: "unauthorized" }
                     }
