@@ -1189,9 +1189,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@signalbox-example/cloudflare-ddns@workspace:examples/cloudflare-ddns":
+"@signalbox/cloudflare-ddns@workspace:examples/cloudflare-ddns":
   version: 0.0.0-use.local
-  resolution: "@signalbox-example/cloudflare-ddns@workspace:examples/cloudflare-ddns"
+  resolution: "@signalbox/cloudflare-ddns@workspace:examples/cloudflare-ddns"
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@signalbox/cloudflare": "npm:^0.2.0"

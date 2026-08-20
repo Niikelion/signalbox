@@ -1,9 +1,13 @@
 {
-    "name": "@signalbox-example/cloudflare-ddns",
+    "name": "@signalbox/cloudflare-ddns",
     "version": "0.0.0",
-    "private": true,
     "license": "MIT",
-    "description": "Example signalbox app: Cloudflare dynamic DNS with a config-driven CLI and systemd lifecycle",
+    "description": "Cloudflare dynamic DNS for home connections, driven by your router's UPnP events",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Niikelion/signalbox.git",
+        "directory": "examples/cloudflare-ddns"
+    },
     "type": "module",
     "bin": "dist/cli.js",
     "files": [

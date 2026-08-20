@@ -27,7 +27,7 @@ jobs:
             -   name: Find packages to publish
                 run: |
                     PKGS=""
-                    for PKG_DIR in packages/*/; do
+                    for PKG_DIR in packages/*/ examples/*/; do
                         PKG_JSON="${PKG_DIR}package.json"
                         [ -f "$PKG_JSON" ] || continue
                         [ "$(jq -r '.private // false' "$PKG_JSON")" = "true" ] && continue
