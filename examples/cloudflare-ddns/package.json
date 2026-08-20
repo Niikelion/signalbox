@@ -1,0 +1,23 @@
+{
+    "name": "@signalbox-example/cloudflare-ddns",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Example signalbox app: Cloudflare dynamic DNS driven by UPnP push and polling",
+    "type": "module",
+    "scripts": {
+        "start": "tsx src/index.ts",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@signalbox/cloudflare": "^0.2.0",
+        "@signalbox/commons": "^0.2.0",
+        "@signalbox/core": "^0.2.0",
+        "@signalbox/upnp": "^0.2.0"
+    },
+    "devDependencies": {
+        "@gamedev-sensei/ts-config": "^2.1.0",
+        "@types/node": "^22.10.2",
+        "tsx": "^4.19.0",
+        "typescript": "^5.9.3"
+    }
+}
