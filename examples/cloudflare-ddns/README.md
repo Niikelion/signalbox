@@ -1,48 +1,76 @@
 # Example: Cloudflare dynamic DNS
 
-A minimal [signalbox](https://github.com/Niikelion/signalbox) app that keeps Cloudflare A records pointed at your home connection's public IP.
+A complete [signalbox](https://github.com/Niikelion/signalbox) app: it keeps Cloudflare A records pointed at your home connection's public IP, with a **config-driven CLI** and **systemd lifecycle** — no domain logic in the CLI, all of it from the framework.
 
 It watches for address changes two ways — the router's UPnP `ExternalIPAddress` **push** and a periodic **poll** — merges them into one stream, de-duplicates, and writes to Cloudflare only when the address actually changes.
 
-```ts
-merge(pushed, polled)
-    .apply(dedupe())
-    .run(async ip => {
-        if (await ctx.plugins.cloudflare.update(ip)) ctx.log(`updated records to ${ip}`)
-    })
+This is the port of signalbox's own DDNS app, without the Discord chat-bridge.
+
+## Build
+
+```bash
+npm install
+npm run build      # → dist/cli.js
 ```
 
-## Prerequisites
+Run the CLI with `node dist/cli.js <command>` (or `npm link` to get a `cloudflare-ddns` binary on your PATH).
 
-- A Cloudflare **API token** scoped to `Zone:DNS:Edit` on the target zone.
-- The **zone id** (domain Overview page).
-- A router that supports UPnP IGD (optional — without it, the poll alone keeps things working).
+## Configure
+
+```bash
+node dist/cli.js config init     # prompts for each field, using the schema descriptions
+node dist/cli.js config set ttl 120
+node dist/cli.js config list     # secrets are redacted
+node dist/cli.js config path     # where the file lives
+```
+
+Config resolves to `/etc/cloudflare-ddns/config.json` as root, otherwise
+`~/.config/cloudflare-ddns/config.json`, written `0640` because it holds the API token.
+
+| key | required | default | what |
+| --- | --- | --- | --- |
+| `apiToken` | ✓ (secret) | — | Cloudflare token, scoped `Zone:DNS:Edit` |
+| `zoneId` | ✓ | — | zone id from the domain's Overview page |
+| `records` | ✓ | — | comma-separated hostnames to keep updated |
+| `ttl` | | `60` | TTL for records this tool creates |
+| `proxied` | | `false` | route through Cloudflare's proxy (HTTP/HTTPS only) |
+| `watchPort` | | `5959` | TCP port the UPnP NOTIFY callback listens on |
+| `fallbackMinutes` | | `15` | safety-net re-check interval |
 
 ## Run
 
-Set the environment and start it:
-
 ```bash
-export CF_API_TOKEN=…            # required
-export CF_ZONE_ID=…              # required
-export CF_RECORDS=home.example.com,vpn.example.com   # required, comma-separated
-export CF_TTL=60                 # optional (default 60)
-export CF_PROXIED=false          # optional (default false)
-export UPNP_PORT=5959            # optional (default 5959)
-
-npm install
-npm start
+node dist/cli.js run     # foreground — reacts to changes until Ctrl-C
+node dist/cli.js once    # apply the records a single time and exit
 ```
 
-`npm start` runs `src/index.ts` with [`tsx`](https://github.com/privatenumber/tsx). The process stays up, reacting to address changes, until `Ctrl-C`.
+## Install as a service (Linux)
+
+```bash
+sudo node dist/cli.js setup      # hardened systemd unit, dedicated user, firewall port, enable + start
+node dist/cli.js status
+sudo node dist/cli.js teardown   # add --purge to also delete the config
+```
+
+`setup` runs the app as `cloudflare-ddns run` under a dedicated unprivileged system user and opens `watchPort` from the gateway. `start | stop | restart | status` control the unit.
 
 ## How it works
 
 | piece | role |
 | --- | --- |
+| [`@signalbox/config`](../../packages/config) | the schema (`field()` builder, secrets) and the config store |
+| [`@signalbox/service-cli`](../../packages/service-cli) | the whole CLI + systemd lifecycle, from a small `ServiceApp` descriptor |
 | [`@signalbox/upnp`](../../packages/upnp) | emits `external-ip` when the router reports a new WAN address |
 | [`@signalbox/commons`](../../packages/commons) | `poll` (fallback re-check) + `dedupe` (drop repeats) |
 | [`@signalbox/cloudflare`](../../packages/cloudflare) | `update(ip)` patches the records, returning whether anything changed |
 | [`@signalbox/core`](../../packages/core) | ties the plugins and the workflow together |
+
+The pipeline is one workflow:
+
+```ts
+merge<Observation>(observed, polled)
+    .apply(dedupe(o => o.ip))
+    .run(async ({ ip }) => ctx.plugins.cloudflare.update(ip))
+```
 
 See the [signalbox documentation](https://github.com/Niikelion/signalbox/tree/master/docs) for the concepts.

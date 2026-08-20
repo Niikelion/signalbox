@@ -2,22 +2,38 @@
     "name": "@signalbox-example/cloudflare-ddns",
     "version": "0.0.0",
     "private": true,
-    "description": "Example signalbox app: Cloudflare dynamic DNS driven by UPnP push and polling",
+    "license": "MIT",
+    "description": "Example signalbox app: Cloudflare dynamic DNS with a config-driven CLI and systemd lifecycle",
     "type": "module",
+    "bin": "dist/cli.js",
+    "files": [
+        "/dist"
+    ],
+    "engines": {
+        "node": ">=20"
+    },
     "scripts": {
-        "start": "tsx src/index.ts",
-        "typecheck": "tsc --noEmit"
+        "build": "tsc --noEmit && tsdown",
+        "typecheck": "tsc --noEmit",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write ."
     },
     "dependencies": {
         "@signalbox/cloudflare": "^0.2.0",
         "@signalbox/commons": "^0.2.0",
+        "@signalbox/config": "^0.2.0",
         "@signalbox/core": "^0.2.0",
+        "@signalbox/service-cli": "^0.2.0",
         "@signalbox/upnp": "^0.2.0"
     },
     "devDependencies": {
         "@gamedev-sensei/ts-config": "^2.1.0",
+        "@signalbox/shared-config": "^0.1.0",
         "@types/node": "^22.10.2",
-        "tsx": "^4.19.0",
+        "eslint": "^9.39.2",
+        "prettier": "^3.8.1",
+        "tsdown": "^0.15.7",
         "typescript": "^5.9.3"
     }
 }
