@@ -1,2 +1,14 @@
+export { z } from "zod"
+
 export { webhookPlugin } from "./plugin.js"
-export type { RouteConfig, WebhookApi, WebhookEvents, WebhookOptions, WebhookRequest } from "./plugin.js"
+export type {
+    RouteConfig,
+    SendOptions,
+    TargetBody,
+    TargetConfig,
+    WebhookApi,
+    WebhookEvents,
+    WebhookOptions,
+    WebhookRequest,
+    WebhookResponse,
+} from "./plugin.js"
