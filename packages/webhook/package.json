@@ -36,7 +36,8 @@
     },
     "dependencies": {
         "@signalbox/core": "^0.2.0",
-        "@signalbox/http": "^0.2.0"
+        "@signalbox/http": "^0.2.0",
+        "zod": "^4.0.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

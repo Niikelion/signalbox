@@ -1,5 +1,6 @@
 import { definePlugin, SignalboxError, type ReadChannel } from "@signalbox/core"
 import type { HttpMount } from "@signalbox/http"
+import { z } from "zod"
 
 /** A received webhook request, emitted on the plugin's channel. */
 export interface WebhookRequest {
@@ -35,7 +36,17 @@ export interface TargetConfig {
     headers?: Record<string, string>
     /** If set, sent as the `x-webhook-secret` header. */
     secret?: string
+    /**
+     * Zod schema the request body is validated (and typed) against. When set, `send`'s
+     * body argument is typed as its inferred type and parsed before the request is sent.
+     */
+    request?: z.ZodType
 }
+
+/** The `send` body type for a target: its `request` schema's inferred type, or `unknown`. */
+export type TargetBody<TTarget extends TargetConfig> = TTarget["request"] extends z.ZodType
+    ? z.infer<TTarget["request"]>
+    : unknown
 
 /** Per-call options for {@link WebhookApi.send}. */
 export interface SendOptions {
@@ -94,11 +105,19 @@ export interface WebhookApi<
     /**
      * Fire a request at a configured outbound target. Resolves with the response;
      * a non-2xx status does not throw (check `response.ok`), but a network failure does.
+     * If the target has a `request` schema, `body` is typed as its inferred type and is
+     * validated before sending (a mismatch throws).
+     * @typeParam TKey the target name
      * @param target the target name from `options.targets`
-     * @param body the request body — an object is JSON-encoded, a string sent as-is
+     * @param body the request body — validated by the target's schema; an object is
+     * JSON-encoded, a string sent as-is
      * @param options per-call header/method overrides
      */
-    send: (target: keyof TTargets, body?: unknown, options?: SendOptions) => Promise<WebhookResponse>
+    send: <TKey extends keyof TTargets>(
+        target: TKey,
+        body: TargetBody<TTargets[TKey]>,
+        options?: SendOptions,
+    ) => Promise<WebhookResponse>
 }
 
 const parseBody = (raw: string, contentType: string): unknown => {
@@ -157,9 +176,9 @@ export const webhookPlugin = <
                 })
             }
 
-            const send = async (
-                target: keyof TTargets,
-                body?: unknown,
+            const send = async <TKey extends keyof TTargets>(
+                target: TKey,
+                body: TargetBody<TTargets[TKey]>,
                 sendOptions?: SendOptions,
             ): Promise<WebhookResponse> => {
                 const def = targets[target as keyof TTargets & string]
@@ -169,14 +188,32 @@ export const webhookPlugin = <
                         `known targets: ${Object.keys(targets).join(", ") || "(none)"}`,
                     )
                 }
-                const isJson = body !== undefined && typeof body !== "string"
+
+                let validated: unknown = body
+                if (def.request) {
+                    const result = def.request.safeParse(body)
+                    if (!result.success) {
+                        throw new SignalboxError(
+                            `invalid body for webhook target "${String(target)}"`,
+                            result.error.issues.map(issue => issue.message).join("; "),
+                        )
+                    }
+                    validated = result.data
+                }
+
+                const isJson = validated !== undefined && typeof validated !== "string"
                 const headers: Record<string, string> = {
                     ...(isJson ? { "content-type": "application/json" } : {}),
                     ...def.headers,
                     ...(def.secret !== undefined ? { "x-webhook-secret": def.secret } : {}),
                     ...sendOptions?.headers,
                 }
-                const payload = body === undefined ? undefined : isJson ? JSON.stringify(body) : body
+                const payload =
+                    validated === undefined
+                        ? undefined
+                        : typeof validated === "string"
+                          ? validated
+                          : JSON.stringify(validated)
 
                 const response = await fetch(def.url, {
                     method: (sendOptions?.method ?? def.method ?? "POST").toUpperCase(),
