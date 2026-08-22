@@ -6,7 +6,7 @@ import type { CloudflareDdnsConfig } from "./config.js"
 export const buildPlugins = (config: CloudflareDdnsConfig) => ({
     upnp: upnpPlugin({ port: config.watchPort }),
     cloudflare: cloudflarePlugin({
-        apiToken: config.apiToken,
+        apiToken: config.apiToken.reveal(),
         zoneId: config.zoneId,
         records: config.records,
         ttl: config.ttl,

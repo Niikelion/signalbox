@@ -8,7 +8,7 @@ export const runOnce = async (config: CloudflareDdnsConfig): Promise<boolean> =>
         write("warn", message)
     })
 
-    const changed = await applyRecords(config, ip, outcome => {
+    const changed = await applyRecords({ ...config, apiToken: config.apiToken.reveal() }, ip, outcome => {
         if (outcome.action === "created") write("info", `created ${outcome.record} -> ${ip}`)
         else if (outcome.action === "updated") write("info", `updated ${outcome.record}: ${outcome.previous} -> ${ip}`)
         else write("info", `${outcome.record} already points at ${ip}`)

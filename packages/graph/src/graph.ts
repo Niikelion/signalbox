@@ -6,6 +6,7 @@ import {
     type Unsubscribe,
     type WorkflowDefinition,
 } from "@signalbox/core"
+import { assertJsonValue, isSecret, redact, Secret, type JsonValue } from "@signalbox/secrets"
 
 /** A workflow described as data: a set of nodes joined by edges. */
 export interface WorkflowGraph {
@@ -179,7 +180,12 @@ export interface ResolveScope {
 const lookup = (path: string, scope: ResolveScope): unknown => {
     if (path === "$input") return scope.input
     if (path.startsWith("$config.")) return getPath(scope.config, path.slice("$config.".length))
-    if (path.startsWith("$secret.")) return getPath(scope.secret, path.slice("$secret.".length))
+    if (path.startsWith("$secret.")) {
+        const [name, ...rest] = path.slice("$secret.".length).split(".")
+        const wrapped = name ? scope.secret?.[name] : undefined
+        const value = isSecret(wrapped) ? wrapped.reveal() : wrapped
+        return rest.length > 0 ? getPath(value, rest.join(".")) : value
+    }
     return getPath(scope.input, path.startsWith("input.") ? path.slice("input.".length) : path)
 }
 
@@ -255,16 +261,21 @@ export interface CompileOptions {
     registry?: NodeRegistry
     /** Config values available to `{{ $config.x }}` templates. */
     config?: Record<string, unknown>
-    /** Secret values available to `{{ $secret.x }}` (masked in logs). */
-    secrets?: Record<string, unknown>
+    /** JSON-compatible secret values available to `{{ $secret.x }}`. */
+    secrets?: Record<string, JsonValue | Secret<JsonValue>>
 }
 
-const makeRedactor = (secrets: Record<string, unknown>): ((message: string) => string) => {
-    const values = Object.values(secrets).filter(
-        (value): value is string => typeof value === "string" && value.length > 0,
-    )
-    if (values.length === 0) return message => message
-    return message => values.reduce((current, secret) => current.split(secret).join("***"), message)
+const wrapSecrets = (values: Record<string, JsonValue | Secret<JsonValue>>): Record<string, Secret<JsonValue>> => {
+    const wrapped: Record<string, Secret<JsonValue>> = {}
+    for (const [name, value] of Object.entries(values)) {
+        if (isSecret(value)) {
+            wrapped[name] = value
+            continue
+        }
+        assertJsonValue(value, `$secret.${name}`)
+        wrapped[name] = Secret.from(value)
+    }
+    return wrapped
 }
 
 /**
@@ -280,8 +291,7 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
 ): WorkflowDefinition<TEvents, TPlugins> => {
     const registry = options.registry ?? defaultRegistry
     const config = options.config ?? {}
-    const secrets = options.secrets ?? {}
-    const redact = makeRedactor(secrets)
+    const secrets = wrapSecrets(options.secrets ?? {})
 
     const nodeById = new Map<string, GraphNode>()
     for (const node of graph.nodes) {
@@ -315,7 +325,9 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
                 log: (message, level) => {
                     ctx.log(redact(message), level)
                 },
-                fail: ctx.fail,
+                fail: error => {
+                    ctx.fail(redact(toError(error)))
+                },
                 onStop: ctx.onStop,
                 interval: ctx.interval,
                 resolve: (template, input) => resolveTemplate(template, { input, config, secret: secrets }),
@@ -343,7 +355,7 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
                         }
                         await runFrom(nextId, output)
                     } catch (error) {
-                        nodeCtx.fail(toError(error))
+                        nodeCtx.fail(error)
                     }
                 }
             }

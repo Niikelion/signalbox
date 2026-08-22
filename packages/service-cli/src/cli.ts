@@ -1,6 +1,16 @@
 import { createInterface } from "node:readline/promises"
 import { parseArgs } from "node:util"
-import { describeOf, isRequired, isSecret, type ConfigOf, type ConfigStore, type z } from "@signalbox/config"
+import {
+    describeOf,
+    isRequired,
+    isSecret,
+    isSecretValue,
+    type ConfigOf,
+    type ConfigSchema,
+    type ConfigStore,
+    type InputOf,
+    type z,
+} from "@signalbox/config"
 import { SignalboxError, write } from "@signalbox/core"
 import { createServiceManager, type ServiceScope } from "./systemd.js"
 
@@ -13,7 +23,7 @@ export interface Runnable {
  * The descriptor a concrete app supplies to drive the shared service CLI.
  * @typeParam TSchema the app's Zod config schema
  */
-export interface ServiceApp<TSchema extends z.ZodObject> {
+export interface ServiceApp<TSchema extends ConfigSchema> {
     /** Binary/app name (config path, systemd unit, usage header). */
     appName: string
     /** One-line summary shown in `--help`. */
@@ -84,7 +94,7 @@ const readSecretly = async (question: string): Promise<string> => {
     }
 }
 
-const configCommand = async <TSchema extends z.ZodObject>(
+const configCommand = async <TSchema extends ConfigSchema>(
     store: ConfigStore<TSchema>,
     args: string[],
 ): Promise<void> => {
@@ -104,14 +114,15 @@ const configCommand = async <TSchema extends z.ZodObject>(
             return
 
         case "list": {
-            const values = store.redacted(store.readPartial())
-            process.stdout.write(`${JSON.stringify(values, null, 4)}\n`)
+            const inspection = await store.inspect()
+            process.stdout.write(`${JSON.stringify(inspection.values, null, 4)}\n`)
             return
         }
 
         case "get": {
             if (!key) throw new SignalboxError("config get needs a key")
-            const value = (store.readPartial() as Record<string, unknown>)[key]
+            requireKey(key)
+            const value = (await store.inspect()).values[key]
             process.stdout.write(`${renderValue(value)}\n`)
             return
         }
@@ -119,20 +130,20 @@ const configCommand = async <TSchema extends z.ZodObject>(
         case "set": {
             if (rest.length === 0) throw new SignalboxError("config set needs a key and a value")
             const field = requireKey(key)
-            store.set(field, rest.join(" "))
+            await store.set(field, rest.join(" "))
             write("info", `set ${field} in ${store.path}`)
             return
         }
 
         case "unset": {
             const field = requireKey(key)
-            store.unset(field)
+            await store.unset(field)
             write("info", `unset ${field} in ${store.path}`)
             return
         }
 
         case "init": {
-            const current = store.readPartial() as Record<string, unknown>
+            const current = (await store.readPartial()) as Record<string, unknown>
             for (const [field, fieldSchema] of fields) {
                 if (!isRequired(fieldSchema)) continue
 
@@ -143,11 +154,14 @@ const configCommand = async <TSchema extends z.ZodObject>(
                         : Array.isArray(existing)
                           ? existing.join(",")
                           : existing
-                const suffix = existing ? ` [${String(shown)}]` : ""
+                const suffix = existing !== undefined ? ` [${String(shown)}]` : ""
                 const answer = await readSecretly(`${field} - ${describeOf(fieldSchema) ?? ""}${suffix}: `)
                 if (answer) current[field] = store.coerce(field, answer)
             }
-            store.save(current as Partial<ConfigOf<TSchema>>)
+            const plaintext = Object.fromEntries(
+                Object.entries(current).map(([field, value]) => [field, isSecretValue(value) ? value.reveal() : value]),
+            )
+            await store.save(plaintext as Partial<InputOf<TSchema>>)
             write("info", `wrote ${store.path}`)
             return
         }
@@ -166,7 +180,7 @@ const configCommand = async <TSchema extends z.ZodObject>(
  * @param app the app descriptor
  * @param argv the CLI arguments (without node/script)
  */
-export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchema>, argv: string[]): Promise<void> => {
+export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSchema>, argv: string[]): Promise<void> => {
     const { values, positionals } = parseArgs({
         args: argv,
         options: {
@@ -195,13 +209,13 @@ export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchem
             return
 
         case "setup": {
-            const config = store.load()
+            const config = await store.load()
             service.setupService({ scope, configPath: store.path, watchPort: app.firewallPort?.(config) })
             return
         }
 
         case "teardown": {
-            const partial = store.readPartial()
+            const partial = await store.readPartial()
             service.teardownService({
                 scope,
                 purge: values.purge,
@@ -222,7 +236,7 @@ export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchem
             return
 
         case "run": {
-            const runnable = app.createApp(store.load())
+            const runnable = app.createApp(await store.load())
             await runnable.run()
             return
         }
@@ -231,7 +245,7 @@ export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchem
             if (!app.runOnce) {
                 throw new SignalboxError(`${app.appName} does not support the once command`)
             }
-            await app.runOnce(store.load())
+            await app.runOnce(await store.load())
             return
         }
 
@@ -245,7 +259,7 @@ export const runCli = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchem
  * @typeParam TSchema the app's Zod config schema
  * @param app the app descriptor
  */
-export const runCliMain = async <TSchema extends z.ZodObject>(app: ServiceApp<TSchema>): Promise<void> => {
+export const runCliMain = async <TSchema extends ConfigSchema>(app: ServiceApp<TSchema>): Promise<void> => {
     try {
         await runCli(app, process.argv.slice(2))
     } catch (error) {
