@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/webhook",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "license": "MIT",
     "description": "signalbox plugin: receive inbound HTTP webhooks and emit them as events",
     "repository": {
