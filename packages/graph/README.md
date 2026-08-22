@@ -28,7 +28,7 @@ const graph = {
 const workflow = compileGraph(graph, {
     registry: defaultRegistry,
     config: {}, // values referenced by node templates
-    secrets: {}, // redacted in logs/errors
+    secrets: {}, // wrapped in memory; revealed only while resolving $secret templates
 })
 
 // createApp({ ..., workflows: [workflow] })

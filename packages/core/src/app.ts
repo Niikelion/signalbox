@@ -1,6 +1,7 @@
+import { redact } from "@signalbox/secrets"
 import { createBus, type Bus, type EventMap } from "./bus.js"
 import { FRAMEWORK_CHANNEL, type FrameworkEvents, type LogLevel } from "./events.js"
-import { attachConsoleLogger, toError, write } from "./log.js"
+import { attachConsoleLogger, sanitizeError, toError, write } from "./log.js"
 import type { AnyPluginDefinition, Cleanup, PluginApis, PluginContext } from "./plugin.js"
 import type { WorkflowContext, WorkflowDefinition } from "./workflow.js"
 
@@ -62,10 +63,10 @@ export const createApp = <TAppEvents extends EventMap, TPlugins extends Record<s
 
     const scopedContext = (scope: string): ScopedContext => ({
         log: (message: string, level: LogLevel = "info") => {
-            framework.emit("log", { level, message, scope })
+            framework.emit("log", { level, message: redact(message), scope })
         },
         fail: (error: unknown) => {
-            framework.emit("error", { scope, error: toError(error) })
+            framework.emit("error", { scope, error: sanitizeError(error) })
         },
         onStart: fn => {
             startHooks.push(() => {
@@ -73,11 +74,11 @@ export const createApp = <TAppEvents extends EventMap, TPlugins extends Record<s
                     const result = fn()
                     if (result instanceof Promise) {
                         result.catch((error: unknown) => {
-                            framework.emit("error", { scope, error: toError(error) })
+                            framework.emit("error", { scope, error: sanitizeError(error) })
                         })
                     }
                 } catch (error) {
-                    framework.emit("error", { scope, error: toError(error) })
+                    framework.emit("error", { scope, error: sanitizeError(error) })
                 }
             })
         },
@@ -90,11 +91,11 @@ export const createApp = <TAppEvents extends EventMap, TPlugins extends Record<s
                     const result = handler()
                     if (result instanceof Promise) {
                         result.catch((error: unknown) => {
-                            framework.emit("error", { scope, error: toError(error) })
+                            framework.emit("error", { scope, error: sanitizeError(error) })
                         })
                     }
                 } catch (error) {
-                    framework.emit("error", { scope, error: toError(error) })
+                    framework.emit("error", { scope, error: sanitizeError(error) })
                 }
             }, ms)
             timer.unref()
