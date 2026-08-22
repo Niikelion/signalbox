@@ -33,7 +33,9 @@ const token = cfg.apiToken.reveal() // explicit plaintext access
 
 `field()` builds string/int/bool/list fields; chain `.secret()` to encrypt a top-level value and `.describe()` to document it. Secret defaults and nested secret markers are rejected. All store I/O is asynchronous.
 
-Secret fields are persisted as authenticated `enc:1` envelopes. The key is read from `<APP>_CONFIG_KEY` or provisioned in a loudly-warned file fallback beside the config. Existing plaintext secrets are validated and atomically migrated on their first read. `inspect()` reports masked values and encryption metadata without resolving keys.
+Secret fields are persisted as authenticated `enc:1` envelopes. Keys are read from systemd credentials or `<APP>_CONFIG_KEY`, with provisioning through a loudly-warned file fallback beside the config. Existing plaintext secrets are validated and atomically migrated on their first read. `inspect()` reports masked values and encryption metadata without resolving keys.
+
+The lifecycle API provides `keyInventory()`, resumable `rekey()`, guarded `pruneKeys()`, and `purge()`. Rekey journals contain IDs and phases only; no key bytes or plaintext values are written to them.
 
 The store resolves to `/etc/<appName>/config.json` as root, otherwise `$XDG_CONFIG_HOME/<appName>/config.json`; pass `path` to override. Config files use mode `0640`, and writes use flushed temporary files followed by atomic replacement.
 

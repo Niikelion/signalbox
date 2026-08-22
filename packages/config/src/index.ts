@@ -7,7 +7,15 @@ export { baseKind, describeOf, isRequired, isSecret } from "./introspect.js"
 export type { BaseKind } from "./introspect.js"
 
 export { createConfigStore } from "./store.js"
-export type { ConfigInspection, ConfigStore, ConfigStoreOptions } from "./store.js"
+export type {
+    ConfigInspection,
+    ConfigKeyInfo,
+    ConfigPurgeResult,
+    ConfigRekeyPending,
+    ConfigRekeyResult,
+    ConfigStore,
+    ConfigStoreOptions,
+} from "./store.js"
 
 export { isSecret as isSecretValue, REDACTED, Secret } from "@signalbox/secrets"
 export type { JsonPrimitive, JsonValue, KeySource, WritableKeyBackend } from "@signalbox/secrets"

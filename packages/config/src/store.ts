@@ -10,13 +10,17 @@ import {
     encryptSecret,
     EnvKeySource,
     FileKeyBackend,
+    isWritableKeyBackend,
     parseEnvelope,
     REDACTED,
     resolveKey,
     resolveOrProvisionKey,
     Secret,
+    SystemdCredentialKeySource,
     type KeyMaterial,
+    type KeyMetadata,
     type KeySource,
+    type WritableKeyBackend,
 } from "@signalbox/secrets"
 import type { z } from "zod"
 import { baseKind, isSecret } from "./introspect.js"
@@ -34,8 +38,38 @@ export interface ConfigInspection {
     >
 }
 
+export interface ConfigKeyInfo {
+    readonly id: string
+    readonly state: KeyMetadata["state"]
+    readonly createdAt?: string
+    readonly backend: string
+    readonly referenced: boolean
+    readonly managed: boolean
+}
+
+export interface ConfigRekeyResult {
+    readonly oldKeyIds: readonly string[]
+    readonly newKeyId: string
+    readonly backend: string
+    readonly revokedKeyIds: readonly string[]
+    readonly externalKeyIds: readonly string[]
+}
+
+export interface ConfigRekeyPending {
+    readonly oldKeyIds: readonly string[]
+    readonly newKeyId: string
+    readonly backend: string
+}
+
+export interface ConfigPurgeResult {
+    readonly removedConfig: boolean
+    readonly deletedKeyIds: readonly string[]
+    readonly externalKeyIds: readonly string[]
+}
+
 /** A read/write config store for one app's schema. */
 export interface ConfigStore<TSchema extends ConfigSchema> {
+    readonly appName: string
     readonly path: string
     readonly schema: TSchema
     exists(): Promise<boolean>
@@ -47,6 +81,14 @@ export interface ConfigStore<TSchema extends ConfigSchema> {
     coerce(key: string, rawValue: string): unknown
     redacted(values: Partial<ConfigOf<TSchema>>): Promise<Record<string, unknown>>
     inspect(): Promise<ConfigInspection>
+    keyMaterial(keyId?: string): Promise<KeyMaterial>
+    keyInventory(): Promise<ConfigKeyInfo[]>
+    rekey(options?: {
+        readonly revokeOld?: boolean
+        readonly verify?: (pending: ConfigRekeyPending) => Promise<void>
+    }): Promise<ConfigRekeyResult>
+    pruneKeys(keyIds: readonly string[]): Promise<readonly string[]>
+    purge(): Promise<ConfigPurgeResult>
 }
 
 /** Options for createConfigStore. */
@@ -61,6 +103,17 @@ export interface ConfigStoreOptions<TSchema extends ConfigSchema> {
 interface DecodedDocument {
     readonly plaintext: Record<string, unknown>
     readonly hasLegacySecrets: boolean
+}
+
+interface RekeyJournal {
+    readonly version: 1
+    readonly appName: string
+    readonly configPath: string
+    readonly oldKeyIds: readonly string[]
+    readonly newKeyId: string
+    readonly backend: string
+    readonly revokeOld: boolean
+    readonly phase: "staged" | "rewritten"
 }
 
 const delay = async (milliseconds: number): Promise<void> =>
@@ -87,9 +140,11 @@ export const createConfigStore = <TSchema extends ConfigSchema>(
     const fromEnvironment = process.env[`${appName.toUpperCase().replace(/[^A-Z0-9]+/gu, "_")}_CONFIG`]
     const path = options.path ?? fromEnvironment ?? (isRoot() ? systemPath : userPath)
     const lockPath = `${path}.lock`
+    const journalPath = `${path}.rekey.json`
+    const backupPath = `${path}.rekey.backup`
     const sources: readonly KeySource[] = options.keySource
         ? [options.keySource]
-        : [new EnvKeySource(), new FileKeyBackend({ configPath: path })]
+        : [new SystemdCredentialKeySource(), new EnvKeySource(), new FileKeyBackend({ configPath: path })]
 
     const fieldOf = (key: string): z.ZodType => {
         const field = shape[key]
@@ -179,6 +234,55 @@ export const createConfigStore = <TSchema extends ConfigSchema>(
         } catch {
             // Directory fsync is not available on every supported platform.
         }
+    }
+
+    const atomicWriteMetadata = async (target: string, value: unknown): Promise<void> => {
+        const directory = dirname(target)
+        await mkdir(directory, { recursive: true, mode: 0o750 })
+        const temporary = join(directory, `.${process.pid}-${randomBytes(8).toString("hex")}.tmp`)
+        const handle = await open(temporary, "wx", 0o600)
+        try {
+            await handle.writeFile(`${JSON.stringify(value, null, 4)}\n`, "utf8")
+            await handle.sync()
+        } catch (error) {
+            await handle.close()
+            await rm(temporary, { force: true })
+            throw error
+        }
+        await handle.close()
+        try {
+            await chmod(temporary, 0o600)
+            await rename(temporary, target)
+        } catch (error) {
+            await rm(temporary, { force: true })
+            throw error
+        }
+    }
+
+    const readJournal = async (): Promise<RekeyJournal | null> => {
+        let value: unknown
+        try {
+            value = JSON.parse(await readFile(journalPath, "utf8")) as unknown
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") return null
+            throw new SignalboxError(`cannot read rekey journal ${journalPath}: ${(error as Error).message}`)
+        }
+        if (!isRecord(value)) throw new SignalboxError(`rekey journal ${journalPath} has an invalid shape`)
+        const oldKeyIds = value["oldKeyIds"]
+        if (
+            value["version"] !== 1 ||
+            value["appName"] !== appName ||
+            value["configPath"] !== path ||
+            !Array.isArray(oldKeyIds) ||
+            !oldKeyIds.every(keyId => typeof keyId === "string") ||
+            typeof value["newKeyId"] !== "string" ||
+            typeof value["backend"] !== "string" ||
+            typeof value["revokeOld"] !== "boolean" ||
+            (value["phase"] !== "staged" && value["phase"] !== "rewritten")
+        ) {
+            throw new SignalboxError(`rekey journal ${journalPath} has an invalid shape`)
+        }
+        return value as unknown as RekeyJournal
     }
 
     const withLock = async <T>(action: () => Promise<T>): Promise<T> => {
@@ -280,9 +384,10 @@ export const createConfigStore = <TSchema extends ConfigSchema>(
     const encryptDocument = async (
         input: Record<string, unknown>,
         preserveUnknown = false,
+        explicitKey?: KeyMaterial,
     ): Promise<Record<string, unknown>> => {
         const output: Record<string, unknown> = {}
-        const writeKey = secretEntries.length > 0 ? await resolveWriteKey() : null
+        const writeKey = secretEntries.length > 0 ? (explicitKey ?? (await resolveWriteKey())) : null
         for (const [key, value] of Object.entries(input)) {
             const fieldSchema = shape[key]
             if (!fieldSchema) {
@@ -303,6 +408,15 @@ export const createConfigStore = <TSchema extends ConfigSchema>(
             }
         }
         return output
+    }
+
+    const referencedKeyIds = (raw: Record<string, unknown>): string[] => {
+        const ids = new Set<string>()
+        for (const [key] of secretEntries) {
+            const stored = raw[key]
+            if (typeof stored === "string" && stored.startsWith("enc:")) ids.add(parseEnvelope(stored).keyId)
+        }
+        return [...ids]
     }
 
     const wrapDocument = (plaintext: Record<string, unknown>): Record<string, unknown> => {
@@ -381,7 +495,238 @@ export const createConfigStore = <TSchema extends ConfigSchema>(
         return { values, secrets: secretStates }
     }
 
+    const keyMaterial = async (keyId?: string): Promise<KeyMaterial> => {
+        const resolved = await resolveKey(sources, appName, keyId)
+        if (!resolved) throw missingKey(keyId)
+        return { id: resolved.material.id, key: Uint8Array.from(resolved.material.key) }
+    }
+
+    const writableSources = (): WritableKeyBackend[] => sources.filter(isWritableKeyBackend)
+
+    const keyInventory = async (): Promise<ConfigKeyInfo[]> => {
+        const raw = (await readRaw()) ?? {}
+        const referenced = new Set(referencedKeyIds(raw))
+        const inventory: ConfigKeyInfo[] = []
+        const seen = new Set<string>()
+        for (const source of sources) {
+            if (!(await source.available())) continue
+            if (isWritableKeyBackend(source)) {
+                for (const metadata of await source.listKeys(appName)) {
+                    const identity = `${source.name}:${metadata.id}`
+                    if (seen.has(identity)) continue
+                    seen.add(identity)
+                    inventory.push({
+                        ...metadata,
+                        backend: source.name,
+                        referenced: referenced.has(metadata.id),
+                        managed: true,
+                    })
+                }
+                continue
+            }
+            if (source instanceof SystemdCredentialKeySource) {
+                const sealed = await source.listKeyIds(appName)
+                if (sealed) {
+                    for (const id of sealed.keyIds) {
+                        const identity = `${source.name}:${id}`
+                        if (seen.has(identity)) continue
+                        seen.add(identity)
+                        inventory.push({
+                            id,
+                            state: id === sealed.activeKeyId ? "active" : "retired",
+                            backend: source.name,
+                            referenced: referenced.has(id),
+                            managed: false,
+                        })
+                    }
+                }
+                continue
+            }
+            const candidates = new Set(referenced)
+            const active = await source.getKey(appName)
+            if (active) candidates.add(active.id)
+            for (const id of candidates) {
+                const material = await source.getKey(appName, id)
+                if (!material) continue
+                const identity = `${source.name}:${id}`
+                if (seen.has(identity)) continue
+                seen.add(identity)
+                inventory.push({
+                    id,
+                    state: active?.id === id ? "active" : "retired",
+                    backend: source.name,
+                    referenced: referenced.has(id),
+                    managed: false,
+                })
+            }
+        }
+        return inventory
+    }
+
+    const deleteManagedKey = async (backend: WritableKeyBackend, keyId: string): Promise<boolean> => {
+        const metadata = (await backend.listKeys(appName)).find(item => item.id === keyId)
+        if (!metadata) return false
+        if (metadata.state === "active") await backend.retireKey(appName, keyId)
+        await backend.deleteKey(appName, keyId)
+        return true
+    }
+
+    const pruneKeys = async (keyIds: readonly string[]): Promise<readonly string[]> =>
+        withLock(async () => {
+            const requested = [...new Set(keyIds)]
+            if (requested.length === 0) return []
+            const inspection = await inspect()
+            const referenced = new Set(
+                Object.values(inspection.secrets)
+                    .map(secret => secret.keyId)
+                    .filter((keyId): keyId is string => keyId !== undefined),
+            )
+            const deleted: string[] = []
+            for (const keyId of requested) {
+                if (referenced.has(keyId)) throw new SignalboxError(`cannot prune referenced key ${keyId}`)
+                let found = false
+                for (const backend of writableSources()) {
+                    const metadata = (await backend.listKeys(appName)).find(item => item.id === keyId)
+                    if (!metadata) continue
+                    found = true
+                    if (metadata.state !== "retired") {
+                        throw new SignalboxError(`cannot prune ${metadata.state} key ${keyId}`)
+                    }
+                    await backend.deleteKey(appName, keyId)
+                    deleted.push(keyId)
+                }
+                if (!found) throw new SignalboxError(`managed key ${keyId} was not found`)
+            }
+            return deleted
+        })
+
+    const rekey = async (
+        rekeyOptions: {
+            readonly revokeOld?: boolean
+            readonly verify?: (pending: ConfigRekeyPending) => Promise<void>
+        } = {},
+    ): Promise<ConfigRekeyResult> =>
+        withLock(async () => {
+            if (secretEntries.length === 0) throw new SignalboxError(`${appName} has no secret config fields to rekey`)
+            const raw = await readRaw()
+            if (!raw) throw new SignalboxError(`no config at ${path}`)
+
+            let journal = await readJournal()
+            let backend: WritableKeyBackend
+            if (journal) {
+                const resumed = writableSources().find(source => source.name === journal?.backend)
+                if (!resumed) throw new SignalboxError(`rekey backend ${journal.backend} is no longer available`)
+                backend = resumed
+            } else {
+                const available: WritableKeyBackend[] = []
+                for (const source of writableSources()) if (await source.available()) available.push(source)
+                const selected = available[0]
+                if (!selected) throw new SignalboxError(`no writable key backend is available for ${appName}`)
+                backend = selected
+                const oldKeyIds = referencedKeyIds(raw)
+                const staged = await backend.stageKey(appName, randomBytes(32))
+                journal = {
+                    version: 1,
+                    appName,
+                    configPath: path,
+                    oldKeyIds,
+                    newKeyId: staged.id,
+                    backend: backend.name,
+                    revokeOld: rekeyOptions.revokeOld ?? false,
+                    phase: "staged",
+                }
+                await atomicWriteMetadata(backupPath, raw)
+                await atomicWriteMetadata(journalPath, journal)
+            }
+
+            const staged = await backend.getKey(appName, journal.newKeyId)
+            if (!staged) throw new SignalboxError(`staged rekey key ${journal.newKeyId} is unavailable`)
+            const currentIds = referencedKeyIds(raw)
+            const alreadyRewritten = currentIds.length > 0 && currentIds.every(id => id === journal?.newKeyId)
+            let wroteConfig = false
+            if (!alreadyRewritten) {
+                const decoded = await decodeDocument(raw)
+                validateFull(decoded.plaintext)
+                try {
+                    await atomicWrite(await encryptDocument(decoded.plaintext, true, staged))
+                    wroteConfig = true
+                    const verifyRaw = await readRaw()
+                    if (!verifyRaw) throw new SignalboxError(`config disappeared while rekeying ${path}`)
+                    validateFull((await decodeDocument(verifyRaw)).plaintext)
+                } catch (error) {
+                    if (wroteConfig) {
+                        const backup = JSON.parse(await readFile(backupPath, "utf8")) as unknown
+                        if (!isRecord(backup))
+                            throw new SignalboxError(`rekey backup ${backupPath} has an invalid shape`)
+                        await atomicWrite(backup)
+                    }
+                    throw error
+                }
+            }
+
+            journal = { ...journal, phase: "rewritten" }
+            await atomicWriteMetadata(journalPath, journal)
+            if (rekeyOptions.verify) {
+                try {
+                    await rekeyOptions.verify({
+                        oldKeyIds: journal.oldKeyIds,
+                        newKeyId: journal.newKeyId,
+                        backend: journal.backend,
+                    })
+                } catch (error) {
+                    const backup = JSON.parse(await readFile(backupPath, "utf8")) as unknown
+                    if (!isRecord(backup)) throw new SignalboxError(`rekey backup ${backupPath} has an invalid shape`)
+                    await atomicWrite(backup)
+                    throw error
+                }
+            }
+            await backend.activateKey(appName, journal.newKeyId)
+
+            const revokedKeyIds: string[] = []
+            const externalKeyIds: string[] = []
+            if (journal.revokeOld) {
+                for (const oldKeyId of journal.oldKeyIds) {
+                    let removed = false
+                    for (const managed of writableSources()) {
+                        if (await deleteManagedKey(managed, oldKeyId)) removed = true
+                    }
+                    if (removed) revokedKeyIds.push(oldKeyId)
+                    else externalKeyIds.push(oldKeyId)
+                }
+            }
+            await rm(journalPath, { force: true })
+            await rm(backupPath, { force: true })
+            return {
+                oldKeyIds: journal.oldKeyIds,
+                newKeyId: journal.newKeyId,
+                backend: journal.backend,
+                revokedKeyIds,
+                externalKeyIds,
+            }
+        })
+
+    const purge = async (): Promise<ConfigPurgeResult> =>
+        withLock(async () => {
+            const inventory = await keyInventory()
+            const deletedKeyIds: string[] = []
+            for (const backend of writableSources()) {
+                for (const metadata of await backend.listKeys(appName)) {
+                    if (await deleteManagedKey(backend, metadata.id)) deletedKeyIds.push(metadata.id)
+                }
+            }
+            const removedConfig = await exists()
+            await rm(path, { force: true })
+            await rm(journalPath, { force: true })
+            await rm(backupPath, { force: true })
+            return {
+                removedConfig,
+                deletedKeyIds,
+                externalKeyIds: [...new Set(inventory.filter(item => !item.managed).map(item => item.id))],
+            }
+        })
+
     return {
+        appName,
         path,
         schema,
         exists,
@@ -411,5 +756,10 @@ export const createConfigStore = <TSchema extends ConfigSchema>(
             return output
         },
         inspect,
+        keyMaterial,
+        keyInventory,
+        rekey,
+        pruneKeys,
+        purge,
     }
 }
