@@ -22,3 +22,11 @@ export type {
     ResolvedKey,
     WritableKeyBackend,
 } from "./keys.js"
+
+export {
+    systemdActiveCredentialName,
+    systemdCredentialName,
+    systemdManifestName,
+    SystemdCredentialKeySource,
+} from "./systemd.js"
+export type { SystemdCredentialKeySourceOptions, SystemdCredentialManifest } from "./systemd.js"

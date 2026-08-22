@@ -31,7 +31,7 @@ const makeStore = async () => {
     directories.push(directory)
     const path = join(directory, "config.json")
     const keySource = new FileKeyBackend({ configPath: path, warn: vi.fn() })
-    return { path, store: createConfigStore({ appName: "test", schema, path, keySource }) }
+    return { path, keySource, store: createConfigStore({ appName: "test", schema, path, keySource }) }
 }
 
 afterEach(async () => {
@@ -216,5 +216,95 @@ describe("encrypted config store", () => {
         expect(isRequired(shape.zoneId)).toBe(true)
         expect(isRequired(shape.ttl)).toBe(false)
         expect(describeOf(shape.apiToken)).toBe("token")
+    })
+
+    it("rotates keys transactionally, retains the old key, and prunes it explicitly", async () => {
+        const { path, store } = await makeStore()
+        await store.save({ apiToken: "rotation-secret", zoneId: "zone" })
+        const firstId = (await store.inspect()).secrets["apiToken"]?.keyId
+        expect(firstId).toBeDefined()
+
+        const result = await store.rekey()
+        const secondId = (await store.inspect()).secrets["apiToken"]?.keyId
+        expect(result.oldKeyIds).toEqual([firstId])
+        expect(secondId).toBe(result.newKeyId)
+        expect(secondId).not.toBe(firstId)
+        expect((await store.load()).apiToken.reveal()).toBe("rotation-secret")
+        expect(await store.keyInventory()).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ id: firstId, state: "retired", referenced: false }),
+                expect.objectContaining({ id: secondId, state: "active", referenced: true }),
+            ]),
+        )
+
+        await store.pruneKeys([firstId as string])
+        expect((await store.keyInventory()).map(item => item.id)).not.toContain(firstId)
+        await expect(readFile(`${path}.rekey.json`, "utf8")).rejects.toMatchObject({ code: "ENOENT" })
+    })
+
+    it("revokes old managed keys and purges config plus remaining managed keys", async () => {
+        const { path, store } = await makeStore()
+        await store.save({ apiToken: "revoke-secret", zoneId: "zone" })
+        const firstId = (await store.inspect()).secrets["apiToken"]?.keyId as string
+        const result = await store.rekey({ revokeOld: true })
+        expect(result.revokedKeyIds).toEqual([firstId])
+        expect((await store.keyInventory()).map(item => item.id)).not.toContain(firstId)
+
+        const purged = await store.purge()
+        expect(purged.removedConfig).toBe(true)
+        expect(purged.deletedKeyIds).toContain(result.newKeyId)
+        expect(await store.exists()).toBe(false)
+        expect(await store.keyInventory()).toEqual([])
+        await expect(readFile(path, "utf8")).rejects.toMatchObject({ code: "ENOENT" })
+    })
+
+    it("resumes a rekey transaction from its staged journal", async () => {
+        const { path, keySource, store } = await makeStore()
+        await store.save({ apiToken: "resume-secret", zoneId: "zone" })
+        const oldKeyId = (await store.inspect()).secrets["apiToken"]?.keyId as string
+        const staged = await keySource.stageKey("test", randomBytes(32))
+        await writeFile(`${path}.rekey.backup`, await readFile(path, "utf8"))
+        await writeFile(
+            `${path}.rekey.json`,
+            JSON.stringify({
+                version: 1,
+                appName: "test",
+                configPath: path,
+                oldKeyIds: [oldKeyId],
+                newKeyId: staged.id,
+                backend: "file",
+                revokeOld: false,
+                phase: "staged",
+            }),
+        )
+
+        const result = await store.rekey()
+        expect(result.newKeyId).toBe(staged.id)
+        expect((await store.load()).apiToken.reveal()).toBe("resume-secret")
+        expect(await keySource.listKeys("test")).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ id: oldKeyId, state: "retired" }),
+                expect.objectContaining({ id: staged.id, state: "active" }),
+            ]),
+        )
+    })
+
+    it("restores the encrypted backup when rekey verification fails", async () => {
+        const { path, store } = await makeStore()
+        await store.save({ apiToken: "rollback-secret", zoneId: "zone" })
+        const original = await readFile(path, "utf8")
+
+        await expect(
+            store.rekey({
+                verify: async () => {
+                    throw new Error("service restart failed")
+                },
+            }),
+        ).rejects.toThrow("service restart failed")
+        expect(await readFile(path, "utf8")).toBe(original)
+        expect((await store.load()).apiToken.reveal()).toBe("rollback-secret")
+
+        await store.rekey()
+        expect((await store.load()).apiToken.reveal()).toBe("rollback-secret")
     })
 })
