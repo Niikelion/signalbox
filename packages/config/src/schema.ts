@@ -1,7 +1,14 @@
+import type { JsonValue, Secret } from "@signalbox/secrets"
 import { z } from "zod"
 
-/** Registry of schemas whose values are secret (redacted in output, hidden at prompts). */
+/** Registry of schemas whose top-level values are secret. */
 export const secrets = z.registry<{ secret: true }>()
+
+declare const secretBrand: unique symbol
+declare const configShape: unique symbol
+
+/** A raw Zod schema branded as a top-level secret declaration. */
+export type SecretSchema<T extends z.ZodType> = T & { readonly [secretBrand]: true }
 
 /** Register on a non-generic schema so Zod's conditional register overload resolves. */
 const markSecret = (schema: z.ZodType): void => {
@@ -9,131 +16,210 @@ const markSecret = (schema: z.ZodType): void => {
 }
 
 interface FieldMeta {
-    secret?: boolean
+    readonly secret?: boolean
 }
 
-/**
- * A config-field builder wrapping a Zod schema, with signalbox extras (`secret`).
- * @typeParam T the underlying Zod type
- */
-export class Field<T extends z.ZodType> {
+/** A config-field builder carrying its underlying schema and secret flag. */
+export class Field<TSchema extends z.ZodType, TSecret extends boolean = false> {
+    declare private readonly secretType?: TSecret
+
     constructor(
         /** The underlying Zod schema. */
-        readonly zod: T,
-        /** signalbox field metadata. */
+        readonly zod: TSchema,
+        /** Signalbox field metadata. */
         readonly meta: FieldMeta = {},
     ) {}
 
-    /** Mark the field's value as secret (redacted in `config list`, hidden at prompts). */
-    secret(): Field<T> {
+    /** Mark this top-level field as secret. */
+    secret(): Field<TSchema, true> {
         return new Field(this.zod, { ...this.meta, secret: true })
     }
 
-    /**
-     * Attach a description (used for CLI prompts and OpenAPI).
-     * @param text the description
-     */
-    describe(text: string): Field<T> {
+    /** Attach a description used by CLI prompts and OpenAPI. */
+    describe(text: string): Field<TSchema, TSecret> {
         return new Field(this.zod.describe(text), this.meta)
     }
 
-    /** Make the field optional. */
-    optional(): Field<z.ZodOptional<T>> {
+    /** Make this field optional while preserving its secret flag. */
+    optional(): Field<z.ZodOptional<TSchema>, TSecret> {
         return new Field(this.zod.optional(), this.meta)
     }
 
-    /**
-     * Give the field a default value.
-     * @param value the default
-     */
-    default(value: z.output<T>): Field<z.ZodDefault<T>> {
+    /** Give this non-secret field a default value. Secret defaults are rejected by config(). */
+    default(value: z.output<TSchema>): Field<z.ZodDefault<TSchema>, TSecret> {
         return new Field(this.zod.default(value as never), this.meta)
     }
 }
 
-class StringField extends Field<z.ZodString> {
-    min(length: number): StringField {
+class StringField<TSecret extends boolean = false> extends Field<z.ZodString, TSecret> {
+    override secret(): StringField<true> {
+        return new StringField(this.zod, { ...this.meta, secret: true })
+    }
+
+    override describe(text: string): StringField<TSecret> {
+        return new StringField(this.zod.describe(text), this.meta)
+    }
+
+    min(length: number): StringField<TSecret> {
         return new StringField(this.zod.min(length), this.meta)
     }
-    max(length: number): StringField {
+
+    max(length: number): StringField<TSecret> {
         return new StringField(this.zod.max(length), this.meta)
     }
-    regex(pattern: RegExp): StringField {
+
+    regex(pattern: RegExp): StringField<TSecret> {
         return new StringField(this.zod.regex(pattern), this.meta)
     }
 }
 
-class NumberField extends Field<z.ZodNumber> {
-    positive(): NumberField {
+class NumberField<TSecret extends boolean = false> extends Field<z.ZodNumber, TSecret> {
+    override secret(): NumberField<true> {
+        return new NumberField(this.zod, { ...this.meta, secret: true })
+    }
+
+    override describe(text: string): NumberField<TSecret> {
+        return new NumberField(this.zod.describe(text), this.meta)
+    }
+
+    positive(): NumberField<TSecret> {
         return new NumberField(this.zod.min(1), this.meta)
     }
-    min(value: number): NumberField {
+
+    min(value: number): NumberField<TSecret> {
         return new NumberField(this.zod.min(value), this.meta)
     }
-    max(value: number): NumberField {
+
+    max(value: number): NumberField<TSecret> {
         return new NumberField(this.zod.max(value), this.meta)
     }
 }
 
-class ListField extends Field<z.ZodArray<z.ZodString>> {
-    nonempty(): ListField {
+class ListField<TSecret extends boolean = false> extends Field<z.ZodArray<z.ZodString>, TSecret> {
+    override secret(): ListField<true> {
+        return new ListField(this.zod, { ...this.meta, secret: true })
+    }
+
+    override describe(text: string): ListField<TSecret> {
+        return new ListField(this.zod.describe(text), this.meta)
+    }
+
+    nonempty(): ListField<TSecret> {
         return new ListField(this.zod.min(1), this.meta)
     }
 }
 
-/** Start a config field: pick a type via `.string()` / `.int()` / `.bool()` / `.list()`. */
+/** Start a config field and select its base type. */
 export const field = () => ({
-    /** A string field (with `.min`/`.max`/`.regex`). */
     string: (): StringField => new StringField(z.string()),
-    /** An integer field (with `.positive`/`.min`/`.max`). */
     int: (): NumberField => new NumberField(z.number().int()),
-    /** A boolean field. */
     bool: (): Field<z.ZodBoolean> => new Field(z.boolean()),
-    /** A comma-separated list of strings (with `.nonempty`). */
     list: (): ListField => new ListField(z.array(z.string())),
 })
 
-/**
- * Mark a bare Zod schema as secret (for nested/raw fields). Apply last in the chain.
- * @typeParam T the schema type
- * @param schema the schema to mark
- */
-export const secret = <T extends z.ZodType>(schema: T): T => {
+/** Mark a raw outermost Zod field schema as secret. */
+export const secret = <T extends z.ZodType>(schema: T): SecretSchema<T> => {
     markSecret(schema)
-    return schema
+    return schema as SecretSchema<T>
 }
 
-type FieldOrZod = Field<z.ZodType> | z.ZodType
-type ZodOf<F> = F extends Field<infer T> ? T : F
-type ShapeOf<S extends Record<string, FieldOrZod>> = { [K in keyof S]: ZodOf<S[K]> }
+export type ConfigDeclaration = Record<string, Field<z.ZodType, boolean> | z.ZodType>
+type ZodOf<F> = F extends Field<infer T, boolean> ? T : F extends z.ZodType ? F : never
+type ShapeOf<S extends ConfigDeclaration> = { [K in keyof S]: ZodOf<S[K]> }
 
-/**
- * Assemble a config schema from `field()` builders and/or raw Zod schemas.
- * @typeParam S the shape map (field builders and/or Zod schemas)
- * @param shape the fields, keyed by config key
- */
-export const config = <S extends Record<string, FieldOrZod>>(shape: S): z.ZodObject<ShapeOf<S>> => {
+/** A Zod object retaining the original declaration as phantom type metadata. */
+export type ConfigSchema<S extends ConfigDeclaration = ConfigDeclaration> = z.ZodObject<ShapeOf<S>> & {
+    readonly [configShape]?: S
+}
+
+type IsSecretDeclaration<D> =
+    D extends Field<z.ZodType, infer TSecret>
+        ? TSecret extends true
+            ? true
+            : false
+        : D extends SecretSchema<z.ZodType>
+          ? true
+          : false
+type InputValue<D> = z.input<ZodOf<D>>
+type OutputValue<D> = z.output<ZodOf<D>>
+type SecretValue<T> = Exclude<T, undefined> extends JsonValue ? Secret<Exclude<T, undefined>> : Secret<JsonValue>
+type RuntimeValue<D> =
+    IsSecretDeclaration<D> extends true
+        ? undefined extends OutputValue<D>
+            ? SecretValue<OutputValue<D>> | undefined
+            : SecretValue<OutputValue<D>>
+        : OutputValue<D>
+type OptionalInputKeys<S extends ConfigDeclaration> = {
+    [K in keyof S]-?: undefined extends InputValue<S[K]> ? K : never
+}[keyof S]
+type OptionalRuntimeKeys<S extends ConfigDeclaration> = {
+    [K in keyof S]-?: undefined extends OutputValue<S[K]> ? K : never
+}[keyof S]
+type ProjectInput<S extends ConfigDeclaration> = {
+    [K in Exclude<keyof S, OptionalInputKeys<S>>]: InputValue<S[K]>
+} & { [K in OptionalInputKeys<S>]?: InputValue<S[K]> }
+type ProjectRuntime<S extends ConfigDeclaration> = {
+    [K in Exclude<keyof S, OptionalRuntimeKeys<S>>]: RuntimeValue<S[K]>
+} & { [K in OptionalRuntimeKeys<S>]?: RuntimeValue<S[K]> }
+
+type DeclarationOf<C> = C extends ConfigSchema<infer S> ? S : never
+
+/** Plaintext values accepted by a config store. */
+export type InputOf<C extends ConfigSchema> = ProjectInput<DeclarationOf<C>>
+
+/** Runtime config values, with every present secret wrapped in Secret<T>. */
+export type ConfigOf<C extends ConfigSchema> = ProjectRuntime<DeclarationOf<C>>
+
+interface ZodInternals {
+    readonly def?: unknown
+}
+
+const isZodSchema = (value: unknown): value is z.ZodType =>
+    typeof value === "object" && value !== null && "_zod" in value
+
+const visitChildren = (value: unknown, visit: (schema: z.ZodType) => boolean): boolean => {
+    if (isZodSchema(value)) return visit(value)
+    if (Array.isArray(value)) return value.some(entry => visitChildren(entry, visit))
+    if (typeof value !== "object" || value === null) return false
+    return Object.values(value).some(entry => visitChildren(entry, visit))
+}
+
+const schemaContains = (schema: z.ZodType, predicate: (schema: z.ZodType) => boolean): boolean => {
+    const seen = new Set<z.ZodType>()
+    const search = (candidate: z.ZodType): boolean => {
+        if (seen.has(candidate)) return false
+        seen.add(candidate)
+        if (predicate(candidate)) return true
+        return visitChildren((candidate._zod as ZodInternals).def, search)
+    }
+    return search(schema)
+}
+
+const schemaType = (schema: z.ZodType): string | undefined =>
+    ((schema._zod as ZodInternals).def as { type?: string } | undefined)?.type
+
+/** Assemble a config schema and validate v1 top-level secret constraints. */
+export const config = <S extends ConfigDeclaration>(shape: S): ConfigSchema<S> => {
     const zodShape: Record<string, z.ZodType> = {}
-    const secretKeys: string[] = []
-    for (const [key, value] of Object.entries(shape)) {
-        if (value instanceof Field) {
-            zodShape[key] = value.zod
-            if (value.meta.secret) secretKeys.push(key)
-        } else {
-            zodShape[key] = value
+    for (const [key, declaration] of Object.entries(shape)) {
+        const fieldSchema = declaration instanceof Field ? declaration.zod : declaration
+        const topLevelSecret =
+            declaration instanceof Field ? declaration.meta.secret === true : secrets.has(fieldSchema)
+        const nestedSecret = visitChildren((fieldSchema._zod as ZodInternals).def, child =>
+            schemaContains(child, candidate => secrets.has(candidate)),
+        )
+        if (
+            (topLevelSecret || nestedSecret) &&
+            schemaContains(fieldSchema, candidate => schemaType(candidate) === "default")
+        ) {
+            throw new Error(`secret field "${key}" cannot have a default value`)
         }
+        if (nestedSecret) throw new Error(`secret field "${key}" must be marked on its outermost top-level schema`)
+        zodShape[key] = fieldSchema
+        if (topLevelSecret) markSecret(fieldSchema)
     }
-    const object = z.object(zodShape)
-    const built = object.shape as Record<string, z.ZodType>
-    for (const key of secretKeys) {
-        const fieldSchema = built[key]
-        if (fieldSchema) markSecret(fieldSchema)
-    }
-    return object as z.ZodObject<ShapeOf<S>>
+    return z.object(zodShape) as ConfigSchema<S>
 }
 
-/**
- * The config object type inferred from a schema built by {@link config}.
- * @typeParam C the schema type
- */
-export type Infer<C extends z.ZodType> = z.infer<C>
+/** Backward-compatible alias for the runtime config projection. */
+export type Infer<C extends ConfigSchema> = ConfigOf<C>

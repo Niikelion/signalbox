@@ -43,7 +43,7 @@ import { compileGraph, defaultRegistry } from "@signalbox/graph"
 const ddns = compileGraph(graph, {
     registry: defaultRegistry, // defaults to defaultRegistry
     config: {}, // values referenced by node config templates
-    secrets: { cfToken: process.env.CF_TOKEN }, // redacted from logs and errors
+    secrets: { cfToken: process.env.CF_TOKEN! }, // wrapped in memory and redacted from framework output
 })
 
 await createApp({ name: "ddns", plugins, workflows: [ddns] }).run()

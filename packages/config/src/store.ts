@@ -1,89 +1,156 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { randomBytes } from "node:crypto"
+import { constants } from "node:fs"
+import { access, chmod, mkdir, open, readFile, rename, rm, stat } from "node:fs/promises"
 import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 import { SignalboxError, isRoot } from "@signalbox/core"
+import {
+    assertJsonValue,
+    decryptSecret,
+    encryptSecret,
+    EnvKeySource,
+    FileKeyBackend,
+    isWritableKeyBackend,
+    parseEnvelope,
+    REDACTED,
+    resolveKey,
+    resolveOrProvisionKey,
+    Secret,
+    SystemdCredentialKeySource,
+    type KeyMaterial,
+    type KeyMetadata,
+    type KeySource,
+    type WritableKeyBackend,
+} from "@signalbox/secrets"
 import type { z } from "zod"
 import { baseKind, isSecret } from "./introspect.js"
+import type { ConfigOf, ConfigSchema, InputOf } from "./schema.js"
 
-/**
- * The config object type for a schema.
- * @typeParam TSchema the Zod object schema
- */
-export type ConfigOf<TSchema extends z.ZodObject> = z.infer<TSchema>
+export interface ConfigInspection {
+    readonly values: Record<string, unknown>
+    readonly secrets: Record<
+        string,
+        {
+            readonly state: "absent" | "plaintext" | "encrypted"
+            readonly version?: number
+            readonly keyId?: string
+        }
+    >
+}
 
-/**
- * A read/write config store for one app's schema.
- * @typeParam TSchema the Zod object schema
- */
-export interface ConfigStore<TSchema extends z.ZodObject> {
-    /** Resolved config file path. */
+export interface ConfigKeyInfo {
+    readonly id: string
+    readonly state: KeyMetadata["state"]
+    readonly createdAt?: string
+    readonly backend: string
+    readonly referenced: boolean
+    readonly managed: boolean
+}
+
+export interface ConfigRekeyResult {
+    readonly oldKeyIds: readonly string[]
+    readonly newKeyId: string
+    readonly backend: string
+    readonly revokedKeyIds: readonly string[]
+    readonly externalKeyIds: readonly string[]
+}
+
+export interface ConfigRekeyPending {
+    readonly oldKeyIds: readonly string[]
+    readonly newKeyId: string
+    readonly backend: string
+}
+
+export interface ConfigPurgeResult {
+    readonly removedConfig: boolean
+    readonly deletedKeyIds: readonly string[]
+    readonly externalKeyIds: readonly string[]
+}
+
+/** A read/write config store for one app's schema. */
+export interface ConfigStore<TSchema extends ConfigSchema> {
+    readonly appName: string
     readonly path: string
-    /** The schema this store validates against. */
     readonly schema: TSchema
-    /** Whether the config file exists. */
-    exists: () => boolean
-    /** Read and validate the full config; throws on missing/invalid values. */
-    load: () => ConfigOf<TSchema>
-    /** Read the raw file without validation (may be partial). */
-    readPartial: () => Partial<ConfigOf<TSchema>>
-    /** Write the given values to the file. */
-    save: (values: Partial<ConfigOf<TSchema>>) => void
-    /** Coerce, validate, and set a single key from a raw CLI string. */
-    set: (key: string, rawValue: string) => void
-    /** Remove a single key. */
-    unset: (key: string) => void
-    /** Coerce a raw CLI string to the field's type (without saving). */
-    coerce: (key: string, rawValue: string) => unknown
-    /** Return a copy of `values` with secret fields masked. */
-    redacted: (values: Record<string, unknown>) => Record<string, unknown>
+    exists(): Promise<boolean>
+    load(): Promise<ConfigOf<TSchema>>
+    readPartial(): Promise<Partial<ConfigOf<TSchema>>>
+    save(values: Partial<InputOf<TSchema>>): Promise<void>
+    set(key: string, rawValue: string): Promise<void>
+    unset(key: string): Promise<void>
+    coerce(key: string, rawValue: string): unknown
+    redacted(values: Partial<ConfigOf<TSchema>>): Promise<Record<string, unknown>>
+    inspect(): Promise<ConfigInspection>
+    keyMaterial(keyId?: string): Promise<KeyMaterial>
+    keyInventory(): Promise<ConfigKeyInfo[]>
+    rekey(options?: {
+        readonly revokeOld?: boolean
+        readonly verify?: (pending: ConfigRekeyPending) => Promise<void>
+    }): Promise<ConfigRekeyResult>
+    pruneKeys(keyIds: readonly string[]): Promise<readonly string[]>
+    purge(): Promise<ConfigPurgeResult>
 }
 
-/**
- * Options for {@link createConfigStore}.
- * @typeParam TSchema the Zod object schema
- */
-export interface ConfigStoreOptions<TSchema extends z.ZodObject> {
-    /** App name; drives the default config path and env override. */
-    appName: string
-    /** The config schema (build it with `config()` / `field()`). */
-    schema: TSchema
-    /** Explicit config file path (overrides the default resolution). */
-    path?: string
+/** Options for createConfigStore. */
+export interface ConfigStoreOptions<TSchema extends ConfigSchema> {
+    readonly appName: string
+    readonly schema: TSchema
+    readonly path?: string
+    /** Use one explicit source instead of automatic environment/file selection. */
+    readonly keySource?: KeySource
 }
 
-/**
- * Create a config store for an app.
- * @typeParam TSchema the Zod object schema
- * @param options app name, schema, and optional path
- */
-export const createConfigStore = <TSchema extends z.ZodObject>(
+interface DecodedDocument {
+    readonly plaintext: Record<string, unknown>
+    readonly hasLegacySecrets: boolean
+}
+
+interface RekeyJournal {
+    readonly version: 1
+    readonly appName: string
+    readonly configPath: string
+    readonly oldKeyIds: readonly string[]
+    readonly newKeyId: string
+    readonly backend: string
+    readonly revokeOld: boolean
+    readonly phase: "staged" | "rewritten"
+}
+
+const delay = async (milliseconds: number): Promise<void> =>
+    new Promise(resolve => {
+        setTimeout(resolve, milliseconds)
+    })
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value)
+
+/** Create an async encrypted config store for an app. Construction itself performs no I/O. */
+export const createConfigStore = <TSchema extends ConfigSchema>(
     options: ConfigStoreOptions<TSchema>,
 ): ConfigStore<TSchema> => {
     const { appName, schema } = options
     const shape = schema.shape as Record<string, z.ZodType>
     const keys = Object.keys(shape)
+    const secretEntries = Object.entries(shape).filter(([, fieldSchema]) => isSecret(fieldSchema))
+
+    const systemPath = `/etc/${appName}/config.json`
+    const xdgConfigHome = process.env["XDG_CONFIG_HOME"]
+    const configHome = xdgConfigHome && xdgConfigHome.length > 0 ? xdgConfigHome : join(homedir(), ".config")
+    const userPath = join(configHome, appName, "config.json")
+    const fromEnvironment = process.env[`${appName.toUpperCase().replace(/[^A-Z0-9]+/gu, "_")}_CONFIG`]
+    const path = options.path ?? fromEnvironment ?? (isRoot() ? systemPath : userPath)
+    const lockPath = `${path}.lock`
+    const journalPath = `${path}.rekey.json`
+    const backupPath = `${path}.rekey.backup`
+    const sources: readonly KeySource[] = options.keySource
+        ? [options.keySource]
+        : [new SystemdCredentialKeySource(), new EnvKeySource(), new FileKeyBackend({ configPath: path })]
 
     const fieldOf = (key: string): z.ZodType => {
         const field = shape[key]
         if (!field) throw new SignalboxError(`unknown config key "${key}"`, `known keys: ${keys.join(", ")}`)
         return field
     }
-
-    const systemPath = `/etc/${appName}/config.json`
-    const xdgConfigHome = process.env["XDG_CONFIG_HOME"]
-    const configHome = xdgConfigHome && xdgConfigHome.length > 0 ? xdgConfigHome : join(homedir(), ".config")
-    const userPath = join(configHome, appName, "config.json")
-
-    const resolvePath = (): string => {
-        if (options.path) return options.path
-        const fromEnv = process.env[`${appName.toUpperCase().replace(/-/g, "_")}_CONFIG`]
-        if (fromEnv) return fromEnv
-        if (existsSync(systemPath)) return systemPath
-        if (existsSync(userPath)) return userPath
-        return isRoot() ? systemPath : userPath
-    }
-
-    const path = resolvePath()
 
     const coerce = (key: string, rawValue: string): unknown => {
         const field = fieldOf(key)
@@ -98,36 +165,187 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
                 if (!Number.isFinite(parsed)) throw new SignalboxError(`${key} must be a number`)
                 return parsed
             }
-            case "boolean": {
-                if (rawValue !== "true" && rawValue !== "false")
+            case "boolean":
+                if (rawValue !== "true" && rawValue !== "false") {
                     throw new SignalboxError(`${key} must be true or false`)
+                }
                 return rawValue === "true"
-            }
             default:
                 return rawValue
         }
     }
 
-    const readPartial = (): Partial<ConfigOf<TSchema>> => {
-        if (!existsSync(path)) return {}
+    const exists = async (): Promise<boolean> => {
         try {
-            return JSON.parse(readFileSync(path, "utf8")) as Partial<ConfigOf<TSchema>>
+            await access(path, constants.F_OK)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    const readRaw = async (): Promise<Record<string, unknown> | null> => {
+        let text: string
+        try {
+            text = await readFile(path, "utf8")
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") return null
+            throw error
+        }
+        let parsed: unknown
+        try {
+            parsed = JSON.parse(text) as unknown
         } catch (error) {
             throw new SignalboxError(`config at ${path} is not valid JSON: ${(error as Error).message}`)
         }
+        if (!isRecord(parsed)) throw new SignalboxError(`config at ${path} must contain a JSON object`)
+        return parsed
     }
 
-    const save = (values: Partial<ConfigOf<TSchema>>): void => {
-        mkdirSync(dirname(path), { recursive: true, mode: 0o750 })
-        writeFileSync(path, `${JSON.stringify(values, null, 4)}\n`, { mode: 0o640 })
-        chmodSync(path, 0o640)
-    }
-
-    const load = (): ConfigOf<TSchema> => {
-        if (!existsSync(path)) {
-            throw new SignalboxError(`no config at ${path}`, `run \`${appName} config init\` to create one`)
+    const atomicWrite = async (document: Record<string, unknown>): Promise<void> => {
+        const directory = dirname(path)
+        await mkdir(directory, { recursive: true, mode: 0o750 })
+        await chmod(directory, 0o750)
+        const temporary = join(directory, `.${process.pid}-${randomBytes(8).toString("hex")}.tmp`)
+        const handle = await open(temporary, "wx", 0o600)
+        try {
+            await handle.writeFile(`${JSON.stringify(document, null, 4)}\n`, "utf8")
+            await handle.sync()
+        } catch (error) {
+            await handle.close()
+            await rm(temporary, { force: true })
+            throw error
         }
-        const result = schema.safeParse(readPartial())
+        await handle.close()
+        try {
+            await chmod(temporary, 0o640)
+            await rename(temporary, path)
+        } catch (error) {
+            await rm(temporary, { force: true })
+            throw error
+        }
+        try {
+            const directoryHandle = await open(directory, "r")
+            try {
+                await directoryHandle.sync()
+            } finally {
+                await directoryHandle.close()
+            }
+        } catch {
+            // Directory fsync is not available on every supported platform.
+        }
+    }
+
+    const atomicWriteMetadata = async (target: string, value: unknown): Promise<void> => {
+        const directory = dirname(target)
+        await mkdir(directory, { recursive: true, mode: 0o750 })
+        const temporary = join(directory, `.${process.pid}-${randomBytes(8).toString("hex")}.tmp`)
+        const handle = await open(temporary, "wx", 0o600)
+        try {
+            await handle.writeFile(`${JSON.stringify(value, null, 4)}\n`, "utf8")
+            await handle.sync()
+        } catch (error) {
+            await handle.close()
+            await rm(temporary, { force: true })
+            throw error
+        }
+        await handle.close()
+        try {
+            await chmod(temporary, 0o600)
+            await rename(temporary, target)
+        } catch (error) {
+            await rm(temporary, { force: true })
+            throw error
+        }
+    }
+
+    const readJournal = async (): Promise<RekeyJournal | null> => {
+        let value: unknown
+        try {
+            value = JSON.parse(await readFile(journalPath, "utf8")) as unknown
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === "ENOENT") return null
+            throw new SignalboxError(`cannot read rekey journal ${journalPath}: ${(error as Error).message}`)
+        }
+        if (!isRecord(value)) throw new SignalboxError(`rekey journal ${journalPath} has an invalid shape`)
+        const oldKeyIds = value["oldKeyIds"]
+        if (
+            value["version"] !== 1 ||
+            value["appName"] !== appName ||
+            value["configPath"] !== path ||
+            !Array.isArray(oldKeyIds) ||
+            !oldKeyIds.every(keyId => typeof keyId === "string") ||
+            typeof value["newKeyId"] !== "string" ||
+            typeof value["backend"] !== "string" ||
+            typeof value["revokeOld"] !== "boolean" ||
+            (value["phase"] !== "staged" && value["phase"] !== "rewritten")
+        ) {
+            throw new SignalboxError(`rekey journal ${journalPath} has an invalid shape`)
+        }
+        return value as unknown as RekeyJournal
+    }
+
+    const withLock = async <T>(action: () => Promise<T>): Promise<T> => {
+        await mkdir(dirname(path), { recursive: true, mode: 0o750 })
+        for (let attempt = 0; attempt < 120; attempt += 1) {
+            try {
+                const handle = await open(lockPath, "wx", 0o600)
+                try {
+                    return await action()
+                } finally {
+                    await handle.close()
+                    await rm(lockPath, { force: true })
+                }
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error
+                try {
+                    const lock = await stat(lockPath)
+                    if (Date.now() - lock.mtimeMs > 30_000) await rm(lockPath, { force: true })
+                } catch (lockError) {
+                    if ((lockError as NodeJS.ErrnoException).code !== "ENOENT") throw lockError
+                }
+                await delay(25)
+            }
+        }
+        throw new SignalboxError(`timed out waiting for config lock ${lockPath}`)
+    }
+
+    const missingKey = (keyId?: string): SignalboxError =>
+        new SignalboxError(
+            keyId
+                ? `no key is available for encrypted config key ${keyId}`
+                : `no encryption key is available for ${appName}`,
+            options.keySource
+                ? `the explicit ${options.keySource.name} source must provide the required key`
+                : `set ${appName.toUpperCase().replace(/[^A-Z0-9]+/gu, "_")}_CONFIG_KEY or allow the file fallback`,
+        )
+
+    const resolveExistingKey = async (keyId: string): Promise<KeyMaterial> => {
+        const resolved = await resolveKey(sources, appName, keyId)
+        if (!resolved) throw missingKey(keyId)
+        return resolved.material
+    }
+
+    const resolveWriteKey = async (): Promise<KeyMaterial> => {
+        try {
+            return (await resolveOrProvisionKey(sources, appName)).material
+        } catch (error) {
+            if (error instanceof SignalboxError) throw error
+            throw new SignalboxError(`cannot obtain an encryption key for ${appName}: ${(error as Error).message}`)
+        }
+    }
+
+    const fieldError = (key: string, issues: readonly z.core.$ZodIssue[]): SignalboxError =>
+        new SignalboxError(`invalid value for ${key}: ${issues.map(issue => issue.message).join(", ")}`)
+
+    const validateField = (key: string, value: unknown): unknown => {
+        const result = fieldOf(key).safeParse(value)
+        if (!result.success) throw fieldError(key, result.error.issues)
+        return result.data
+    }
+
+    const validateFull = (document: Record<string, unknown>): Record<string, unknown> => {
+        const result = schema.safeParse(document)
         if (!result.success) {
             const problems = result.error.issues.map(issue => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
             throw new SignalboxError(`config at ${path} is invalid: ${problems.join("; ")}`)
@@ -135,41 +353,413 @@ export const createConfigStore = <TSchema extends z.ZodObject>(
         return result.data
     }
 
+    const decodeDocument = async (raw: Record<string, unknown>): Promise<DecodedDocument> => {
+        const plaintext = { ...raw }
+        let hasLegacySecrets = false
+        const keyCache = new Map<string, Promise<KeyMaterial>>()
+        for (const [key, fieldSchema] of secretEntries) {
+            if (!(key in raw)) continue
+            const stored = raw[key]
+            let value: unknown
+            if (typeof stored === "string" && stored.startsWith("enc:")) {
+                const envelope = parseEnvelope(stored)
+                let keyPromise = keyCache.get(envelope.keyId)
+                if (!keyPromise) {
+                    keyPromise = resolveExistingKey(envelope.keyId)
+                    keyCache.set(envelope.keyId, keyPromise)
+                }
+                value = decryptSecret(stored, (await keyPromise).key, { appName, fieldName: key })
+            } else {
+                hasLegacySecrets = true
+                value = stored
+            }
+            const result = fieldSchema.safeParse(value)
+            if (!result.success) throw fieldError(key, result.error.issues)
+            assertJsonValue(result.data, key)
+            plaintext[key] = result.data
+        }
+        return { plaintext, hasLegacySecrets }
+    }
+
+    const encryptDocument = async (
+        input: Record<string, unknown>,
+        preserveUnknown = false,
+        explicitKey?: KeyMaterial,
+    ): Promise<Record<string, unknown>> => {
+        const output: Record<string, unknown> = {}
+        const writeKey = secretEntries.length > 0 ? (explicitKey ?? (await resolveWriteKey())) : null
+        for (const [key, value] of Object.entries(input)) {
+            const fieldSchema = shape[key]
+            if (!fieldSchema) {
+                if (preserveUnknown) {
+                    output[key] = value
+                    continue
+                }
+                throw new SignalboxError(`unknown config key "${key}"`, `known keys: ${keys.join(", ")}`)
+            }
+            const parsed = validateField(key, value)
+            if (parsed === undefined) continue
+            if (isSecret(fieldSchema)) {
+                assertJsonValue(parsed, key)
+                if (!writeKey) throw missingKey()
+                output[key] = encryptSecret(parsed, writeKey.key, { appName, fieldName: key })
+            } else {
+                output[key] = parsed
+            }
+        }
+        return output
+    }
+
+    const referencedKeyIds = (raw: Record<string, unknown>): string[] => {
+        const ids = new Set<string>()
+        for (const [key] of secretEntries) {
+            const stored = raw[key]
+            if (typeof stored === "string" && stored.startsWith("enc:")) ids.add(parseEnvelope(stored).keyId)
+        }
+        return [...ids]
+    }
+
+    const wrapDocument = (plaintext: Record<string, unknown>): Record<string, unknown> => {
+        const output = { ...plaintext }
+        for (const [key] of secretEntries) {
+            if (!(key in output) || output[key] === undefined) continue
+            assertJsonValue(output[key], key)
+            output[key] = Secret.from(output[key])
+        }
+        return output
+    }
+
+    const migrateLocked = async (raw: Record<string, unknown>): Promise<DecodedDocument> => {
+        const decoded = await decodeDocument(raw)
+        if (!decoded.hasLegacySecrets) return decoded
+        validateFull(decoded.plaintext)
+        await atomicWrite(await encryptDocument(decoded.plaintext, true))
+        return decoded
+    }
+
+    const readDecoded = async (): Promise<DecodedDocument | null> => {
+        const raw = await readRaw()
+        if (!raw) return null
+        const decoded = await decodeDocument(raw)
+        if (!decoded.hasLegacySecrets) return decoded
+        return withLock(async () => {
+            const current = await readRaw()
+            return current ? migrateLocked(current) : null
+        })
+    }
+
+    const readPartial = async (): Promise<Partial<ConfigOf<TSchema>>> => {
+        const decoded = await readDecoded()
+        return (decoded ? wrapDocument(decoded.plaintext) : {}) as Partial<ConfigOf<TSchema>>
+    }
+
+    const load = async (): Promise<ConfigOf<TSchema>> => {
+        const decoded = await readDecoded()
+        if (!decoded) {
+            throw new SignalboxError(`no config at ${path}`, `run \`${appName} config init\` to create one`)
+        }
+        return wrapDocument(validateFull(decoded.plaintext)) as ConfigOf<TSchema>
+    }
+
+    const save = async (values: Partial<InputOf<TSchema>>): Promise<void> => {
+        await withLock(async () => atomicWrite(await encryptDocument(values as Record<string, unknown>)))
+    }
+
+    const update = async (change: (current: Record<string, unknown>) => void): Promise<void> => {
+        await withLock(async () => {
+            const raw = await readRaw()
+            const decoded = raw ? await decodeDocument(raw) : { plaintext: {}, hasLegacySecrets: false }
+            change(decoded.plaintext)
+            await atomicWrite(await encryptDocument(decoded.plaintext, true))
+        })
+    }
+
+    const inspect = async (): Promise<ConfigInspection> => {
+        const raw = (await readRaw()) ?? {}
+        const values = { ...raw }
+        const secretStates: ConfigInspection["secrets"] = {}
+        for (const [key] of secretEntries) {
+            if (!(key in raw)) {
+                secretStates[key] = { state: "absent" }
+                continue
+            }
+            const stored = raw[key]
+            if (typeof stored === "string" && stored.startsWith("enc:")) {
+                const envelope = parseEnvelope(stored)
+                secretStates[key] = { state: "encrypted", version: envelope.version, keyId: envelope.keyId }
+            } else {
+                secretStates[key] = { state: "plaintext" }
+            }
+            values[key] = REDACTED
+        }
+        return { values, secrets: secretStates }
+    }
+
+    const keyMaterial = async (keyId?: string): Promise<KeyMaterial> => {
+        const resolved = await resolveKey(sources, appName, keyId)
+        if (!resolved) throw missingKey(keyId)
+        return { id: resolved.material.id, key: Uint8Array.from(resolved.material.key) }
+    }
+
+    const writableSources = (): WritableKeyBackend[] => sources.filter(isWritableKeyBackend)
+
+    const keyInventory = async (): Promise<ConfigKeyInfo[]> => {
+        const raw = (await readRaw()) ?? {}
+        const referenced = new Set(referencedKeyIds(raw))
+        const inventory: ConfigKeyInfo[] = []
+        const seen = new Set<string>()
+        for (const source of sources) {
+            if (!(await source.available())) continue
+            if (isWritableKeyBackend(source)) {
+                for (const metadata of await source.listKeys(appName)) {
+                    const identity = `${source.name}:${metadata.id}`
+                    if (seen.has(identity)) continue
+                    seen.add(identity)
+                    inventory.push({
+                        ...metadata,
+                        backend: source.name,
+                        referenced: referenced.has(metadata.id),
+                        managed: true,
+                    })
+                }
+                continue
+            }
+            if (source instanceof SystemdCredentialKeySource) {
+                const sealed = await source.listKeyIds(appName)
+                if (sealed) {
+                    for (const id of sealed.keyIds) {
+                        const identity = `${source.name}:${id}`
+                        if (seen.has(identity)) continue
+                        seen.add(identity)
+                        inventory.push({
+                            id,
+                            state: id === sealed.activeKeyId ? "active" : "retired",
+                            backend: source.name,
+                            referenced: referenced.has(id),
+                            managed: false,
+                        })
+                    }
+                }
+                continue
+            }
+            const candidates = new Set(referenced)
+            const active = await source.getKey(appName)
+            if (active) candidates.add(active.id)
+            for (const id of candidates) {
+                const material = await source.getKey(appName, id)
+                if (!material) continue
+                const identity = `${source.name}:${id}`
+                if (seen.has(identity)) continue
+                seen.add(identity)
+                inventory.push({
+                    id,
+                    state: active?.id === id ? "active" : "retired",
+                    backend: source.name,
+                    referenced: referenced.has(id),
+                    managed: false,
+                })
+            }
+        }
+        return inventory
+    }
+
+    const deleteManagedKey = async (backend: WritableKeyBackend, keyId: string): Promise<boolean> => {
+        const metadata = (await backend.listKeys(appName)).find(item => item.id === keyId)
+        if (!metadata) return false
+        if (metadata.state === "active") await backend.retireKey(appName, keyId)
+        await backend.deleteKey(appName, keyId)
+        return true
+    }
+
+    const pruneKeys = async (keyIds: readonly string[]): Promise<readonly string[]> =>
+        withLock(async () => {
+            const requested = [...new Set(keyIds)]
+            if (requested.length === 0) return []
+            const inspection = await inspect()
+            const referenced = new Set(
+                Object.values(inspection.secrets)
+                    .map(secret => secret.keyId)
+                    .filter((keyId): keyId is string => keyId !== undefined),
+            )
+            const deleted: string[] = []
+            for (const keyId of requested) {
+                if (referenced.has(keyId)) throw new SignalboxError(`cannot prune referenced key ${keyId}`)
+                let found = false
+                for (const backend of writableSources()) {
+                    const metadata = (await backend.listKeys(appName)).find(item => item.id === keyId)
+                    if (!metadata) continue
+                    found = true
+                    if (metadata.state !== "retired") {
+                        throw new SignalboxError(`cannot prune ${metadata.state} key ${keyId}`)
+                    }
+                    await backend.deleteKey(appName, keyId)
+                    deleted.push(keyId)
+                }
+                if (!found) throw new SignalboxError(`managed key ${keyId} was not found`)
+            }
+            return deleted
+        })
+
+    const rekey = async (
+        rekeyOptions: {
+            readonly revokeOld?: boolean
+            readonly verify?: (pending: ConfigRekeyPending) => Promise<void>
+        } = {},
+    ): Promise<ConfigRekeyResult> =>
+        withLock(async () => {
+            if (secretEntries.length === 0) throw new SignalboxError(`${appName} has no secret config fields to rekey`)
+            const raw = await readRaw()
+            if (!raw) throw new SignalboxError(`no config at ${path}`)
+
+            let journal = await readJournal()
+            let backend: WritableKeyBackend
+            if (journal) {
+                const resumed = writableSources().find(source => source.name === journal?.backend)
+                if (!resumed) throw new SignalboxError(`rekey backend ${journal.backend} is no longer available`)
+                backend = resumed
+            } else {
+                const available: WritableKeyBackend[] = []
+                for (const source of writableSources()) if (await source.available()) available.push(source)
+                const selected = available[0]
+                if (!selected) throw new SignalboxError(`no writable key backend is available for ${appName}`)
+                backend = selected
+                const oldKeyIds = referencedKeyIds(raw)
+                const staged = await backend.stageKey(appName, randomBytes(32))
+                journal = {
+                    version: 1,
+                    appName,
+                    configPath: path,
+                    oldKeyIds,
+                    newKeyId: staged.id,
+                    backend: backend.name,
+                    revokeOld: rekeyOptions.revokeOld ?? false,
+                    phase: "staged",
+                }
+                await atomicWriteMetadata(backupPath, raw)
+                await atomicWriteMetadata(journalPath, journal)
+            }
+
+            const staged = await backend.getKey(appName, journal.newKeyId)
+            if (!staged) throw new SignalboxError(`staged rekey key ${journal.newKeyId} is unavailable`)
+            const currentIds = referencedKeyIds(raw)
+            const alreadyRewritten = currentIds.length > 0 && currentIds.every(id => id === journal?.newKeyId)
+            let wroteConfig = false
+            if (!alreadyRewritten) {
+                const decoded = await decodeDocument(raw)
+                validateFull(decoded.plaintext)
+                try {
+                    await atomicWrite(await encryptDocument(decoded.plaintext, true, staged))
+                    wroteConfig = true
+                    const verifyRaw = await readRaw()
+                    if (!verifyRaw) throw new SignalboxError(`config disappeared while rekeying ${path}`)
+                    validateFull((await decodeDocument(verifyRaw)).plaintext)
+                } catch (error) {
+                    if (wroteConfig) {
+                        const backup = JSON.parse(await readFile(backupPath, "utf8")) as unknown
+                        if (!isRecord(backup))
+                            throw new SignalboxError(`rekey backup ${backupPath} has an invalid shape`)
+                        await atomicWrite(backup)
+                    }
+                    throw error
+                }
+            }
+
+            journal = { ...journal, phase: "rewritten" }
+            await atomicWriteMetadata(journalPath, journal)
+            if (rekeyOptions.verify) {
+                try {
+                    await rekeyOptions.verify({
+                        oldKeyIds: journal.oldKeyIds,
+                        newKeyId: journal.newKeyId,
+                        backend: journal.backend,
+                    })
+                } catch (error) {
+                    const backup = JSON.parse(await readFile(backupPath, "utf8")) as unknown
+                    if (!isRecord(backup)) throw new SignalboxError(`rekey backup ${backupPath} has an invalid shape`)
+                    await atomicWrite(backup)
+                    throw error
+                }
+            }
+            await backend.activateKey(appName, journal.newKeyId)
+
+            const revokedKeyIds: string[] = []
+            const externalKeyIds: string[] = []
+            if (journal.revokeOld) {
+                for (const oldKeyId of journal.oldKeyIds) {
+                    let removed = false
+                    for (const managed of writableSources()) {
+                        if (await deleteManagedKey(managed, oldKeyId)) removed = true
+                    }
+                    if (removed) revokedKeyIds.push(oldKeyId)
+                    else externalKeyIds.push(oldKeyId)
+                }
+            }
+            await rm(journalPath, { force: true })
+            await rm(backupPath, { force: true })
+            return {
+                oldKeyIds: journal.oldKeyIds,
+                newKeyId: journal.newKeyId,
+                backend: journal.backend,
+                revokedKeyIds,
+                externalKeyIds,
+            }
+        })
+
+    const purge = async (): Promise<ConfigPurgeResult> =>
+        withLock(async () => {
+            const inventory = await keyInventory()
+            const deletedKeyIds: string[] = []
+            for (const backend of writableSources()) {
+                for (const metadata of await backend.listKeys(appName)) {
+                    if (await deleteManagedKey(backend, metadata.id)) deletedKeyIds.push(metadata.id)
+                }
+            }
+            const removedConfig = await exists()
+            await rm(path, { force: true })
+            await rm(journalPath, { force: true })
+            await rm(backupPath, { force: true })
+            return {
+                removedConfig,
+                deletedKeyIds,
+                externalKeyIds: [...new Set(inventory.filter(item => !item.managed).map(item => item.id))],
+            }
+        })
+
     return {
+        appName,
         path,
         schema,
-        exists: () => existsSync(path),
+        exists,
         load,
         readPartial,
         save,
         coerce,
-        set: (key, rawValue) => {
-            const field = fieldOf(key)
-            const coerced = coerce(key, rawValue)
-            const result = field.safeParse(coerced)
-            if (!result.success) {
-                throw new SignalboxError(
-                    `invalid value for ${key}: ${result.error.issues.map(i => i.message).join(", ")}`,
-                )
-            }
-            const current = readPartial() as Record<string, unknown>
-            current[key] = result.data
-            save(current as Partial<ConfigOf<TSchema>>)
+        set: async (key, rawValue) => {
+            const fieldSchema = fieldOf(key)
+            const parsed = validateField(key, coerce(key, rawValue))
+            if (isSecret(fieldSchema)) assertJsonValue(parsed, key)
+            await update(current => {
+                current[key] = parsed
+            })
         },
-        unset: key => {
+        unset: async key => {
             fieldOf(key)
-            const { [key]: _removed, ...rest } = readPartial() as Record<string, unknown>
-            save(rest as Partial<ConfigOf<TSchema>>)
+            await update(current => {
+                Reflect.deleteProperty(current, key)
+            })
         },
-        redacted: values => {
-            const output: Record<string, unknown> = { ...values }
-            for (const [key, fieldSchema] of Object.entries(shape)) {
-                if (!isSecret(fieldSchema)) continue
-                const value = output[key]
-                if (typeof value !== "string" || value.length === 0) continue
-                output[key] = value.length > 4 ? `${"*".repeat(value.length - 4)}${value.slice(-4)}` : "****"
+        redacted: async values => {
+            const output: Record<string, unknown> = { ...(values as Record<string, unknown>) }
+            for (const [key] of secretEntries) {
+                if (key in output) output[key] = REDACTED
             }
             return output
         },
+        inspect,
+        keyMaterial,
+        keyInventory,
+        rekey,
+        pruneKeys,
+        purge,
     }
 }

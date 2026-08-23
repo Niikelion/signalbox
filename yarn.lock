@@ -1251,6 +1251,7 @@ __metadata:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/secrets": "npm:^0.1.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1268,12 +1269,14 @@ __metadata:
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/secrets": "npm:^0.1.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
   languageName: unknown
   linkType: soft
 
@@ -1344,12 +1347,14 @@ __metadata:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/secrets": "npm:^0.1.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
   languageName: unknown
   linkType: soft
 
@@ -1408,6 +1413,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@signalbox/secrets@npm:^0.1.0, @signalbox/secrets@workspace:packages/secrets":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/secrets@workspace:packages/secrets"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/shared-config": "npm:^0.1.0"
+    "@types/node": "npm:^22.10.2"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
+  languageName: unknown
+  linkType: soft
+
 "@signalbox/service-cli@npm:^0.2.0, @signalbox/service-cli@workspace:packages/service-cli":
   version: 0.0.0-use.local
   resolution: "@signalbox/service-cli@workspace:packages/service-cli"
@@ -1416,12 +1437,14 @@ __metadata:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@signalbox/config": "npm:^0.2.0"
     "@signalbox/core": "npm:^0.2.0"
+    "@signalbox/secrets": "npm:^0.1.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
   languageName: unknown
   linkType: soft
 

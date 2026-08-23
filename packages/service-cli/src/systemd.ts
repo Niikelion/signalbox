@@ -1,8 +1,25 @@
 import { execFileSync } from "node:child_process"
-import { chownSync, existsSync, mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import {
+    chownSync,
+    chmodSync,
+    existsSync,
+    mkdirSync,
+    readFileSync,
+    realpathSync,
+    readdirSync,
+    rmSync,
+    writeFileSync,
+} from "node:fs"
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { isRoot, SignalboxError, write } from "@signalbox/core"
+import {
+    systemdActiveCredentialName,
+    systemdCredentialName,
+    systemdManifestName,
+    type KeyMaterial,
+    type SystemdCredentialManifest,
+} from "@signalbox/secrets"
 
 /** Whether a systemd unit is system-wide (root) or per-user (rootless). */
 export type ServiceScope = "system" | "user"
@@ -14,6 +31,10 @@ export interface SetupOptions {
     configPath: string
     /** Inbound port to open in the firewall, if any. */
     watchPort?: number
+    /** Keys to seal and expose to the installed unit. */
+    keys?: readonly KeyMaterial[]
+    /** Key the unit should use for new writes. */
+    activeKeyId?: string
 }
 
 /** Options for removing the service. */
@@ -29,6 +50,8 @@ export interface TeardownOptions {
 
 /** Manages an app's systemd unit lifecycle. */
 export interface ServiceManager {
+    /** Whether the selected unit file currently exists. */
+    isInstalled: (scope: ServiceScope) => boolean
     /** Install and start the unit. */
     setupService: (options: SetupOptions) => void
     /** Stop and remove the unit (optionally purge config). */
@@ -37,6 +60,10 @@ export interface ServiceManager {
     controlService: (scope: ServiceScope, action: "start" | "stop" | "restart") => void
     /** Return the unit's status output. */
     serviceStatus: (scope: ServiceScope) => string
+    /** Remove selected sealed credentials after verified revocation/pruning. */
+    deleteSealedKeys: (scope: ServiceScope, keyIds: readonly string[]) => void
+    /** Remove all sealed credentials managed for this app. */
+    purgeSealedCredentials: (scope: ServiceScope) => void
 }
 
 const SERVICE_USER = "signalbox"
@@ -44,6 +71,18 @@ const SERVICE_USER = "signalbox"
 const run = (command: string, args: string[]): string => {
     try {
         return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })
+    } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error)
+        throw new SignalboxError(`${command} ${args.join(" ")} failed: ${detail}`)
+    }
+}
+
+const runBinary = (command: string, args: string[], input?: Uint8Array): Buffer => {
+    try {
+        return execFileSync(command, args, {
+            ...(input ? { input: Buffer.from(input) } : {}),
+            stdio: ["pipe", "pipe", "pipe"],
+        })
     } catch (error) {
         const detail = error instanceof Error ? error.message : String(error)
         throw new SignalboxError(`${command} ${args.join(" ")} failed: ${detail}`)
@@ -77,6 +116,8 @@ export const createServiceManager = (appName: string): ServiceManager => {
     const systemUnitPath = `/etc/systemd/system/${appName}.service`
     const userUnitPath = join(homedir(), ".config", "systemd", "user", `${appName}.service`)
     const ownedConfigDirs = [resolve(`/etc/${appName}`), resolve(join(homedir(), ".config", appName))]
+    const credentialArchive = (scope: ServiceScope): string =>
+        scope === "system" ? "/etc/credstore.encrypted" : join(homedir(), ".config", "systemd", "credstore.encrypted")
 
     const unitPath = (scope: ServiceScope): string => (scope === "system" ? systemUnitPath : userUnitPath)
     const systemctl = (scope: ServiceScope, args: string[]): string[] =>
@@ -97,7 +138,12 @@ export const createServiceManager = (appName: string): ServiceManager => {
         }
     }
 
-    const unitContents = (scope: ServiceScope, configPath: string): string => {
+    const unitContents = (
+        scope: ServiceScope,
+        configPath: string,
+        credentials: readonly { readonly name: string; readonly path: string }[],
+        activeKeyId?: string,
+    ): string => {
         const account = scope === "system" ? `User=${SERVICE_USER}\nGroup=${SERVICE_USER}\n` : ""
         const hardening =
             scope === "system"
@@ -115,6 +161,11 @@ LockPersonality=yes
 PrivateTmp=yes
 `
 
+        const credentialLines = [
+            ...credentials.map(credential => `LoadCredentialEncrypted=${credential.name}:${credential.path}`),
+            ...(activeKeyId ? [`SetCredential=${systemdActiveCredentialName(appName)}:${activeKeyId}`] : []),
+        ].join("\n")
+
         return `[Unit]
 Description=signalbox dynamic DNS (UPnP push)
 After=network-online.target
@@ -126,6 +177,7 @@ ${account}Environment=${configEnv}=${configPath}
 ExecStart=${process.execPath} ${cliEntry()} run
 Restart=always
 RestartSec=10
+${credentialLines}
 
 ${hardening}
 [Install]
@@ -178,12 +230,49 @@ WantedBy=${scope === "system" ? "multi-user.target" : "default.target"}
             }
         }
 
+        const archive = credentialArchive(scope)
+        const credentials: { name: string; path: string }[] = []
+        if (options.keys && options.keys.length > 0) {
+            if (!options.activeKeyId) throw new SignalboxError("setup needs an active key ID when sealing credentials")
+            mkdirSync(archive, { recursive: true, mode: 0o700 })
+            chmodSync(archive, 0o700)
+            for (const material of options.keys) {
+                const name = systemdCredentialName(appName, material.id)
+                const targetPath = join(archive, name)
+                const commandOptions = scope === "user" ? ["--user"] : []
+                runBinary(
+                    "systemd-creds",
+                    [...commandOptions, "encrypt", `--name=${name}`, "-", targetPath],
+                    material.key,
+                )
+                const roundTrip = runBinary("systemd-creds", [...commandOptions, "decrypt", targetPath, "-"])
+                if (!roundTrip.equals(Buffer.from(material.key))) {
+                    throw new SignalboxError(`systemd credential ${name} failed round-trip verification`)
+                }
+                credentials.push({ name, path: targetPath })
+            }
+            const manifest: SystemdCredentialManifest = {
+                version: 1,
+                appName,
+                activeKeyId: options.activeKeyId,
+                keyIds: options.keys.map(key => key.id),
+            }
+            writeFileSync(join(archive, systemdManifestName(appName)), `${JSON.stringify(manifest, null, 4)}\n`, {
+                mode: 0o600,
+            })
+        }
+
         const target = unitPath(scope)
+        const wasInstalled = existsSync(target)
         mkdirSync(dirname(target), { recursive: true })
-        writeFileSync(target, unitContents(scope, options.configPath), { mode: 0o644 })
+        writeFileSync(target, unitContents(scope, options.configPath, credentials, options.activeKeyId), {
+            mode: 0o644,
+        })
 
         run("systemctl", systemctl(scope, ["daemon-reload"]))
         run("systemctl", systemctl(scope, ["enable", "--now", `${appName}.service`]))
+        if (wasInstalled) run("systemctl", systemctl(scope, ["restart", `${appName}.service`]))
+        run("systemctl", systemctl(scope, ["is-active", "--quiet", `${appName}.service`]))
         write("info", `installed ${target} and started ${appName}`)
 
         if (scope === "user") {
@@ -279,5 +368,47 @@ WantedBy=${scope === "system" ? "multi-user.target" : "default.target"}
         write("info", `${action}ed ${appName}`)
     }
 
-    return { setupService, teardownService, controlService, serviceStatus }
+    const deleteSealedKeys = (scope: ServiceScope, keyIds: readonly string[]): void => {
+        requireScopePrivileges(scope, "delete sealed keys")
+        const archive = credentialArchive(scope)
+        const removed = new Set(keyIds)
+        const manifestPath = join(archive, systemdManifestName(appName))
+        let manifest: SystemdCredentialManifest | undefined
+        if (existsSync(manifestPath)) {
+            manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as SystemdCredentialManifest
+            if (removed.has(manifest.activeKeyId)) {
+                throw new SignalboxError(`cannot delete active sealed key ${manifest.activeKeyId}`)
+            }
+        }
+        for (const keyId of removed) rmSync(join(archive, systemdCredentialName(appName, keyId)), { force: true })
+        if (manifest) {
+            writeFileSync(
+                manifestPath,
+                `${JSON.stringify({ ...manifest, keyIds: manifest.keyIds.filter(keyId => !removed.has(keyId)) }, null, 4)}\n`,
+                { mode: 0o600 },
+            )
+        }
+    }
+
+    const purgeSealedCredentials = (scope: ServiceScope): void => {
+        requireScopePrivileges(scope, "purge sealed credentials")
+        const archive = credentialArchive(scope)
+        if (!existsSync(archive)) return
+        const prefix = `${appName.replace(/[^A-Za-z0-9_.-]+/gu, "-")}-config-key-`
+        for (const entry of readdirSync(archive)) {
+            if (entry.startsWith(prefix) || entry === systemdManifestName(appName)) {
+                rmSync(join(archive, entry), { force: true })
+            }
+        }
+    }
+
+    return {
+        isInstalled: scope => existsSync(unitPath(scope)),
+        setupService,
+        teardownService,
+        controlService,
+        serviceStatus,
+        deleteSealedKeys,
+        purgeSealedCredentials,
+    }
 }

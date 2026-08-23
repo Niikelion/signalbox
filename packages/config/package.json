@@ -36,6 +36,7 @@
     },
     "dependencies": {
         "@signalbox/core": "^0.2.0",
+        "@signalbox/secrets": "^0.1.0",
         "zod": "^4.0.0"
     },
     "devDependencies": {

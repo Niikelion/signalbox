@@ -1,3 +1,4 @@
+import { redact } from "@signalbox/secrets"
 import type { ReadChannel } from "./bus.js"
 import type { FrameworkEvents, LogLevel } from "./events.js"
 
@@ -22,6 +23,9 @@ export class SignalboxError extends Error {
  */
 export const toError = (value: unknown): Error => (value instanceof Error ? value : new Error(String(value)))
 
+/** Coerce a thrown value into an Error and return a sanitized copy. */
+export const sanitizeError = (value: unknown): Error => redact(toError(value))
+
 const stamp = (): string => new Date().toISOString().replace("T", " ").slice(0, 19)
 
 /**
@@ -30,7 +34,7 @@ const stamp = (): string => new Date().toISOString().replace("T", " ").slice(0, 
  * @param message the message
  */
 export const write = (level: LogLevel, message: string): void => {
-    const line = `${stamp()}  ${message}\n`
+    const line = `${stamp()}  ${redact(message)}\n`
     if (level === "error") process.stderr.write(line)
     else process.stdout.write(line)
 }

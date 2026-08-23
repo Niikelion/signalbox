@@ -11,13 +11,13 @@ export const buildPlugins = (config: DdnsOvhConfig) => ({
     upnp: upnpPlugin({ port: config.watchPort }),
     ovh: ovhPlugin({
         username: config.dynhostUser,
-        password: config.dynhostPassword,
+        password: config.dynhostPassword.reveal(),
         records: config.records,
     }),
     schedule: schedulePlugin(),
     store: storePlugin({ path: config.remindersDb }),
     discordBot: discordBotPlugin({
-        token: config.discordToken,
+        token: config.discordToken.reveal(),
         guildId: config.discordGuildId,
         commands: [REMIND_COMMAND],
     }),
