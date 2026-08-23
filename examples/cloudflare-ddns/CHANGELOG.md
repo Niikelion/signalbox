@@ -1,5 +1,12 @@
 # @signalbox/cloudflare-ddns
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [c69b3bb]
+    - @signalbox/service-cli@0.4.0
+
 ## 0.1.1
 
 ### Patch Changes
