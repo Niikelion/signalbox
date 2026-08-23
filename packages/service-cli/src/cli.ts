@@ -16,6 +16,7 @@ import { SignalboxError, write } from "@signalbox/core"
 import { FileKeyBackend, type KeyMaterial } from "@signalbox/secrets"
 import { createServiceManager, type ServiceManager, type ServiceScope } from "./systemd.js"
 import { readInputFile, readMasked, readPlain, readStream, selectOption } from "./terminal.js"
+import { exportConfigTransfer, importConfigTransfer } from "./transfer.js"
 
 /** Something the `run` command can start â€” an app's `run()`. */
 export interface Runnable {
@@ -79,12 +80,18 @@ config
   config rekey [--revoke-old]
   config keys list
   config keys prune <id...> [--yes]
+  config export --recipient <recipient> --output <file>
+  config import --identity <private-key> --file <bundle> [--yes]
   config path          print the config file location
 
 options
   --config <path>      use a specific config file
   --stdin              read a secret value from standard input
   --file <path>        read a secret value from a UTF-8 file
+  --recipient <key>    age1, ssh-rsa, or ssh-ed25519 export recipient
+  --recipients-file    file containing one or more Age/SSH recipients
+  --identity <path>    Age or SSH private identity used for import
+  --output <path>      new encrypted transfer file to create
   --revoke-old         delete the prior key after verified rekey
   --yes                confirm destructive non-interactive commands
   -h, --help           show this
@@ -100,6 +107,10 @@ const renderValue = (value: unknown): string => {
 
 interface ConfigCommandOptions {
     readonly file?: string
+    readonly identity?: string
+    readonly output?: string
+    readonly recipient?: string
+    readonly recipientsFile?: string
     readonly stdin: boolean
     readonly yes: boolean
     readonly revokeOld: boolean
@@ -352,6 +363,28 @@ const configCommand = async <TSchema extends ConfigSchema>(
             throw new SignalboxError("config keys expects list or prune")
         }
 
+        case "export": {
+            if (key || rest.length > 0) throw new SignalboxError("config export accepts options only")
+            if (!options.output) throw new SignalboxError("config export needs --output <file>")
+            await exportConfigTransfer(store, {
+                output: options.output,
+                ...(options.recipient ? { recipient: options.recipient } : {}),
+                ...(options.recipientsFile ? { recipientsFile: options.recipientsFile } : {}),
+            })
+            write("info", `exported encrypted config to ${options.output}`)
+            return
+        }
+
+        case "import": {
+            if (key || rest.length > 0) throw new SignalboxError("config import accepts options only")
+            if (!options.file) throw new SignalboxError("config import needs --file <bundle>")
+            if (!options.identity) throw new SignalboxError("config import needs --identity <private-key>")
+            if (await store.exists()) await confirm(`Replace config at ${store.path}?`, options.yes)
+            await importConfigTransfer(store, { input: options.file, identity: options.identity })
+            write("info", `imported and locally encrypted config at ${store.path}`)
+            return
+        }
+
         case "init": {
             const current = (await store.readPartial()) as Record<string, unknown>
             for (const [field, fieldSchema] of fields) {
@@ -384,7 +417,7 @@ const configCommand = async <TSchema extends ConfigSchema>(
         default:
             throw new SignalboxError(
                 `unknown config command "${action ?? ""}"`,
-                "expected one of: init, interactive, list, get, reveal, set, unset, rekey, keys, path",
+                "expected one of: init, interactive, list, get, reveal, set, unset, rekey, keys, export, import, path",
             )
     }
 }
@@ -401,6 +434,10 @@ export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSche
         options: {
             config: { type: "string" },
             file: { type: "string" },
+            identity: { type: "string" },
+            output: { type: "string" },
+            recipient: { type: "string" },
+            "recipients-file": { type: "string" },
             stdin: { type: "boolean", default: false },
             purge: { type: "boolean", default: false },
             yes: { type: "boolean", default: false },
@@ -426,6 +463,10 @@ export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSche
         case "config":
             await configCommand(store, rest, {
                 ...(values.file ? { file: values.file } : {}),
+                ...(values.identity ? { identity: values.identity } : {}),
+                ...(values.output ? { output: values.output } : {}),
+                ...(values.recipient ? { recipient: values.recipient } : {}),
+                ...(values["recipients-file"] ? { recipientsFile: values["recipients-file"] } : {}),
                 stdin: values.stdin,
                 yes: values.yes,
                 revokeOld: values["revoke-old"],
