@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/webhook",
-    "version": "0.3.0",
+    "version": "0.3.1",
     "license": "MIT",
     "description": "signalbox plugin: receive inbound HTTP webhooks and emit them as events",
     "repository": {
@@ -35,8 +35,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.2.0",
-        "@signalbox/http": "^0.2.0",
+        "@signalbox/core": "^0.3.0",
+        "@signalbox/http": "^0.2.1",
         "zod": "^4.0.0"
     },
     "devDependencies": {

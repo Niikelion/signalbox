@@ -1,5 +1,13 @@
 # @signalbox/cloudflare
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [669a2b7]
+    - @signalbox/core@0.3.0
+    - @signalbox/graph@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes

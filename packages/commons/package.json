@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/commons",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "license": "MIT",
     "description": "signalbox commons: reusable polling and dedupe workflow building blocks",
     "repository": {
@@ -33,7 +33,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.2.0"
+        "@signalbox/core": "^0.3.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

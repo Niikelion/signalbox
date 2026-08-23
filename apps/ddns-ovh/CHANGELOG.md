@@ -1,5 +1,20 @@
 # @signalbox/ddns-ovh
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [669a2b7]
+    - @signalbox/config@0.3.0
+    - @signalbox/core@0.3.0
+    - @signalbox/service-cli@0.3.0
+    - @signalbox/commons@0.2.1
+    - @signalbox/discord-bot@0.2.1
+    - @signalbox/ovh@0.2.1
+    - @signalbox/schedule@0.2.1
+    - @signalbox/store@0.2.1
+    - @signalbox/upnp@0.2.1
+
 ## 0.1.1
 
 ### Patch Changes

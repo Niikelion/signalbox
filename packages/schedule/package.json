@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/schedule",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "license": "MIT",
     "description": "signalbox plugin: schedule one-shot and cron jobs (timezone-aware, via Croner)",
     "repository": {
@@ -35,7 +35,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.2.0",
+        "@signalbox/core": "^0.3.0",
         "croner": "^9.0.0"
     },
     "devDependencies": {

@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/discord-bot",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "license": "MIT",
     "description": "signalbox plugin: a Discord gateway bot (slash commands, send, DM) via discord.js",
     "repository": {
@@ -35,7 +35,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.2.0",
+        "@signalbox/core": "^0.3.0",
         "discord.js": "^14.16.0"
     },
     "devDependencies": {
