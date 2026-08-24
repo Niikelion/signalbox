@@ -1,9 +1,9 @@
-import { registerNode, type ActionNodeType } from "@signalbox/graph"
+import { registerNode, type MapNodeType } from "@signalbox/graph"
 import { createARecord, findARecord, patchARecord } from "./api.js"
 
-export const cloudflareUpdateNode: ActionNodeType = {
+export const cloudflareUpdateNode: MapNodeType = {
     type: "cloudflare.update",
-    kind: "action",
+    kind: "map",
     configSchema: {
         apiToken: { type: "string", required: true },
         zoneId: { type: "string", required: true },

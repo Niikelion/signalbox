@@ -69,8 +69,8 @@ The pipeline is one workflow:
 
 ```ts
 merge<Observation>(observed, polled)
-    .apply(dedupe(o => o.ip))
-    .run(async ({ ip }) => ctx.plugins.cloudflare.update(ip))
+    .filter(dedupeBy(o => o.ip))
+    .effect(async ({ ip }) => ctx.plugins.cloudflare.update(ip))
 ```
 
 See the [signalbox documentation](https://github.com/Niikelion/signalbox/tree/master/docs) for the concepts.

@@ -42,7 +42,7 @@ export const reminders = (config: DdnsOvhConfig) =>
         })
 
         // handle /remind
-        ctx.plugins.discordBot.events.flow("command").run(async command => {
+        ctx.plugins.discordBot.events.flow("command").effect(async command => {
             if (command.command !== REMIND_COMMAND.name) return
 
             const message = typeof command.options["message"] === "string" ? command.options["message"] : ""

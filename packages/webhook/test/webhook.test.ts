@@ -37,7 +37,7 @@ describe("webhook plugin — inbound routes (mounted on shared http)", () => {
             plugins,
             workflows: [
                 defineWorkflow("capture", ctx => {
-                    ctx.plugins.webhook.events.flow("chat").run(request => {
+                    ctx.plugins.webhook.events.flow("chat").effect(request => {
                         received.push(request)
                     })
                 }),
@@ -241,4 +241,3 @@ describe("webhook plugin — outbound request schemas", () => {
         expect(sentBody()).toEqual({ whatever: [1, 2, 3] })
     })
 })
-

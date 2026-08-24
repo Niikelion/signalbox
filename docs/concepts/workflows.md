@@ -12,7 +12,7 @@ import { createWorkflowDefiner, type NoEvents, type PluginApis } from "@signalbo
 const defineWorkflow = createWorkflowDefiner<NoEvents, PluginApis<typeof plugins>>()
 
 const announce = defineWorkflow("announce", ctx => {
-    ctx.plugins.hooks.events.flow("deploy").run(req => {
+    ctx.plugins.hooks.events.flow("deploy").effect(req => {
         ctx.plugins.discord.send({ content: `deploy: ${JSON.stringify(req.body)}` })
     })
 })
@@ -46,7 +46,7 @@ const backup = defineWorkflow("backup", ctx => {
 })
 ```
 
-Subscribe with `on`/`once`/`off` for callbacks, or `flow(event)` to build a [Flow](flow.md) pipeline (`map` / `filter` / `merge` / …).
+Subscribe with `on`/`once`/`off` for callbacks, or `flow(event)` to build a [Flow](flow.md) pipeline (`map` / `filter` / `combine` / …).
 
 ## App-level events
 
@@ -57,11 +57,11 @@ type AppEvents = { "user:seen": { id: string } }
 const defineWorkflow = createWorkflowDefiner<AppEvents, PluginApis<typeof plugins>>()
 
 const track = defineWorkflow("track", ctx => {
-    ctx.plugins.hooks.events.flow("visit").run(v => ctx.app.emit("user:seen", { id: v.body.id }))
+    ctx.plugins.hooks.events.flow("visit").effect(v => ctx.app.emit("user:seen", { id: v.body.id }))
 })
 
 const greet = defineWorkflow("greet", ctx => {
-    ctx.app.flow("user:seen").run(({ id }) => ctx.log(`seen ${id}`))
+    ctx.app.flow("user:seen").effect(({ id }) => ctx.log(`seen ${id}`))
 })
 ```
 

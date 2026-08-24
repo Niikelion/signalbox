@@ -27,7 +27,7 @@ const plugins = {
 
 // in a workflow:
 await ctx.plugins.cloudflare.update("203.0.113.7")
-ctx.plugins.cloudflare.events.flow("dns:updated").run(({ record, previous, current }) => {
+ctx.plugins.cloudflare.events.flow("dns:updated").effect(({ record, previous, current }) => {
     ctx.log(`${record}: ${previous ?? "(created)"} -> ${current}`)
 })
 ```

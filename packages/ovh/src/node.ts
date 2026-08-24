@@ -1,9 +1,9 @@
-import { registerNode, type ActionNodeType } from "@signalbox/graph"
+import { registerNode, type MapNodeType } from "@signalbox/graph"
 import { updateDynHost } from "./api.js"
 
-export const ovhUpdateNode: ActionNodeType = {
+export const ovhUpdateNode: MapNodeType = {
     type: "ovh.update",
-    kind: "action",
+    kind: "map",
     configSchema: {
         username: { type: "string", required: true },
         password: { type: "string", required: true },

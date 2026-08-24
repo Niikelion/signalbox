@@ -1,8 +1,11 @@
 import {
     SignalboxError,
+    makeFlow,
     toError,
     type EventMap,
+    type Flow,
     type LogLevel,
+    type RunContext,
     type Unsubscribe,
     type WorkflowDefinition,
 } from "@signalbox/core"
@@ -81,45 +84,74 @@ export interface TriggerNodeType {
     create: () => TriggerInstance
 }
 
-/** An action may return this to end its branch (emit nothing downstream). */
-export const STOP: unique symbol = Symbol("signalbox.graph.stop")
-
-const FAN_OUT: unique symbol = Symbol("signalbox.graph.fanout")
-
-/** An action result that fans one flow out into several (see {@link fanOut}). */
-export interface FanOut {
-    readonly [FAN_OUT]: true
-    readonly values: readonly unknown[]
+export interface FlowNodeArgs {
+    config: Record<string, unknown>
+    input: unknown
+    ctx: GraphNodeContext
+    run: RunContext
 }
 
-/**
- * Wrap several values so an action fans out one flow per value.
- * @param values the values to fan out
- */
-export const fanOut = (values: readonly unknown[]): FanOut => ({ [FAN_OUT]: true, values })
-
-/**
- * Whether a value is a {@link FanOut}.
- * @param value the value to test
- */
-export const isFanOut = (value: unknown): value is FanOut =>
-    typeof value === "object" && value !== null && (value as Record<PropertyKey, unknown>)[FAN_OUT] === true
-
-/** A running action node: transforms an input into an output (or STOP/FanOut). */
-export interface ActionInstance {
-    run: (args: { config: Record<string, unknown>; input: unknown; ctx: GraphNodeContext }) => unknown
+/** A running map node: transforms an input into an output. */
+export interface MapInstance {
+    run: (args: FlowNodeArgs) => unknown
 }
 
-/** A registered action node type (a transform/sink). */
-export interface ActionNodeType {
+/** A registered map node type. */
+export interface MapNodeType {
     type: string
-    kind: "action"
+    kind: "map"
     configSchema: NodeConfigSchema
-    create: () => ActionInstance
+    create: () => MapInstance
+}
+
+/** A running filter node: decides whether an input continues. */
+export interface FilterInstance {
+    run: (args: FlowNodeArgs) => boolean | Promise<boolean>
+}
+
+/** A registered filter node type. */
+export interface FilterNodeType {
+    type: string
+    kind: "filter"
+    configSchema: NodeConfigSchema
+    create: () => FilterInstance
+}
+
+/** A running fork node: splits one input into joined child runs. */
+export interface ForkInstance {
+    run: (args: FlowNodeArgs) => readonly unknown[] | Promise<readonly unknown[]>
+}
+
+/** A registered fork node type. */
+export interface ForkNodeType {
+    type: string
+    kind: "fork"
+    configSchema: NodeConfigSchema
+    create: () => ForkInstance
+}
+
+/** A running effect node: performs terminal work. */
+export interface EffectInstance {
+    run: (args: FlowNodeArgs) => void | Promise<void>
+}
+
+/** A registered effect node type. */
+export interface EffectNodeType {
+    type: string
+    kind: "effect"
+    configSchema: NodeConfigSchema
+    create: () => EffectInstance
+}
+
+/** A registered detach node type. */
+export interface DetachNodeType {
+    type: string
+    kind: "detach"
+    configSchema: NodeConfigSchema
 }
 
 /** Any registered node type. */
-export type NodeType = TriggerNodeType | ActionNodeType
+export type NodeType = TriggerNodeType | MapNodeType | FilterNodeType | ForkNodeType | EffectNodeType | DetachNodeType
 
 /** A registry of node types. */
 export interface NodeRegistry {
@@ -334,42 +366,102 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
                 resolveDeep: (template, input) => resolveDeep(template, { input, config, secret: secrets }),
             }
 
-            const actions = new Map<string, ActionInstance>()
+            const instances = new Map<string, MapInstance | FilterInstance | ForkInstance | EffectInstance>()
             for (const node of graph.nodes) {
                 const type = registry.get(node.type)
-                if (type?.kind === "action") actions.set(node.id, type.create())
+                if (
+                    type?.kind === "map" ||
+                    type?.kind === "filter" ||
+                    type?.kind === "fork" ||
+                    type?.kind === "effect"
+                ) {
+                    instances.set(node.id, type.create())
+                }
             }
 
-            const runFrom = async (nodeId: string, value: unknown): Promise<void> => {
-                for (const nextId of downstream.get(nodeId) ?? []) {
-                    const node = nodeById.get(nextId)
-                    const action = actions.get(nextId)
-                    if (!node || !action) continue
+            const nodeArgs = (node: GraphNode, input: unknown, run: RunContext): FlowNodeArgs => ({
+                config: node.config ?? {},
+                input,
+                ctx: nodeCtx,
+                run,
+            })
 
-                    try {
-                        const output = await action.run({ config: node.config ?? {}, input: value, ctx: nodeCtx })
-                        if (output === STOP) continue
-                        if (isFanOut(output)) {
-                            for (const each of output.values) await runFrom(nextId, each)
-                            continue
-                        }
-                        await runFrom(nextId, output)
-                    } catch (error) {
-                        nodeCtx.fail(error)
-                    }
+            const failAndThrow = (error: unknown): never => {
+                nodeCtx.fail(error)
+                throw error
+            }
+
+            const applyNode = (nodeId: string, input: Flow<unknown>): Flow<unknown> | undefined => {
+                const node = nodeById.get(nodeId)
+                const type = node ? registry.get(node.type) : undefined
+                const instance = instances.get(nodeId)
+                if (!node || !type) return input
+
+                switch (type.kind) {
+                    case "trigger":
+                        return input
+                    case "map":
+                        return input.map(async (value, run) => {
+                            try {
+                                return await (instance as MapInstance).run(nodeArgs(node, value, run))
+                            } catch (error) {
+                                return failAndThrow(error)
+                            }
+                        })
+                    case "filter":
+                        return input.filter(async (value, run) => {
+                            try {
+                                return await (instance as FilterInstance).run(nodeArgs(node, value, run))
+                            } catch (error) {
+                                return failAndThrow(error)
+                            }
+                        })
+                    case "fork":
+                        return input.fork(async (value, run) => {
+                            try {
+                                return await (instance as ForkInstance).run(nodeArgs(node, value, run))
+                            } catch (error) {
+                                return failAndThrow(error)
+                            }
+                        })
+                    case "detach":
+                        return input.detach()
+                    case "effect":
+                        input.effect(async (value, run) => {
+                            try {
+                                return await (instance as EffectInstance).run(nodeArgs(node, value, run))
+                            } catch (error) {
+                                return failAndThrow(error)
+                            }
+                        })
+                        return undefined
+                }
+            }
+
+            const wireFrom = (nodeId: string, input: Flow<unknown>): void => {
+                const nextIds = downstream.get(nodeId) ?? []
+                if (nextIds.length === 0) {
+                    input.effect(() => undefined)
+                    return
+                }
+
+                for (const nextId of nextIds) {
+                    const next = applyNode(nextId, input)
+                    if (next) wireFrom(nextId, next)
                 }
             }
 
             for (const node of graph.nodes) {
                 const type = registry.get(node.type)
                 if (type?.kind !== "trigger") continue
-                type.create().start({
-                    config: node.config ?? {},
-                    ctx: nodeCtx,
-                    push: value => {
-                        void runFrom(node.id, value)
-                    },
+                const source = makeFlow<unknown>(push => {
+                    type.create().start({
+                        config: node.config ?? {},
+                        ctx: nodeCtx,
+                        push,
+                    })
                 })
+                wireFrom(node.id, source)
             }
         },
     }
@@ -390,7 +482,7 @@ registerNode({
 
 registerNode({
     type: "plugin.call",
-    kind: "action",
+    kind: "map",
     configSchema: {
         plugin: { type: "string", required: true },
         method: { type: "string", required: true },
@@ -419,7 +511,7 @@ registerNode({
 
 registerNode({
     type: "event.emit",
-    kind: "action",
+    kind: "map",
     configSchema: {
         event: { type: "string", required: true },
         payload: { type: "object" },
@@ -435,7 +527,7 @@ registerNode({
 
 registerNode({
     type: "map",
-    kind: "action",
+    kind: "map",
     configSchema: { value: { type: "object", required: true } },
     create: () => ({
         run: ({ config, input, ctx }) => ctx.resolveDeep(config["value"], input),
@@ -444,7 +536,7 @@ registerNode({
 
 registerNode({
     type: "repeat",
-    kind: "action",
+    kind: "fork",
     configSchema: { over: { type: "any", required: true }, as: { type: "string" } },
     create: () => ({
         run: ({ config, input, ctx }) => {
@@ -457,14 +549,14 @@ registerNode({
                 input !== null && typeof input === "object" && !Array.isArray(input)
                     ? (input as Record<string, unknown>)
                     : {}
-            return fanOut(items.map(item => ({ ...base, [as]: item })))
+            return items.map(item => ({ ...base, [as]: item }))
         },
     }),
 })
 
 registerNode({
     type: "dedupe",
-    kind: "action",
+    kind: "filter",
     configSchema: { key: { type: "string" } },
     create: () => {
         let last: string | undefined
@@ -473,9 +565,9 @@ registerNode({
                 const compared =
                     typeof config["key"] === "string" ? ctx.resolve(`{{ ${config["key"]} }}`, input) : input
                 const marker = JSON.stringify(compared ?? null)
-                if (marker === last) return STOP
+                if (marker === last) return false
                 last = marker
-                return input
+                return true
             },
         }
     },
@@ -483,7 +575,7 @@ registerNode({
 
 registerNode({
     type: "log",
-    kind: "action",
+    kind: "map",
     configSchema: {
         message: { type: "string", required: true },
         level: { type: "string" },
@@ -495,4 +587,10 @@ registerNode({
             return input
         },
     }),
+})
+
+registerNode({
+    type: "detach",
+    kind: "detach",
+    configSchema: {},
 })

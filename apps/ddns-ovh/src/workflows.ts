@@ -1,5 +1,5 @@
-import { dedupe, poll, publicIPv4 } from "@signalbox/commons"
-import { merge } from "@signalbox/core"
+import { dedupeBy, poll, publicIPv4 } from "@signalbox/commons"
+import { combine } from "@signalbox/core"
 import type { DdnsOvhConfig } from "./config.js"
 import { defineWorkflow } from "./defineWorkflow.js"
 
@@ -27,22 +27,22 @@ export const ddnsOvhPipeline = (config: DdnsOvhConfig) =>
             retryOn: ctx.plugins.upnp.events.flow("reconnected"),
         }).map(({ value: ip, phase }): Observation => ({ ip, source: phaseSource[phase] }))
 
-        merge<Observation>(observed, polled)
-            .apply(dedupe(observation => observation.ip))
-            .run(async ({ ip, source }) => {
+        combine<Observation>(observed, polled)
+            .filter(dedupeBy(observation => observation.ip))
+            .effect(async ({ ip, source }) => {
                 ctx.log(`WAN IP changed to ${ip} (via ${source})`)
                 await ctx.plugins.ovh.update(ip)
             })
 
-        ctx.plugins.ovh.events.flow("dns:updated").run(({ record, current }) => {
+        ctx.plugins.ovh.events.flow("dns:updated").effect(({ record, current }) => {
             ctx.log(`${record} -> ${current}`)
         })
 
-        ctx.plugins.ovh.events.flow("dns:unchanged").run(({ ip }) => {
+        ctx.plugins.ovh.events.flow("dns:unchanged").effect(({ ip }) => {
             ctx.log(`records already point at ${ip}`)
         })
 
-        ctx.plugins.upnp.events.flow("unavailable").run(({ reason }) => {
+        ctx.plugins.upnp.events.flow("unavailable").effect(({ reason }) => {
             ctx.log(`UPnP unavailable: ${reason}`, "warn")
         })
     })

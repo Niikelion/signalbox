@@ -37,7 +37,7 @@ export interface FlowTrigger {
      * Subscribe to the trigger.
      * @param sink called on each fire
      */
-    run(sink: () => void | Promise<void>): void
+    effect(sink: () => void | Promise<void>): void
 }
 
 /**
@@ -99,7 +99,7 @@ export const poll = <T>(options: PollOptions<T>): Flow<{ value: T; phase: PollPh
             })
             const backoff = options.backoff ?? [5, 15, 30, 60]
 
-            retry.run(async () => {
+            retry.effect(async () => {
                 for (const waitSeconds of backoff) {
                     if (stopped) return
                     try {

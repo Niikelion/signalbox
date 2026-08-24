@@ -33,7 +33,7 @@ const worker = defineWorkflow("worker", ctx => {
     })
 
     // react to app events off the workflow's own channel
-    ctx.app.flow("job:done").run(({ id }) => {
+    ctx.app.flow("job:done").effect(({ id }) => {
         ctx.log(`done ${id}`)
     })
 })

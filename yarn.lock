@@ -1241,6 +1241,7 @@ __metadata:
     prettier: "npm:^3.8.1"
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
   languageName: unknown
   linkType: soft
 

@@ -25,7 +25,7 @@ const plugins = {
 
 // in a workflow:
 await ctx.plugins.ovh.update("203.0.113.7")
-ctx.plugins.ovh.events.flow("dns:unchanged").run(({ ip }) => {
+ctx.plugins.ovh.events.flow("dns:unchanged").effect(({ ip }) => {
     ctx.log(`already at ${ip}`)
 })
 ```

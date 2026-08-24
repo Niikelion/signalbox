@@ -30,7 +30,7 @@ const plugins = {
 }
 
 // in a workflow — subscribe by route name:
-ctx.plugins.webhook.events.flow("gh-push").run(request => {
+ctx.plugins.webhook.events.flow("gh-push").effect(request => {
     ctx.log(`hook: ${JSON.stringify(request.body)}`)
 })
 ```
