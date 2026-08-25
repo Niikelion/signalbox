@@ -74,7 +74,12 @@ jobs:
             -   name: Install dependencies
                 run: yarn install --immutable
             -   name: Run tests
-                run: yarn turbo test
+                run: yarn test:coverage
+            -   name: Report cognitive load
+                run: yarn cognitive-load
+            -   name: Write quality summary
+                if: always()
+                run: yarn ci:summary
     changeset:
         runs-on: ubuntu-latest
         permissions:

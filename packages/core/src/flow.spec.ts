@@ -60,6 +60,68 @@ describe("Flow", () => {
             expect(runs[0]?.causedByRunId).toBeUndefined()
         })
 
+        it("should start the source only once for multiple effects on the same flow", async () => {
+            let starts = 0
+            let emit!: (value: string) => void
+            const flow = makeFlow<string>(push => {
+                starts += 1
+                emit = push
+            })
+            const result: string[] = []
+
+            flow.effect(value => {
+                result.push(`a:${value}`)
+            })
+            flow.effect(value => {
+                result.push(`b:${value}`)
+            })
+
+            emit("value")
+            await flush()
+
+            expect(starts).toBe(1)
+            expect(result).toEqual(["a:value", "b:value"])
+        })
+
+        it("should create independent root runs for separate flow calls over the same source", async () => {
+            const emitter = new Emitter<string>()
+            const runs: string[] = []
+
+            emitter.flow().effect((_value, run) => {
+                runs.push(run.id)
+            })
+            emitter.flow().effect((_value, run) => {
+                runs.push(run.id)
+            })
+
+            emitter.emit("value")
+            await flush()
+
+            expect(runs).toHaveLength(2)
+            expect(runs[0]).not.toBe(runs[1])
+        })
+
+        it("should continue sibling branches after one branch fails", async () => {
+            const emitter = new Emitter<string>()
+            const write = vi.spyOn(log, "write").mockImplementation(() => undefined)
+            const flow = emitter.flow()
+            const result: string[] = []
+
+            flow.effect(() => {
+                throw new Error("branch failed")
+            })
+            flow.effect(value => {
+                result.push(value)
+            })
+
+            emitter.emit("value")
+            await flush()
+            await flush()
+
+            expect(result).toEqual(["value"])
+            expect(write).toHaveBeenCalledWith("error", "[flow] 1 of 2 flow branches failed")
+        })
+
         it("should log asynchronous effect failures", async () => {
             const emitter = new Emitter<string>()
             const write = vi.spyOn(log, "write").mockImplementation(() => undefined)
@@ -211,6 +273,23 @@ describe("Flow", () => {
             expect(children.map(run => run.correlationId)).toEqual([parent?.correlationId, parent?.correlationId])
         })
 
+        it("should close the branch without downstream effects when fork returns no values", async () => {
+            const emitter = new Emitter<string>()
+            const result: string[] = []
+
+            emitter
+                .flow()
+                .fork((): readonly string[] => [])
+                .effect(value => {
+                    result.push(value)
+                })
+
+            emitter.emit("value")
+            await flush()
+
+            expect(result).toEqual([])
+        })
+
         it("should log joined child failures after running successful children", async () => {
             const emitter = new Emitter<readonly string[]>()
             const write = vi.spyOn(log, "write").mockImplementation(() => undefined)
@@ -310,6 +389,39 @@ describe("Flow", () => {
             await flush()
 
             expect(result).toEqual(["same", "other"])
+        })
+
+        it("should start each combined source only once across multiple downstream effects", async () => {
+            let startA = 0
+            let startB = 0
+            let emitA!: (value: string) => void
+            let emitB!: (value: string) => void
+            const a = makeFlow<string>(push => {
+                startA += 1
+                emitA = push
+            })
+            const b = makeFlow<string>(push => {
+                startB += 1
+                emitB = push
+            })
+            const combined = combine(a, b)
+            const result: string[] = []
+
+            combined.effect(value => {
+                result.push(`first:${value}`)
+            })
+            combined.effect(value => {
+                result.push(`second:${value}`)
+            })
+
+            emitA("a")
+            emitB("b")
+            await flush()
+
+            expect(startA).toBe(1)
+            expect(startB).toBe(1)
+            expect(result).toHaveLength(4)
+            expect(result).toEqual(expect.arrayContaining(["first:a", "second:a", "first:b", "second:b"]))
         })
 
         it("should keep runs independent across source flows", async () => {

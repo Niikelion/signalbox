@@ -1,6 +1,7 @@
 import { defineConfig } from "eslint/config"
 import * as js from "@eslint/js"
 import * as tseslint from "typescript-eslint"
+import sonarjs from "eslint-plugin-sonarjs"
 // @ts-ignore
 import eslintConfigPrettier from "eslint-plugin-prettier/recommended"
 
@@ -17,8 +18,15 @@ export const eslintConfig = defineConfig(
         },
     },
     {
+        plugins: {
+            sonarjs,
+        },
         rules: {
             "no-empty": ["error", { allowEmptyCatch: true }],
+            "sonarjs/cognitive-complexity": [
+                process.env["COGNITIVE_LOAD"] === "1" ? "warn" : "off",
+                0,
+            ],
             "@typescript-eslint/no-unused-vars": [
                 "error",
                 {

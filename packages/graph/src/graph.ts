@@ -429,7 +429,7 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
                     case "effect":
                         input.effect(async (value, run) => {
                             try {
-                                return await (instance as EffectInstance).run(nodeArgs(node, value, run))
+                                await (instance as EffectInstance).run(nodeArgs(node, value, run))
                             } catch (error) {
                                 return failAndThrow(error)
                             }
