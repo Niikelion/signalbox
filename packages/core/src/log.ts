@@ -1,6 +1,6 @@
 import { redact } from "@signalbox/secrets"
-import type { ReadChannel } from "./bus.js"
-import type { FrameworkEvents, LogLevel } from "./events.js"
+import type { ReadChannel } from "./bus"
+import type { FrameworkEvents, LogLevel } from "./events"
 
 /** An error carrying an optional user-facing hint (shown by the CLI). */
 export class SignalboxError extends Error {

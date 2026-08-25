@@ -9,7 +9,7 @@ import {
     systemdCredentialName,
     systemdManifestName,
     SystemdCredentialKeySource,
-} from "../src/index.js"
+} from "../src/index"
 
 const directories: string[] = []
 const temporaryDirectory = async (): Promise<string> => {

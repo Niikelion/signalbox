@@ -1,5 +1,5 @@
 import { definePlugin, type ReadChannel } from "@signalbox/core"
-import { createARecord, findARecord, patchARecord, verifyZone, type CloudflareCredentials } from "./api.js"
+import { createARecord, findARecord, patchARecord, verifyZone, type CloudflareCredentials } from "./api"
 
 /** Events emitted by the Cloudflare plugin. */
 export type CloudflareEvents = {

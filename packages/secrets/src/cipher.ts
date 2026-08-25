@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto"
-import { decodeJsonValue, encodeJsonValue, type JsonValue } from "./json.js"
+import { decodeJsonValue, encodeJsonValue, type JsonValue } from "./json"
 
 export const ENCRYPTED_PREFIX = "enc:"
 export const ENVELOPE_VERSION = 1 as const

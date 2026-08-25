@@ -9,7 +9,7 @@ import {
     exportConfigTransfer,
     importConfigTransfer,
     type AgeRunner,
-} from "../src/index.js"
+} from "../src/index"
 
 const schema = config({ token: field().string().secret(), name: field().string() })
 const directories: string[] = []

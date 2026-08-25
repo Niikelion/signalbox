@@ -1,5 +1,5 @@
 import { assertType, expectTypeOf, test } from "vitest"
-import { webhookPlugin, z, type WebhookResponse } from "../src/index.js"
+import { webhookPlugin, z, type WebhookResponse } from "../src/index"
 
 test("send() body is typed per the target's request schema", () => {
     const plugin = webhookPlugin({

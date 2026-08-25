@@ -3,8 +3,8 @@ import { constants } from "node:fs"
 import { access, readFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { join } from "node:path"
-import { deriveKeyId } from "./cipher.js"
-import type { KeyMaterial, KeySource } from "./keys.js"
+import { deriveKeyId } from "./cipher"
+import type { KeyMaterial, KeySource } from "./keys"
 
 export interface SystemdCredentialManifest {
     readonly version: 1

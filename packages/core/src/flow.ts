@@ -1,4 +1,4 @@
-import { toError, write } from "./log.js"
+import { toError, write } from "@/log"
 
 /** A JSON-compatible value. */
 export type JsonValue = null | string | number | boolean | JsonValue[] | { [key: string]: JsonValue }
@@ -13,7 +13,7 @@ export interface RunContext {
     annotate(key: string, value: JsonValue): void
 }
 
-/** A terminal side-effect handler. */
+/** A terminal side effect handler. */
 export type EffectHandler<T> = (value: T, run: RunContext) => void | Promise<void>
 
 /** Maps a flow value while preserving the current run. */
@@ -31,6 +31,11 @@ export type ForkHandler<T, U> = (value: T, run: RunContext) => readonly U[] | Pr
  * @typeParam T the value type
  */
 export interface Flow<T> {
+    /**
+     * Start the workflow graph, calling `handler` for each value that reaches
+     * this terminal branch.
+     */
+    effect(handler: EffectHandler<T>): void
     /**
      * Transform each value.
      * @typeParam U the output type
@@ -54,11 +59,6 @@ export interface Flow<T> {
     fork<U>(fn: ForkHandler<T, U>): Flow<U>
     /** Continue downstream work in a detached run that no longer affects the parent. */
     detach(): Flow<T>
-    /**
-     * Start the workflow graph, calling `handler` for each value that reaches
-     * this terminal branch.
-     */
-    effect(handler: EffectHandler<T>): void
 }
 
 interface MutableRunState {

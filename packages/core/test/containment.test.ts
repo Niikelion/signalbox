@@ -6,8 +6,8 @@ const observed = vi.hoisted(() => ({
     messages: [] as string[],
 }))
 
-vi.mock("../src/log.js", async importOriginal => {
-    const actual = await importOriginal<typeof import("../src/log.js")>()
+vi.mock("../src/log", async importOriginal => {
+    const actual = await importOriginal<typeof import("../src/log")>()
     return {
         ...actual,
         attachConsoleLogger: (channel: Parameters<typeof actual.attachConsoleLogger>[0]) => {
@@ -25,7 +25,7 @@ vi.mock("../src/log.js", async importOriginal => {
     }
 })
 
-import { createApp, write } from "../src/index.js"
+import { createApp, write } from "../src/index"
 
 afterEach(() => {
     observed.errors.length = 0

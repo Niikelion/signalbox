@@ -1,5 +1,5 @@
 import { registerNode, type MapNodeType } from "@signalbox/graph"
-import { createARecord, findARecord, patchARecord } from "./api.js"
+import { createARecord, findARecord, patchARecord } from "./api"
 
 export const cloudflareUpdateNode: MapNodeType = {
     type: "cloudflare.update",

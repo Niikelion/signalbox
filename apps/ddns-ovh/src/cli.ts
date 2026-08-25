@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { runCliMain } from "@signalbox/service-cli"
-import { createDdnsOvhApp } from "./app.js"
-import { APP_NAME, configSchema, createDdnsOvhConfigStore } from "./config.js"
+import { createDdnsOvhApp } from "./app"
+import { APP_NAME, configSchema, createDdnsOvhConfigStore } from "./config"
 
 await runCliMain({
     appName: APP_NAME,

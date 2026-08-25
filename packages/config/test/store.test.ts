@@ -15,7 +15,7 @@ import {
     isSecretValue,
     secret,
     z,
-} from "../src/index.js"
+} from "../src/index"
 
 const schema = config({
     apiToken: field().string().secret().describe("token"),

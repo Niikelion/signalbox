@@ -1,5 +1,5 @@
 import { definePlugin, type ReadChannel } from "@signalbox/core"
-import { updateDynHost, type OvhDynHostCredentials } from "./api.js"
+import { updateDynHost, type OvhDynHostCredentials } from "./api"
 
 /** Events emitted by the OVH plugin. */
 export type OvhEvents = {

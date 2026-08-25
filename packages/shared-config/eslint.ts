@@ -31,6 +31,25 @@ export const eslintConfig = defineConfig(
             "@typescript-eslint/restrict-template-expressions": "off",
             "@typescript-eslint/no-invalid-void-type": "off",
             "@typescript-eslint/require-await": "off",
+            "no-restricted-syntax": [
+                "error",
+                {
+                    selector: "ImportDeclaration[source.value=/^\\.{1,2}\\/.*\\.js$/]",
+                    message: "Omit .js from relative TypeScript imports when the target can be resolved.",
+                },
+                {
+                    selector: "ExportNamedDeclaration[source.value=/^\\.{1,2}\\/.*\\.js$/]",
+                    message: "Omit .js from relative TypeScript exports when the target can be resolved.",
+                },
+                {
+                    selector: "ExportAllDeclaration[source.value=/^\\.{1,2}\\/.*\\.js$/]",
+                    message: "Omit .js from relative TypeScript exports when the target can be resolved.",
+                },
+                {
+                    selector: "ImportExpression[source.value=/^\\.{1,2}\\/.*\\.js$/]",
+                    message: "Omit .js from relative TypeScript dynamic imports when the target can be resolved.",
+                },
+            ],
         },
     },
     {

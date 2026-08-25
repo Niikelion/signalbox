@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, expect, it } from "vitest"
-import { createStore } from "../src/index.js"
+import { createStore } from "../src/index"
 
 interface Reminder {
     id: string

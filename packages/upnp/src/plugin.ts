@@ -1,6 +1,6 @@
 import { definePlugin, type ReadChannel } from "@signalbox/core"
-import type { GatewayService } from "./discovery.js"
-import { createUpnpWatcher, type UpnpWatcher } from "./watch.js"
+import type { GatewayService } from "./discovery"
+import { createUpnpWatcher, type UpnpWatcher } from "./watch"
 
 /** Events emitted by the UPnP plugin. */
 export type UpnpEvents = {

@@ -2,7 +2,7 @@ import type { AddressInfo } from "node:net"
 import { request } from "node:http"
 import type { Server } from "node:http"
 import { afterEach, describe, expect, it } from "vitest"
-import { createNotifyServer } from "../src/gena.js"
+import { createNotifyServer } from "../src/gena"
 
 const LIVE_SID = "uuid:live-subscription"
 

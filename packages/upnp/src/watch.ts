@@ -1,6 +1,6 @@
 import type { Server } from "node:http"
-import { discoverGateway, sourceIpToward, type GatewayService } from "./discovery.js"
-import { createNotifyServer, gena } from "./gena.js"
+import { discoverGateway, sourceIpToward, type GatewayService } from "./discovery"
+import { createNotifyServer, gena } from "./gena"
 
 /** Severity for the watcher's log hook. */
 export type WatchLevel = "info" | "warn" | "error"

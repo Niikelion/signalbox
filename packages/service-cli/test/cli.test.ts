@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { config, createConfigStore, field, type ConfigOf } from "@signalbox/config"
 import { FileKeyBackend } from "@signalbox/secrets"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { runCli, type ServiceApp } from "../src/index.js"
+import { runCli, type ServiceApp } from "../src/index"
 
 const schema = config({ token: field().string().secret(), name: field().string() })
 const directories: string[] = []

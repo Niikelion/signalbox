@@ -2,7 +2,7 @@
 import { createApp, createWorkflowDefiner, type NoEvents, type PluginApis } from "@signalbox/core"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { httpPlugin } from "../src/index.js"
+import { httpPlugin } from "../src/index"
 
 describe("http plugin", () => {
     it("serves routes registered via handle()", async () => {

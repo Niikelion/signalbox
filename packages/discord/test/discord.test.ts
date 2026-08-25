@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import { afterAll, describe, expect, it, vi } from "vitest"
-import { discordPlugin } from "../src/index.js"
+import { discordPlugin } from "../src/index"
 
 const fetchMock = vi.spyOn(globalThis, "fetch")
 afterAll(() => {

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { runCliMain } from "@signalbox/service-cli"
-import { createDdnsApp } from "./app.js"
-import { APP_NAME, configSchema, createDdnsConfigStore } from "./config.js"
-import { runOnce } from "./once.js"
+import { createDdnsApp } from "./app"
+import { APP_NAME, configSchema, createDdnsConfigStore } from "./config"
+import { runOnce } from "./once"
 
 await runCliMain({
     appName: APP_NAME,

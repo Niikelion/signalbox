@@ -1,7 +1,7 @@
 import { createApp, type App } from "@signalbox/core"
-import { APP_NAME, type CloudflareDdnsConfig } from "./config.js"
-import { buildPlugins } from "./plugins.js"
-import { ddnsPipeline } from "./workflows.js"
+import { APP_NAME, type CloudflareDdnsConfig } from "./config"
+import { buildPlugins } from "./plugins"
+import { ddnsPipeline } from "./workflows"
 
 export const createDdnsApp = (config: CloudflareDdnsConfig): App =>
     createApp({

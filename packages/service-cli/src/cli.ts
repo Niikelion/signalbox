@@ -14,9 +14,9 @@ import {
 } from "@signalbox/config"
 import { SignalboxError, write } from "@signalbox/core"
 import { FileKeyBackend, type KeyMaterial } from "@signalbox/secrets"
-import { createServiceManager, type ServiceManager, type ServiceScope } from "./systemd.js"
-import { readInputFile, readMasked, readPlain, readStream, selectOption } from "./terminal.js"
-import { exportConfigTransfer, importConfigTransfer } from "./transfer.js"
+import { createServiceManager, type ServiceManager, type ServiceScope } from "./systemd"
+import { readInputFile, readMasked, readPlain, readStream, selectOption } from "./terminal"
+import { exportConfigTransfer, importConfigTransfer } from "./transfer"
 
 /** Something the `run` command can start â€” an app's `run()`. */
 export interface Runnable {

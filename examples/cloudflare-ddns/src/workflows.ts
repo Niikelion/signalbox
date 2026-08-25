@@ -1,7 +1,7 @@
 import { dedupeBy, poll, publicIPv4 } from "@signalbox/commons"
 import { combine } from "@signalbox/core"
-import type { CloudflareDdnsConfig } from "./config.js"
-import { defineWorkflow } from "./defineWorkflow.js"
+import type { CloudflareDdnsConfig } from "./config"
+import { defineWorkflow } from "./defineWorkflow"
 
 type WanIpSource = "upnp" | "http" | "startup" | "reconnect"
 interface Observation {

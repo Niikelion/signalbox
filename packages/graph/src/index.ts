@@ -5,7 +5,7 @@ export {
     registerNode,
     resolveDeep,
     resolveTemplate,
-} from "./graph.js"
+} from "./graph"
 export type {
     CompileOptions,
     ConfigField,
@@ -30,4 +30,4 @@ export type {
     TriggerInstance,
     TriggerNodeType,
     WorkflowGraph,
-} from "./graph.js"
+} from "./graph"

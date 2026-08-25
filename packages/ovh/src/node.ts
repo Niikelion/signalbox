@@ -1,5 +1,5 @@
 import { registerNode, type MapNodeType } from "@signalbox/graph"
-import { updateDynHost } from "./api.js"
+import { updateDynHost } from "./api"
 
 export const ovhUpdateNode: MapNodeType = {
     type: "ovh.update",

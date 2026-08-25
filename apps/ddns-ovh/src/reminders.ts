@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
-import type { DdnsOvhConfig } from "./config.js"
-import { defineWorkflow } from "./defineWorkflow.js"
-import { REMIND_COMMAND } from "./remind.js"
+import type { DdnsOvhConfig } from "./config"
+import { defineWorkflow } from "./defineWorkflow"
+import { REMIND_COMMAND } from "./remind"
 
 interface Reminder {
     id: string

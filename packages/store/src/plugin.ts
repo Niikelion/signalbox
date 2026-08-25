@@ -1,5 +1,5 @@
 import { definePlugin, type NoEvents } from "@signalbox/core"
-import { createStore, type Store } from "./store.js"
+import { createStore, type Store } from "./store"
 
 /** Options for {@link storePlugin}. */
 export interface StorePluginOptions {

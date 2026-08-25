@@ -1,7 +1,7 @@
 import { createBus, type EventMap, type WorkflowContext } from "@signalbox/core"
 import { Secret } from "@signalbox/secrets"
 import { describe, expect, it } from "vitest"
-import { compileGraph, createNodeRegistry, type GraphNodeContext } from "../src/index.js"
+import { compileGraph, createNodeRegistry, type GraphNodeContext } from "../src/index"
 
 const setupContext = (
     logs: string[],

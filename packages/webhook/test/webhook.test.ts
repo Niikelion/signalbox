@@ -9,7 +9,7 @@ import {
     type TargetConfig,
     type WebhookRequest,
     type WebhookResponse,
-} from "../src/index.js"
+} from "../src/index"
 
 // ------------------------------------------------------------------ inbound
 

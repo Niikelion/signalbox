@@ -1,6 +1,6 @@
 import { createBus, type EventMap, type RunContext, type WorkflowContext } from "@signalbox/core"
 import { describe, expect, it } from "vitest"
-import { compileGraph, createNodeRegistry, type GraphNodeContext } from "../src/index.js"
+import { compileGraph, createNodeRegistry, type GraphNodeContext } from "../src/index"
 
 const flush = async (): Promise<void> => {
     await new Promise(resolve => setTimeout(resolve, 0))

@@ -1,6 +1,6 @@
 import { makeFlow } from "@signalbox/core"
 import { describe, expect, it } from "vitest"
-import { dedupeBy } from "../src/index.js"
+import { dedupeBy } from "../src/index"
 
 const flush = async (): Promise<void> => {
     await Promise.resolve()

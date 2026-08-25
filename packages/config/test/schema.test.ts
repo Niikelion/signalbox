@@ -1,6 +1,6 @@
 import { Secret } from "@signalbox/secrets"
 import { describe, expect, expectTypeOf, it } from "vitest"
-import { config, field, secret, z, type ConfigOf, type InputOf } from "../src/index.js"
+import { config, field, secret, z, type ConfigOf, type InputOf } from "../src/index"
 
 describe("config type projections", () => {
     const schema = config({
