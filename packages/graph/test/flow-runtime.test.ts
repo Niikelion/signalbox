@@ -18,6 +18,37 @@ const setupContext = (): WorkflowContext<EventMap, Record<string, unknown>> => (
     interval: () => undefined,
 })
 
+const setupValidationRegistry = () => {
+    const registry = createNodeRegistry()
+
+    registry.register({
+        type: "source",
+        kind: "trigger",
+        configSchema: {},
+        create: () => ({
+            start: () => undefined,
+        }),
+    })
+    registry.register({
+        type: "pass",
+        kind: "map",
+        configSchema: {},
+        create: () => ({
+            run: ({ input }) => input,
+        }),
+    })
+    registry.register({
+        type: "sink",
+        kind: "effect",
+        configSchema: {},
+        create: () => ({
+            run: () => undefined,
+        }),
+    })
+
+    return registry
+}
+
 describe("graph flow runtime", () => {
     it("passes Flow run context through graph actions", async () => {
         const pushes: Array<(value: unknown) => void> = []
@@ -132,5 +163,50 @@ describe("graph flow runtime", () => {
         expect(children.map(run => run.parentRunId)).toEqual([parent?.id, parent?.id])
         expect(children.map(run => run.causedByRunId)).toEqual([parent?.id, parent?.id])
         expect(children.map(run => run.correlationId)).toEqual([parent?.correlationId, parent?.correlationId])
+    })
+
+    it("rejects cyclic graphs before setup", () => {
+        const registry = setupValidationRegistry()
+
+        expect(() =>
+            compileGraph(
+                {
+                    name: "cycle",
+                    nodes: [
+                        { id: "source", type: "source" },
+                        { id: "a", type: "pass" },
+                        { id: "b", type: "pass" },
+                    ],
+                    edges: [
+                        { from: "source", to: "a" },
+                        { from: "a", to: "b" },
+                        { from: "b", to: "a" },
+                    ],
+                },
+                { registry },
+            ),
+        ).toThrow("workflow graph contains a cycle: a -> b -> a")
+    })
+
+    it("rejects outgoing edges from effect nodes", () => {
+        const registry = setupValidationRegistry()
+
+        expect(() =>
+            compileGraph(
+                {
+                    name: "terminal",
+                    nodes: [
+                        { id: "source", type: "source" },
+                        { id: "sink", type: "sink" },
+                        { id: "after", type: "pass" },
+                    ],
+                    edges: [
+                        { from: "source", to: "sink" },
+                        { from: "sink", to: "after" },
+                    ],
+                },
+                { registry },
+            ),
+        ).toThrow('effect node "sink" cannot have outgoing edges')
     })
 })

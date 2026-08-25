@@ -287,6 +287,43 @@ const validateConfig = (node: GraphNode, schema: NodeConfigSchema): void => {
     }
 }
 
+const validateGraphShape = (
+    graph: WorkflowGraph,
+    nodeById: Map<string, GraphNode>,
+    downstream: Map<string, string[]>,
+    registry: NodeRegistry,
+): void => {
+    for (const node of graph.nodes) {
+        const type = registry.get(node.type)
+        const nextIds = downstream.get(node.id) ?? []
+        if (type?.kind === "effect" && nextIds.length > 0) {
+            throw new SignalboxError(`effect node "${node.id}" cannot have outgoing edges`)
+        }
+    }
+
+    const visited = new Set<string>()
+    const visiting = new Set<string>()
+    const path: string[] = []
+
+    const visit = (nodeId: string): void => {
+        if (visiting.has(nodeId)) {
+            const start = path.indexOf(nodeId)
+            const cycle = [...path.slice(start), nodeId].join(" -> ")
+            throw new SignalboxError(`workflow graph contains a cycle: ${cycle}`)
+        }
+        if (visited.has(nodeId)) return
+
+        visiting.add(nodeId)
+        path.push(nodeId)
+        for (const nextId of downstream.get(nodeId) ?? []) visit(nextId)
+        path.pop()
+        visiting.delete(nodeId)
+        visited.add(nodeId)
+    }
+
+    for (const nodeId of nodeById.keys()) visit(nodeId)
+}
+
 /** Options for {@link compileGraph}. */
 export interface CompileOptions {
     /** Node registry to resolve types against (default: {@link defaultRegistry}). */
@@ -344,6 +381,7 @@ export const compileGraph = <TEvents extends EventMap = EventMap, TPlugins = Rec
         if (!nodeById.has(edge.to)) throw new SignalboxError(`edge to unknown node "${edge.to}"`)
         downstream.set(edge.from, [...(downstream.get(edge.from) ?? []), edge.to])
     }
+    validateGraphShape(graph, nodeById, downstream, registry)
 
     return {
         name: graph.name,

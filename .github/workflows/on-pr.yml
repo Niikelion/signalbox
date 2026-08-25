@@ -76,6 +76,7 @@ jobs:
             -   name: Run tests
                 run: yarn test:coverage
             -   name: Report cognitive load
+                if: always()
                 run: yarn cognitive-load
             -   name: Write quality summary
                 if: always()
