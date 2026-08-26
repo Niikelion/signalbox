@@ -9,6 +9,7 @@
         "@signalbox/discord-bot": "report",
         "@signalbox/graph": "report",
         "@signalbox/http": "report",
+        "@signalbox/local-rpc": "report",
         "@signalbox/ovh": "report",
         "@signalbox/permissions": "report",
         "@signalbox/permissions-store": "report",

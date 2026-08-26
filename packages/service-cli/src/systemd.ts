@@ -11,7 +11,7 @@ import {
     writeFileSync,
 } from "node:fs"
 import { homedir } from "node:os"
-import { dirname, join, resolve } from "node:path"
+import { dirname, isAbsolute, join, resolve } from "node:path"
 import { isRoot, SignalboxError, write } from "@signalbox/core"
 import {
     systemdActiveCredentialName,
@@ -35,6 +35,30 @@ export interface SetupOptions {
     keys?: readonly KeyMaterial[]
     /** Key the unit should use for new writes. */
     activeKeyId?: string
+}
+
+/** Narrow, structured customizations for a generated systemd service. */
+export interface SystemServiceProfile {
+    /** Service account name (default `signalbox`). */
+    user?: string
+    /** Primary service group (default matches `user`). */
+    group?: string
+    /** Create a missing primary group and service user during setup (default true). */
+    createAccount?: boolean
+    /** Existing groups added with systemd's `SupplementaryGroups`. */
+    supplementaryGroups?: readonly string[]
+    /** A systemd-managed directory below `/run` (or the user runtime directory). */
+    runtimeDirectory?: { readonly name?: string; readonly mode?: number }
+    /** Absolute paths made writable through the existing `ProtectSystem=strict` sandbox. */
+    readWritePaths?: readonly string[]
+}
+
+/** Options fixed for the lifetime of a service manager. */
+export interface ServiceManagerOptions {
+    /** Description written to the systemd unit. */
+    description?: string
+    /** Structured systemd service customizations. */
+    systemService?: SystemServiceProfile
 }
 
 /** Options for removing the service. */
@@ -66,7 +90,71 @@ export interface ServiceManager {
     purgeSealedCredentials: (scope: ServiceScope) => void
 }
 
-const SERVICE_USER = "signalbox"
+const DEFAULT_SERVICE_USER = "signalbox"
+const ACCOUNT_NAME = /^[a-z_][a-z0-9_-]*[$]?$/u
+const RUNTIME_DIRECTORY_NAME = /^[A-Za-z0-9_.-]+$/u
+
+interface ResolvedSystemServiceProfile {
+    readonly user: string
+    readonly group: string
+    readonly createAccount: boolean
+    readonly supplementaryGroups: readonly string[]
+    readonly runtimeDirectory?: { readonly name: string; readonly mode: number }
+    readonly readWritePaths: readonly string[]
+}
+
+interface SystemdUnitRenderOptions {
+    readonly appName: string
+    readonly scope: ServiceScope
+    readonly configPath: string
+    readonly executable: string
+    readonly cliPath: string
+    readonly credentials: readonly { readonly name: string; readonly path: string }[]
+    readonly activeKeyId?: string
+    readonly description?: string
+    readonly systemService?: SystemServiceProfile
+}
+
+const resolveProfile = (appName: string, profile: SystemServiceProfile = {}): ResolvedSystemServiceProfile => {
+    const user = profile.user ?? DEFAULT_SERVICE_USER
+    const group = profile.group ?? user
+    const supplementaryGroups = [...new Set(profile.supplementaryGroups ?? [])]
+    for (const name of [user, group, ...supplementaryGroups]) {
+        if (!ACCOUNT_NAME.test(name)) throw new SignalboxError(`invalid system account or group name "${name}"`)
+    }
+    const runtimeDirectory = profile.runtimeDirectory
+        ? {
+              name: profile.runtimeDirectory.name ?? appName,
+              mode: profile.runtimeDirectory.mode ?? 0o750,
+          }
+        : undefined
+    if (runtimeDirectory && !RUNTIME_DIRECTORY_NAME.test(runtimeDirectory.name)) {
+        throw new SignalboxError(`invalid runtime directory name "${runtimeDirectory.name}"`)
+    }
+    if (
+        runtimeDirectory &&
+        (!Number.isInteger(runtimeDirectory.mode) || runtimeDirectory.mode < 0 || runtimeDirectory.mode > 0o777)
+    ) {
+        throw new SignalboxError(`invalid runtime directory mode ${String(runtimeDirectory.mode)}`)
+    }
+    const readWritePaths = [...new Set(profile.readWritePaths ?? [])]
+    for (const path of readWritePaths) {
+        if (!isAbsolute(path) || /[\s"'\\]/u.test(path)) {
+            throw new SignalboxError(
+                `invalid writable path "${path}"`,
+                "use an absolute path without whitespace, quotes, or backslashes",
+            )
+        }
+    }
+    return {
+        user,
+        group,
+        createAccount: profile.createAccount ?? true,
+        supplementaryGroups,
+        runtimeDirectory,
+        readWritePaths,
+    }
+}
 
 const run = (command: string, args: string[]): string => {
     try {
@@ -98,6 +186,7 @@ const tryRun = (command: string, args: string[]): string | null => {
 }
 
 const userExists = (name: string): boolean => tryRun("id", ["-u", name]) !== null
+const groupExists = (name: string): boolean => tryRun("getent", ["group", name]) !== null
 
 const ufwIsActive = (): boolean => (tryRun("ufw", ["status"]) ?? "").includes("Status: active")
 
@@ -107,12 +196,75 @@ const cliEntry = (): string => {
     return realpathSync(argv1)
 }
 
+/** @internal Pure unit rendering entrypoint used by tests. */
+export const renderSystemdUnit = (options: SystemdUnitRenderOptions): string => {
+    if (options.description && /[\r\n]/u.test(options.description)) {
+        throw new SignalboxError("systemd service description cannot contain a line break")
+    }
+    const profile = resolveProfile(options.appName, options.systemService)
+    const configEnv = `${options.appName.toUpperCase().replace(/-/g, "_")}_CONFIG`
+    const account = options.scope === "system" ? `User=${profile.user}\nGroup=${profile.group}\n` : ""
+    const hardening =
+        options.scope === "system"
+            ? `NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+LockPersonality=yes
+`
+            : `NoNewPrivileges=yes
+PrivateTmp=yes
+`
+
+    const credentialLines = [
+        ...options.credentials.map(credential => `LoadCredentialEncrypted=${credential.name}:${credential.path}`),
+        ...(options.activeKeyId
+            ? [`SetCredential=${systemdActiveCredentialName(options.appName)}:${options.activeKeyId}`]
+            : []),
+    ].join("\n")
+    const profileLines = [
+        ...(options.scope === "system" && profile.supplementaryGroups.length > 0
+            ? [`SupplementaryGroups=${profile.supplementaryGroups.join(" ")}`]
+            : []),
+        ...(profile.runtimeDirectory
+            ? [
+                  `RuntimeDirectory=${profile.runtimeDirectory.name}`,
+                  `RuntimeDirectoryMode=${profile.runtimeDirectory.mode.toString(8).padStart(4, "0")}`,
+              ]
+            : []),
+        ...(profile.readWritePaths.length > 0 ? [`ReadWritePaths=${profile.readWritePaths.join(" ")}`] : []),
+    ].join("\n")
+
+    return `[Unit]
+Description=${options.description ?? options.appName}
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+${account}Environment=${configEnv}=${options.configPath}
+ExecStart=${options.executable} ${options.cliPath} run
+Restart=always
+RestartSec=10
+${credentialLines}
+${profileLines}
+
+${hardening}
+[Install]
+WantedBy=${options.scope === "system" ? "multi-user.target" : "default.target"}
+`
+}
+
 /**
  * Create a systemd service manager for an app.
  * @param appName the app/unit name
  */
-export const createServiceManager = (appName: string): ServiceManager => {
-    const configEnv = `${appName.toUpperCase().replace(/-/g, "_")}_CONFIG`
+export const createServiceManager = (appName: string, managerOptions: ServiceManagerOptions = {}): ServiceManager => {
+    const profile = resolveProfile(appName, managerOptions.systemService)
     const systemUnitPath = `/etc/systemd/system/${appName}.service`
     const userUnitPath = join(homedir(), ".config", "systemd", "user", `${appName}.service`)
     const ownedConfigDirs = [resolve(`/etc/${appName}`), resolve(join(homedir(), ".config", appName))]
@@ -138,74 +290,57 @@ export const createServiceManager = (appName: string): ServiceManager => {
         }
     }
 
-    const unitContents = (
-        scope: ServiceScope,
-        configPath: string,
-        credentials: readonly { readonly name: string; readonly path: string }[],
-        activeKeyId?: string,
-    ): string => {
-        const account = scope === "system" ? `User=${SERVICE_USER}\nGroup=${SERVICE_USER}\n` : ""
-        const hardening =
-            scope === "system"
-                ? `NoNewPrivileges=yes
-PrivateTmp=yes
-ProtectSystem=strict
-ProtectHome=yes
-ProtectKernelTunables=yes
-ProtectControlGroups=yes
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
-CapabilityBoundingSet=
-LockPersonality=yes
-`
-                : `NoNewPrivileges=yes
-PrivateTmp=yes
-`
-
-        const credentialLines = [
-            ...credentials.map(credential => `LoadCredentialEncrypted=${credential.name}:${credential.path}`),
-            ...(activeKeyId ? [`SetCredential=${systemdActiveCredentialName(appName)}:${activeKeyId}`] : []),
-        ].join("\n")
-
-        return `[Unit]
-Description=signalbox dynamic DNS (UPnP push)
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=simple
-${account}Environment=${configEnv}=${configPath}
-ExecStart=${process.execPath} ${cliEntry()} run
-Restart=always
-RestartSec=10
-${credentialLines}
-
-${hardening}
-[Install]
-WantedBy=${scope === "system" ? "multi-user.target" : "default.target"}
-`
-    }
-
     const setupService = (options: SetupOptions): void => {
         const { scope } = options
         requireScopePrivileges(scope, "setup")
+        const configuredProfile = managerOptions.systemService
+        if (
+            scope === "user" &&
+            configuredProfile &&
+            (configuredProfile.user !== undefined ||
+                configuredProfile.group !== undefined ||
+                configuredProfile.createAccount !== undefined ||
+                (configuredProfile.supplementaryGroups?.length ?? 0) > 0)
+        ) {
+            throw new SignalboxError("system account and supplementary-group settings cannot be used with --user")
+        }
 
         if (process.execPath.includes("/.nvm/") || process.execPath.includes("/.volta/")) {
             const detail =
                 scope === "system"
-                    ? `the ${SERVICE_USER} user must be able to read that path - a system-wide node is safer`
+                    ? `the ${profile.user} user must be able to read that path - a system-wide node is safer`
                     : "fine for a user service, but the path breaks if you switch node versions"
             write("warn", `node lives at ${process.execPath}, inside a per-user version manager: ${detail}`)
         }
 
         if (scope === "system") {
-            if (!userExists(SERVICE_USER)) {
-                run("useradd", ["--system", "--no-create-home", "--shell", "/usr/sbin/nologin", SERVICE_USER])
-                write("info", `created system user ${SERVICE_USER}`)
+            for (const supplementaryGroup of profile.supplementaryGroups) {
+                if (!groupExists(supplementaryGroup)) {
+                    throw new SignalboxError(`supplementary group ${supplementaryGroup} does not exist`)
+                }
+            }
+            if (!groupExists(profile.group)) {
+                if (!profile.createAccount) throw new SignalboxError(`service group ${profile.group} does not exist`)
+                run("groupadd", ["--system", profile.group])
+                write("info", `created system group ${profile.group}`)
+            }
+            if (!userExists(profile.user)) {
+                if (!profile.createAccount) throw new SignalboxError(`service user ${profile.user} does not exist`)
+                run("useradd", [
+                    "--system",
+                    "--no-create-home",
+                    "--shell",
+                    "/usr/sbin/nologin",
+                    "--gid",
+                    profile.group,
+                    profile.user,
+                ])
+                write("info", `created system user ${profile.user}`)
             }
 
             const configDir = dirname(options.configPath)
             mkdirSync(configDir, { recursive: true, mode: 0o750 })
-            const gid = Number(run("id", ["-g", SERVICE_USER]).trim())
+            const gid = Number(run("id", ["-g", profile.user]).trim())
             chownSync(configDir, 0, gid)
             if (existsSync(options.configPath)) chownSync(options.configPath, 0, gid)
 
@@ -265,9 +400,23 @@ WantedBy=${scope === "system" ? "multi-user.target" : "default.target"}
         const target = unitPath(scope)
         const wasInstalled = existsSync(target)
         mkdirSync(dirname(target), { recursive: true })
-        writeFileSync(target, unitContents(scope, options.configPath, credentials, options.activeKeyId), {
-            mode: 0o644,
-        })
+        writeFileSync(
+            target,
+            renderSystemdUnit({
+                appName,
+                scope,
+                configPath: options.configPath,
+                executable: process.execPath,
+                cliPath: cliEntry(),
+                credentials,
+                activeKeyId: options.activeKeyId,
+                description: managerOptions.description,
+                systemService: managerOptions.systemService,
+            }),
+            {
+                mode: 0o644,
+            },
+        )
 
         run("systemctl", systemctl(scope, ["daemon-reload"]))
         run("systemctl", systemctl(scope, ["enable", "--now", `${appName}.service`]))
@@ -350,11 +499,6 @@ WantedBy=${scope === "system" ? "multi-user.target" : "default.target"}
             }
         } else {
             write("info", `left ${configDir} in place - not a directory ${appName} created`)
-        }
-
-        if (scope === "system" && userExists(SERVICE_USER)) {
-            tryRun("userdel", [SERVICE_USER])
-            write("info", `removed user ${SERVICE_USER}`)
         }
     }
 

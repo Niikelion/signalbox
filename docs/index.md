@@ -40,4 +40,4 @@ A plugin gives you a capability (`schedule`), another delivers output (`discord`
 
 **Concepts** — [Apps](concepts/apps.md) · [Plugins](concepts/plugins.md) · [Workflows](concepts/workflows.md) · [Events](concepts/events.md) · [Flow](concepts/flow.md) · [Config](concepts/config.md)
 
-**Guides** — [Writing a plugin](guides/writing-a-plugin.md) · [Deploying with service-cli](guides/deploying-with-service-cli.md) · [Workflows as data](guides/workflows-as-data.md)
+**Guides** — [Writing a plugin](guides/writing-a-plugin.md) · [Local RPC](guides/local-rpc.md) · [Deploying with service-cli](guides/deploying-with-service-cli.md) · [Workflows as data](guides/workflows-as-data.md)

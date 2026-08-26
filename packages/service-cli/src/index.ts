@@ -1,5 +1,12 @@
 export { createServiceManager } from "./systemd"
-export type { ServiceManager, ServiceScope, SetupOptions, TeardownOptions } from "./systemd"
+export type {
+    ServiceManager,
+    ServiceManagerOptions,
+    ServiceScope,
+    SetupOptions,
+    SystemServiceProfile,
+    TeardownOptions,
+} from "./systemd"
 
 export { runCli, runCliMain } from "./cli"
 export type { ServiceApp, Runnable } from "./cli"

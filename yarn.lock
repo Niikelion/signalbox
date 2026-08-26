@@ -830,6 +830,111 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@koromix/koffi-darwin-arm64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-darwin-arm64@npm:3.1.6"
+  conditions: os=darwin & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-darwin-x64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-darwin-x64@npm:3.1.6"
+  conditions: os=darwin & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-freebsd-arm64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-freebsd-arm64@npm:3.1.6"
+  conditions: os=freebsd & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-freebsd-ia32@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-freebsd-ia32@npm:3.1.6"
+  conditions: os=freebsd & cpu=ia32
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-freebsd-x64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-freebsd-x64@npm:3.1.6"
+  conditions: os=freebsd & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-linux-arm64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-linux-arm64@npm:3.1.6"
+  conditions: os=linux & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-linux-ia32@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-linux-ia32@npm:3.1.6"
+  conditions: os=linux & cpu=ia32
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-linux-loong64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-linux-loong64@npm:3.1.6"
+  conditions: os=linux & cpu=loong64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-linux-riscv64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-linux-riscv64@npm:3.1.6"
+  conditions: os=linux & cpu=riscv64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-linux-x64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-linux-x64@npm:3.1.6"
+  conditions: os=linux & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-openbsd-ia32@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-openbsd-ia32@npm:3.1.6"
+  conditions: os=openbsd & cpu=ia32
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-openbsd-x64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-openbsd-x64@npm:3.1.6"
+  conditions: os=openbsd & cpu=x64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-win32-arm64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-win32-arm64@npm:3.1.6"
+  conditions: os=win32 & cpu=arm64
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-win32-ia32@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-win32-ia32@npm:3.1.6"
+  conditions: os=win32 & cpu=ia32
+  languageName: node
+  linkType: hard
+
+"@koromix/koffi-win32-x64@npm:3.1.6":
+  version: 3.1.6
+  resolution: "@koromix/koffi-win32-x64@npm:3.1.6"
+  conditions: os=win32 & cpu=x64
+  languageName: node
+  linkType: hard
+
 "@loaderkit/resolve@npm:^1.0.2":
   version: 1.0.6
   resolution: "@loaderkit/resolve@npm:1.0.6"
@@ -1489,6 +1594,27 @@ __metadata:
     "@vitest/coverage-v8": "npm:^2.1.9"
     eslint: "npm:^9.39.2"
     hono: "npm:^4.6.0"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
+    zod: "npm:^4.0.0"
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/local-rpc@workspace:packages/local-rpc":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/local-rpc@workspace:packages/local-rpc"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/core": "npm:^0.5.1"
+    "@signalbox/permissions": "npm:^0.4.0"
+    "@signalbox/shared-config": "npm:^0.1.0"
+    "@types/node": "npm:^22.10.2"
+    "@vitest/coverage-v8": "npm:^2.1.9"
+    eslint: "npm:^9.39.2"
+    koffi: "npm:^3.1.6"
     prettier: "npm:^3.8.1"
     tsdown: "npm:^0.15.7"
     typescript: "npm:^5.9.3"
@@ -3372,6 +3498,60 @@ __metadata:
   languageName: node
   linkType: hard
 
+"koffi@npm:^3.1.6":
+  version: 3.1.6
+  resolution: "koffi@npm:3.1.6"
+  dependencies:
+    "@koromix/koffi-darwin-arm64": "npm:3.1.6"
+    "@koromix/koffi-darwin-x64": "npm:3.1.6"
+    "@koromix/koffi-freebsd-arm64": "npm:3.1.6"
+    "@koromix/koffi-freebsd-ia32": "npm:3.1.6"
+    "@koromix/koffi-freebsd-x64": "npm:3.1.6"
+    "@koromix/koffi-linux-arm64": "npm:3.1.6"
+    "@koromix/koffi-linux-ia32": "npm:3.1.6"
+    "@koromix/koffi-linux-loong64": "npm:3.1.6"
+    "@koromix/koffi-linux-riscv64": "npm:3.1.6"
+    "@koromix/koffi-linux-x64": "npm:3.1.6"
+    "@koromix/koffi-openbsd-ia32": "npm:3.1.6"
+    "@koromix/koffi-openbsd-x64": "npm:3.1.6"
+    "@koromix/koffi-win32-arm64": "npm:3.1.6"
+    "@koromix/koffi-win32-ia32": "npm:3.1.6"
+    "@koromix/koffi-win32-x64": "npm:3.1.6"
+  dependenciesMeta:
+    "@koromix/koffi-darwin-arm64":
+      optional: true
+    "@koromix/koffi-darwin-x64":
+      optional: true
+    "@koromix/koffi-freebsd-arm64":
+      optional: true
+    "@koromix/koffi-freebsd-ia32":
+      optional: true
+    "@koromix/koffi-freebsd-x64":
+      optional: true
+    "@koromix/koffi-linux-arm64":
+      optional: true
+    "@koromix/koffi-linux-ia32":
+      optional: true
+    "@koromix/koffi-linux-loong64":
+      optional: true
+    "@koromix/koffi-linux-riscv64":
+      optional: true
+    "@koromix/koffi-linux-x64":
+      optional: true
+    "@koromix/koffi-openbsd-ia32":
+      optional: true
+    "@koromix/koffi-openbsd-x64":
+      optional: true
+    "@koromix/koffi-win32-arm64":
+      optional: true
+    "@koromix/koffi-win32-ia32":
+      optional: true
+    "@koromix/koffi-win32-x64":
+      optional: true
+  checksum: 10c0/49908f9a16fc031a405fcedd945ed856684efb95cf78021ef3a54a4880a24ebf03a7bd5344fb4b750425d37b7e469bac5c72f32107f4340d308341c9537b8726
+  languageName: node
+  linkType: hard
+
 "levn@npm:^0.4.1":
   version: 0.4.1
   resolution: "levn@npm:0.4.1"
@@ -3502,8 +3682,8 @@ __metadata:
   linkType: hard
 
 "markdown-it@npm:^14.3.0":
-  version: 14.3.0
-  resolution: "markdown-it@npm:14.3.0"
+  version: 14.3.1
+  resolution: "markdown-it@npm:14.3.1"
   dependencies:
     argparse: "npm:^2.0.1"
     entities: "npm:^4.5.0"
@@ -3513,7 +3693,7 @@ __metadata:
     uc.micro: "npm:^2.1.0"
   bin:
     markdown-it: bin/markdown-it.mjs
-  checksum: 10c0/b2dea908968109d6e9088ac972254bca842157d85d2e6838d0eb263cd8106e7e6a72663b138366cc98f57441d9f3f2ebfb842bf7b2f9e1c13187ebe70e0af8f9
+  checksum: 10c0/806f0f5f29f1ddd9fd465f905c1f2c54d64af9023095792dd5364e5807f77454f427ee75d66083b432d0900e21836f0fff940f94f5fc93c41b2f78970469874e
   languageName: node
   linkType: hard
 
