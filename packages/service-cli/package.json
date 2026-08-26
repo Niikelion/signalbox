@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/service-cli",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "license": "MIT",
     "description": "signalbox service CLI: config-driven command line and systemd lifecycle management for a long-running app, with no domain logic baked in",
     "repository": {
@@ -35,8 +35,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/config": "^0.3.0",
-        "@signalbox/core": "^0.3.0",
+        "@signalbox/config": "^0.3.1",
+        "@signalbox/core": "^0.4.0",
         "@signalbox/secrets": "^0.2.0"
     },
     "devDependencies": {

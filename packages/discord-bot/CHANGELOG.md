@@ -1,5 +1,12 @@
 # @signalbox/discord-bot
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [c332137]
+    - @signalbox/core@0.4.0
+
 ## 0.2.1
 
 ### Patch Changes

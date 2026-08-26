@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/cloudflare",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "license": "MIT",
     "description": "signalbox plugin: keep Cloudflare DNS A records pointed at a changing address",
     "repository": {
@@ -33,8 +33,8 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.3.0",
-        "@signalbox/graph": "^0.3.0"
+        "@signalbox/core": "^0.4.0",
+        "@signalbox/graph": "^0.4.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

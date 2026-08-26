@@ -1,5 +1,13 @@
 # @signalbox/webhook
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [c332137]
+    - @signalbox/core@0.4.0
+    - @signalbox/http@0.2.2
+
 ## 0.3.1
 
 ### Patch Changes

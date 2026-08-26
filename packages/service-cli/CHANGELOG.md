@@ -1,5 +1,13 @@
 # @signalbox/service-cli
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [c332137]
+    - @signalbox/core@0.4.0
+    - @signalbox/config@0.3.1
+
 ## 0.4.0
 
 ### Minor Changes
