@@ -23,8 +23,8 @@ import {
     type WritableKeyBackend,
 } from "@signalbox/secrets"
 import type { z } from "zod"
-import { baseKind, isSecret } from "./introspect.js"
-import type { ConfigOf, ConfigSchema, InputOf } from "./schema.js"
+import { baseKind, isSecret } from "./introspect"
+import type { ConfigOf, ConfigSchema, InputOf } from "./schema"
 
 export interface ConfigInspection {
     readonly values: Record<string, unknown>

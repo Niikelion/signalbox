@@ -1,6 +1,6 @@
 import { definePlugin, type ReadChannel } from "@signalbox/core"
 import { Client, GatewayIntentBits, MessageFlags, REST, Routes } from "discord.js"
-import { toApplicationCommand, type CommandSpec } from "./commands.js"
+import { toApplicationCommand, type CommandSpec } from "./commands"
 
 /** A slash-command invocation, emitted on the bot's channel as the `command` event. */
 export interface CommandEvent {

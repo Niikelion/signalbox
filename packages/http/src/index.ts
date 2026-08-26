@@ -1,4 +1,4 @@
-export { httpPlugin } from "./plugin.js"
+export { httpPlugin } from "./plugin"
 export type {
     HttpApi,
     HttpContext,
@@ -9,4 +9,4 @@ export type {
     HttpResult,
     OpenApiOptions,
     RouteSpec,
-} from "./plugin.js"
+} from "./plugin"

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it } from "vitest"
-import { schedulePlugin, type ScheduleApi } from "../src/index.js"
+import { schedulePlugin, type ScheduleApi } from "../src/index"
 
 const stubCtx = { onStop: () => undefined, fail: () => undefined } as any
 

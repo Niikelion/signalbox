@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto"
 import { access, chmod, mkdir, open, readFile, rename, rm, stat } from "node:fs/promises"
 import { constants } from "node:fs"
 import { dirname, join } from "node:path"
-import { deriveKeyId } from "./cipher.js"
+import { deriveKeyId } from "./cipher"
 
 export interface KeyMaterial {
     readonly id: string

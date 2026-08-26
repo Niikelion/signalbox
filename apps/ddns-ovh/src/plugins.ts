@@ -4,8 +4,8 @@ import { ovhPlugin } from "@signalbox/ovh"
 import { schedulePlugin } from "@signalbox/schedule"
 import { storePlugin } from "@signalbox/store"
 import { upnpPlugin } from "@signalbox/upnp"
-import type { DdnsOvhConfig } from "./config.js"
-import { REMIND_COMMAND } from "./remind.js"
+import type { DdnsOvhConfig } from "./config"
+import { REMIND_COMMAND } from "./remind"
 
 export const buildPlugins = (config: DdnsOvhConfig) => ({
     upnp: upnpPlugin({ port: config.watchPort }),

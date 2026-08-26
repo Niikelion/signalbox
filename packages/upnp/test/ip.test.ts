@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isPublicIPv4 } from "../src/ip.js"
+import { isPublicIPv4 } from "../src/ip"
 
 describe("isPublicIPv4", () => {
     it.each([

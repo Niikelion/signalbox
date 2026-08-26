@@ -1,9 +1,9 @@
 import { redact } from "@signalbox/secrets"
-import { createBus, type Bus, type EventMap } from "./bus.js"
-import { FRAMEWORK_CHANNEL, type FrameworkEvents, type LogLevel } from "./events.js"
-import { attachConsoleLogger, sanitizeError, toError, write } from "./log.js"
-import type { AnyPluginDefinition, Cleanup, PluginApis, PluginContext } from "./plugin.js"
-import type { WorkflowContext, WorkflowDefinition } from "./workflow.js"
+import { createBus, type Bus, type EventMap } from "./bus"
+import { FRAMEWORK_CHANNEL, type FrameworkEvents, type LogLevel } from "./events"
+import { attachConsoleLogger, sanitizeError, toError, write } from "./log"
+import type { AnyPluginDefinition, Cleanup, PluginApis, PluginContext } from "./plugin"
+import type { WorkflowContext, WorkflowDefinition } from "./workflow"
 
 const APP_CHANNEL = "app"
 

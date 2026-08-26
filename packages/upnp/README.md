@@ -22,10 +22,10 @@ const plugins = {
 }
 
 // in a workflow:
-ctx.plugins.upnp.events.flow("external-ip").run(({ ip }) => {
+ctx.plugins.upnp.events.flow("external-ip").effect(({ ip }) => {
     ctx.log(`WAN IP is ${ip}`)
 })
-ctx.plugins.upnp.events.flow("unavailable").run(({ reason }) => {
+ctx.plugins.upnp.events.flow("unavailable").effect(({ reason }) => {
     ctx.log(`no UPnP gateway: ${reason}`, "warn")
 })
 ```

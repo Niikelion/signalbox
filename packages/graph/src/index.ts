@@ -1,24 +1,21 @@
-export {
-    compileGraph,
-    createNodeRegistry,
-    defaultRegistry,
-    fanOut,
-    isFanOut,
-    registerNode,
-    resolveDeep,
-    resolveTemplate,
-    STOP,
-} from "./graph.js"
+export { compileGraph, createNodeRegistry, defaultRegistry, registerNode, resolveDeep, resolveTemplate } from "./graph"
 export type {
-    ActionInstance,
-    ActionNodeType,
     CompileOptions,
     ConfigField,
     ConfigFieldType,
-    FanOut,
+    DetachNodeType,
+    EffectInstance,
+    EffectNodeType,
+    FilterInstance,
+    FilterNodeType,
+    FlowNodeArgs,
+    ForkInstance,
+    ForkNodeType,
     GraphEdge,
     GraphNode,
     GraphNodeContext,
+    MapInstance,
+    MapNodeType,
     NodeConfigSchema,
     NodeRegistry,
     NodeType,
@@ -26,4 +23,4 @@ export type {
     TriggerInstance,
     TriggerNodeType,
     WorkflowGraph,
-} from "./graph.js"
+} from "./graph"

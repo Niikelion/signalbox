@@ -7,7 +7,7 @@ import {
     encryptSecret,
     parseEnvelope,
     type JsonValue,
-} from "../src/index.js"
+} from "../src/index"
 
 describe("persistent secret cipher", () => {
     const context = { appName: "example", fieldName: "token" }

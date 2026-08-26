@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access */
 import type { z } from "zod"
-import { secrets } from "./schema.js"
+import { secrets } from "./schema"
 
 interface ZodDef {
     type: string

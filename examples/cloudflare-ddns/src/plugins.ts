@@ -1,7 +1,7 @@
 import { cloudflarePlugin } from "@signalbox/cloudflare"
 import type { PluginApis } from "@signalbox/core"
 import { upnpPlugin } from "@signalbox/upnp"
-import type { CloudflareDdnsConfig } from "./config.js"
+import type { CloudflareDdnsConfig } from "./config"
 
 export const buildPlugins = (config: CloudflareDdnsConfig) => ({
     upnp: upnpPlugin({ port: config.watchPort }),

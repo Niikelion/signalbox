@@ -1,4 +1,4 @@
-import { makeFlow, type Flow } from "./flow.js"
+import { makeFlow, type Flow } from "@/flow"
 
 /** An event map: event name → payload type. */
 export type EventMap = Record<string, unknown>

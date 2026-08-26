@@ -1,21 +1,21 @@
-export { createBus } from "./bus.js"
-export type { Bus, BusOptions, Channel, EventMap, Listener, NoEvents, ReadChannel, Unsubscribe } from "./bus.js"
+export { createBus } from "./bus"
+export type { Bus, BusOptions, Channel, EventMap, Listener, NoEvents, ReadChannel, Unsubscribe } from "./bus"
 
-export { makeFlow, merge } from "./flow.js"
-export type { Flow, FlowSink, Operator } from "./flow.js"
+export { combine, makeFlow } from "./flow"
+export type { EffectHandler, FilterHandler, Flow, ForkHandler, JsonValue, MapHandler, RunContext } from "./flow"
 
-export { FRAMEWORK_CHANNEL } from "./events.js"
-export type { FrameworkEvents, LogLevel } from "./events.js"
+export { FRAMEWORK_CHANNEL } from "./events"
+export type { FrameworkEvents, LogLevel } from "./events"
 
-export { attachConsoleLogger, sanitizeError, toError, SignalboxError, write } from "./log.js"
+export { attachConsoleLogger, sanitizeError, toError, SignalboxError, write } from "./log"
 
-export { definePlugin } from "./plugin.js"
-export type { AnyPluginDefinition, Cleanup, PluginApis, PluginContext, PluginDefinition } from "./plugin.js"
+export { definePlugin } from "./plugin"
+export type { AnyPluginDefinition, Cleanup, PluginApis, PluginContext, PluginDefinition } from "./plugin"
 
-export { createWorkflowDefiner } from "./workflow.js"
-export type { WorkflowContext, WorkflowDefinition } from "./workflow.js"
+export { createWorkflowDefiner } from "./workflow"
+export type { WorkflowContext, WorkflowDefinition } from "./workflow"
 
-export { createApp } from "./app.js"
-export type { App, AppOptions } from "./app.js"
+export { createApp } from "./app"
+export type { App, AppOptions } from "./app"
 
-export { isRoot } from "./platform.js"
+export { isRoot } from "./platform"

@@ -10,7 +10,7 @@ import {
     resolveKey,
     resolveOrProvisionKey,
     type KeySource,
-} from "../src/index.js"
+} from "../src/index"
 
 const directories: string[] = []
 const temporaryConfig = async (): Promise<string> => {

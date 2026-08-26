@@ -11,8 +11,8 @@ bolting missing features onto a pre-built system, wiring one API to another, or 
 your alerts and configuration in Slack or Discord.
 
 ```ts
-import { createApp, createWorkflowDefiner, merge, type NoEvents, type PluginApis } from "@signalbox/core"
-import { poll, dedupe, publicIPv4 } from "@signalbox/commons"
+import { combine, createApp, createWorkflowDefiner, type NoEvents, type PluginApis } from "@signalbox/core"
+import { dedupeBy, poll, publicIPv4 } from "@signalbox/commons"
 import { upnpPlugin } from "@signalbox/upnp"
 import { cloudflarePlugin } from "@signalbox/cloudflare"
 
@@ -27,9 +27,9 @@ const ddns = defineWorkflow("ddns", ctx => {
     const pushed = ctx.plugins.upnp.events.flow("external-ip").map(({ ip }) => ip)
     const polled = poll({ ctx, every: 15 * 60 * 1000, probe: publicIPv4 }).map(({ value }) => value)
 
-    merge(pushed, polled)
-        .apply(dedupe())
-        .run(async ip => {
+    combine(pushed, polled)
+        .filter(dedupeBy(ip => ip))
+        .effect(async ip => {
             if (await ctx.plugins.cloudflare.update(ip)) ctx.log(`updated records to ${ip}`)
         })
 })

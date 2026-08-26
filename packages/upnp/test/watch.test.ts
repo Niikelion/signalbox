@@ -2,18 +2,18 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 
 // Replace the two network modules so we can drive the router's behaviour from the
 // test: discovery, the SUBSCRIBE/renew round-trips, and the callback server.
-vi.mock("../src/discovery.js", () => ({
+vi.mock("../src/discovery", () => ({
     discoverGateway: vi.fn(),
     sourceIpToward: vi.fn(),
 }))
-vi.mock("../src/gena.js", () => ({
+vi.mock("../src/gena", () => ({
     gena: vi.fn(),
     createNotifyServer: vi.fn(),
 }))
 
-import { discoverGateway, sourceIpToward } from "../src/discovery.js"
-import { gena } from "../src/gena.js"
-import { createUpnpWatcher, type UpnpWatcherHooks } from "../src/watch.js"
+import { discoverGateway, sourceIpToward } from "../src/discovery"
+import { gena } from "../src/gena"
+import { createUpnpWatcher, type UpnpWatcherHooks } from "../src/watch"
 
 const GATEWAY = {
     eventUrl: "http://192.168.0.1:5000/evt",

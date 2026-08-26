@@ -21,7 +21,7 @@ Each node has an `id` (referenced by edges), a registered `type`, and optional `
 
 ## Node types and the registry
 
-Nodes come from a **registry**. A node type is either a **trigger** (a source — it starts a flow) or an **action** (it runs per value). Plugin packages ship their own nodes and register them:
+Nodes come from a **registry**. A node type represents one Flow operator: `trigger`, `map`, `filter`, `fork`, `detach`, or `effect`. Plugin packages ship their own nodes and register them:
 
 ```ts
 import { registerUpnpNodes } from "@signalbox/upnp"
@@ -51,11 +51,11 @@ await createApp({ name: "ddns", plugins, workflows: [ddns] }).run()
 
 An unknown node type or invalid config throws at compile time, with a hint listing the registered types.
 
-## Templates and control flow
+## Templates and flow operators
 
 - **Templates** — node config can reference values from the `config`/`secrets` scopes; they're resolved (`resolveTemplate` / `resolveDeep`) as the graph runs, and secret values are redacted from any log or error.
-- **`STOP`** — an action can return the `STOP` sentinel to halt propagation for that value, so nothing downstream runs.
-- **`fanOut(values)`** — emit several values from one node, running the downstream path once per value.
+- **`filter` nodes** — return `false` to halt propagation for that value.
+- **`fork` nodes** — return several values, creating joined child runs for the downstream path.
 
 ## Next
 

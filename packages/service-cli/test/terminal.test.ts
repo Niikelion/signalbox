@@ -1,6 +1,6 @@
 import { PassThrough } from "node:stream"
 import { describe, expect, it, vi } from "vitest"
-import { readMasked, stripOneTerminalNewline } from "../src/terminal.js"
+import { readMasked, stripOneTerminalNewline } from "../src/terminal"
 
 describe("secure terminal input", () => {
     it("removes exactly one terminal newline", () => {

@@ -1,5 +1,5 @@
-import type { Channel, EventMap } from "./bus.js"
-import type { LogLevel } from "./events.js"
+import type { Channel, EventMap } from "./bus"
+import type { LogLevel } from "./events"
 
 /** A teardown callback registered with `onStop`. */
 export type Cleanup = () => void | Promise<void>

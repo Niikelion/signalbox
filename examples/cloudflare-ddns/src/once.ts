@@ -1,7 +1,7 @@
 import { applyRecords } from "@signalbox/cloudflare"
 import { publicIPv4 } from "@signalbox/commons"
 import { write } from "@signalbox/core"
-import type { CloudflareDdnsConfig } from "./config.js"
+import type { CloudflareDdnsConfig } from "./config"
 
 export const runOnce = async (config: CloudflareDdnsConfig): Promise<boolean> => {
     const ip = await publicIPv4(message => {

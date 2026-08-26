@@ -34,7 +34,7 @@ const workflow = compileGraph(graph, {
 // createApp({ ..., workflows: [workflow] })
 ```
 
-Node types come from a `NodeRegistry`: use `defaultRegistry`, or build your own with `createNodeRegistry()` / `registerNode()`. Plugin packages expose their nodes (e.g. `registerUpnpNodes`, `registerCloudflareNodes`). Templates in node config are resolved with `resolveTemplate` / `resolveDeep`; `STOP` and `fanOut` control flow between nodes.
+Node types come from a `NodeRegistry`: use `defaultRegistry`, or build your own with `createNodeRegistry()` / `registerNode()`. Plugin packages expose their nodes (e.g. `registerUpnpNodes`, `registerCloudflareNodes`). Templates in node config are resolved with `resolveTemplate` / `resolveDeep`; node kinds mirror Flow operators such as `map`, `filter`, `fork`, `detach`, and `effect`.
 
 ## License
 

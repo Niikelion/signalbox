@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { isSecret, redact, REDACTED, Secret } from "../src/index.js"
+import { isSecret, redact, REDACTED, Secret } from "../src/index"
 
 describe("Secret", () => {
     it("reveals fresh mutable values and masks every implicit representation", () => {
@@ -20,7 +20,7 @@ describe("Secret", () => {
     it("recognizes wrappers after a second module evaluation", async () => {
         const first = Secret.from("cross-copy-secret")
         vi.resetModules()
-        const secondCopy = await import("../src/index.js")
+        const secondCopy = await import("../src/index")
         const second = secondCopy.Secret.from("other-cross-copy-secret")
         expect(secondCopy.isSecret(first)).toBe(true)
         expect(isSecret(second)).toBe(true)

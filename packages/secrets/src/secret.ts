@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHmac, randomBytes, timingSafeEqual } from "node:crypto"
-import { decodeJsonValue, encodeJsonValue, type JsonValue } from "./json.js"
+import { decodeJsonValue, encodeJsonValue, type JsonValue } from "./json"
 
 export const REDACTED = "[redacted]" as const
 

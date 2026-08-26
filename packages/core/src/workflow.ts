@@ -1,6 +1,6 @@
-import type { Channel, EventMap } from "./bus.js"
-import type { LogLevel } from "./events.js"
-import type { Cleanup } from "./plugin.js"
+import type { Channel, EventMap } from "./bus"
+import type { LogLevel } from "./events"
+import type { Cleanup } from "./plugin"
 
 /**
  * What a workflow receives at setup.

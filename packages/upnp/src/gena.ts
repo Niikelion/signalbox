@@ -1,5 +1,5 @@
 import { createServer, request, type Server } from "node:http"
-import { isPublicIPv4 } from "./ip.js"
+import { isPublicIPv4 } from "./ip"
 
 /** A GENA event subscription. */
 export interface Subscription {

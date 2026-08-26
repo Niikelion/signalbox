@@ -1,8 +1,8 @@
 import { createApp, type App } from "@signalbox/core"
-import { APP_NAME, type DdnsOvhConfig } from "./config.js"
-import { buildPlugins } from "./plugins.js"
-import { reminders } from "./reminders.js"
-import { ddnsOvhPipeline } from "./workflows.js"
+import { APP_NAME, type DdnsOvhConfig } from "./config"
+import { buildPlugins } from "./plugins"
+import { reminders } from "./reminders"
+import { ddnsOvhPipeline } from "./workflows"
 
 export const createDdnsOvhApp = (config: DdnsOvhConfig): App =>
     createApp({

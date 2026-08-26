@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
-import type { DdnsOvhConfig } from "./config.js"
-import { defineWorkflow } from "./defineWorkflow.js"
-import { REMIND_COMMAND } from "./remind.js"
+import type { DdnsOvhConfig } from "./config"
+import { defineWorkflow } from "./defineWorkflow"
+import { REMIND_COMMAND } from "./remind"
 
 interface Reminder {
     id: string
@@ -42,7 +42,7 @@ export const reminders = (config: DdnsOvhConfig) =>
         })
 
         // handle /remind
-        ctx.plugins.discordBot.events.flow("command").run(async command => {
+        ctx.plugins.discordBot.events.flow("command").effect(async command => {
             if (command.command !== REMIND_COMMAND.name) return
 
             const message = typeof command.options["message"] === "string" ? command.options["message"] : ""

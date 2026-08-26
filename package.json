@@ -13,14 +13,19 @@
         "typecheck": "turbo typecheck",
         "lint": "turbo lint",
         "test": "turbo test",
+        "test:coverage": "turbo test -- --coverage --coverage.include='src/**/*.ts' --coverage.reporter=text --coverage.reporter=json-summary",
+        "cognitive-load": "node scripts/cognitive-load.mjs",
+        "ci:summary": "node scripts/ci-summary.mjs",
         "format": "turbo format",
         "changeset": "changeset",
         "release": "turbo build && changeset publish"
     },
     "devDependencies": {
         "@changesets/cli": "^2.29.7",
+        "@vitest/coverage-v8": "^2.1.9",
         "tsdown": "^0.15.7",
         "turbo": "^2.8.20",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "vitest": "^2.1.9"
     }
 }

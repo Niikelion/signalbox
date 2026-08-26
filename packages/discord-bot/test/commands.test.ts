@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { toApplicationCommand } from "../src/commands.js"
+import { toApplicationCommand } from "../src/commands"
 
 describe("toApplicationCommand", () => {
     it("maps a spec to Discord application-command JSON", () => {

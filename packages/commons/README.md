@@ -13,7 +13,7 @@ npm install @signalbox/commons
 ## Usage
 
 ```ts
-import { poll, dedupe, publicIPv4 } from "@signalbox/commons"
+import { dedupeBy, poll, publicIPv4 } from "@signalbox/commons"
 
 // A Flow that probes on startup and every interval, with optional retry triggers.
 poll({
@@ -21,14 +21,14 @@ poll({
     every: 15 * 60 * 1000,
     probe: () => publicIPv4(),
 })
-    .apply(dedupe(({ value }) => value)) // drop repeats
-    .run(({ value, phase }) => {
+    .filter(dedupeBy(({ value }) => value)) // drop repeats
+    .effect(({ value, phase }) => {
         ctx.log(`ip ${value} (${phase})`)
     })
 ```
 
 - **`poll(options)`** — a `Flow<{ value, phase }>` that emits on startup, on an interval, and on any `retryOn` trigger.
-- **`dedupe(keyFn)`** — a `Flow` operator that suppresses consecutive values with the same key.
+- **`dedupeBy(keyFn)`** — a stateful filter predicate that suppresses consecutive values with the same key.
 - **`publicIPv4()`** — resolve the current public IPv4 over HTTP; **`isIPv4(value)`** validates a string.
 
 ## License

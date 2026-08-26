@@ -1,15 +1,15 @@
-export { upnpPlugin } from "./plugin.js"
-export type { UpnpApi, UpnpEvents, UpnpOptions } from "./plugin.js"
+export { upnpPlugin } from "./plugin"
+export type { UpnpApi, UpnpEvents, UpnpOptions } from "./plugin"
 
-export { createUpnpWatcher } from "./watch.js"
-export type { UpnpWatcher, UpnpWatcherHooks, UpnpWatcherOptions, WatchLevel } from "./watch.js"
+export { createUpnpWatcher } from "./watch"
+export type { UpnpWatcher, UpnpWatcherHooks, UpnpWatcherOptions, WatchLevel } from "./watch"
 
-export { registerUpnpNodes, upnpSourceNode } from "./node.js"
+export { registerUpnpNodes, upnpSourceNode } from "./node"
 
-export { defaultGateway, discoverGateway, sourceIpToward } from "./discovery.js"
-export type { GatewayService } from "./discovery.js"
+export { defaultGateway, discoverGateway, sourceIpToward } from "./discovery"
+export type { GatewayService } from "./discovery"
 
-export { createNotifyServer, gena } from "./gena.js"
-export type { NotifyServerOptions, Subscription } from "./gena.js"
+export { createNotifyServer, gena } from "./gena"
+export type { NotifyServerOptions, Subscription } from "./gena"
 
-export { isPublicIPv4 } from "./ip.js"
+export { isPublicIPv4 } from "./ip"

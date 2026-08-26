@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { defaultGateway } from "../src/discovery.js"
+import { defaultGateway } from "../src/discovery"
 
 const onLinux = process.platform === "linux"
 

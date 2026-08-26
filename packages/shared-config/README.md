@@ -10,7 +10,8 @@ across the workspace.
 
 - **`@signalbox/shared-config/eslint`** — a flat ESLint config: `@eslint/js` recommended,
   `typescript-eslint` `strictTypeChecked` + `stylisticTypeChecked` (type-aware via
-  `projectService`), with `eslint-plugin-prettier` wired in.
+  `projectService`), with `eslint-plugin-prettier` wired in. Relative TypeScript
+  imports/exports should omit `.js` suffixes when the target can be resolved.
 - **`@signalbox/shared-config/prettier`** — the shared Prettier options.
 
 TypeScript settings come from [`@gamedev-sensei/ts-config`](https://www.npmjs.com/package/@gamedev-sensei/ts-config),

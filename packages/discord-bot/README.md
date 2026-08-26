@@ -24,7 +24,7 @@ const plugins = {
 }
 
 // in a workflow:
-ctx.plugins.bot.events.flow("command").run(async cmd => {
+ctx.plugins.bot.events.flow("command").effect(async cmd => {
     if (cmd.command === "ping") await cmd.reply("pong")
 })
 
