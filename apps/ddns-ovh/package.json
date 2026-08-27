@@ -27,7 +27,7 @@
         "@signalbox/core": "^0.4.0",
         "@signalbox/discord-bot": "^0.2.2",
         "@signalbox/ovh": "^0.2.2",
-        "@signalbox/permissions": "^0.1.0",
+        "@signalbox/permissions": "^0.2.0",
         "@signalbox/schedule": "^0.2.2",
         "@signalbox/service-cli": "^0.4.1",
         "@signalbox/store": "^0.2.2",
