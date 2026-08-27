@@ -1454,7 +1454,7 @@ __metadata:
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/permissions": "npm:^0.1.0"
+    "@signalbox/permissions": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@signalbox/store": "npm:^0.2.2"
     "@types/node": "npm:^22.10.2"
@@ -1467,7 +1467,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/permissions@npm:^0.1.0, @signalbox/permissions@workspace:packages/permissions":
+"@signalbox/permissions@npm:^0.2.0, @signalbox/permissions@workspace:packages/permissions":
   version: 0.0.0-use.local
   resolution: "@signalbox/permissions@workspace:packages/permissions"
   dependencies:

@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/permissions-store",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "license": "MIT",
     "description": "Durable @signalbox/store backend for the Signalbox permission registry",
     "repository": {
@@ -38,7 +38,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/permissions": "^0.1.0",
+        "@signalbox/permissions": "^0.2.0",
         "@signalbox/store": "^0.2.2"
     },
     "devDependencies": {
