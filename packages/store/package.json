@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/store",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "license": "MIT",
     "description": "signalbox: a small persistent typed document store backed by node:sqlite",
     "repository": {
@@ -38,7 +38,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.4.0"
+        "@signalbox/core": "^0.5.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

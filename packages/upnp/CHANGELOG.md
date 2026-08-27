@@ -1,5 +1,13 @@
 # @signalbox/upnp
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [49dd5e2]
+    - @signalbox/core@0.5.0
+    - @signalbox/graph@0.4.1
+
 ## 0.2.2
 
 ### Patch Changes

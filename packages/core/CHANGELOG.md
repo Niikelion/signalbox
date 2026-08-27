@@ -1,5 +1,16 @@
 # @signalbox/core
 
+## 0.5.0
+
+### Minor Changes
+
+- 49dd5e2: Add durable owned-resource authority with atomic registration, blocking, recovery, owner suspension/removal, explicit enablement, and target-scoped ownership transfer. Protect Discord sends, expose authenticated webhook source policies, and add validated permission-aware manual triggers to core.
+
+### Patch Changes
+
+- Updated dependencies [49dd5e2]
+    - @signalbox/permissions@0.3.0
+
 ## 0.4.0
 
 ### Minor Changes

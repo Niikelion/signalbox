@@ -1239,14 +1239,14 @@ __metadata:
   resolution: "@signalbox/cloudflare-ddns@workspace:examples/cloudflare-ddns"
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/cloudflare": "npm:^0.2.2"
-    "@signalbox/commons": "npm:^0.3.0"
-    "@signalbox/config": "npm:^0.3.1"
-    "@signalbox/core": "npm:^0.4.0"
-    "@signalbox/permissions": "npm:^0.2.0"
-    "@signalbox/service-cli": "npm:^0.4.1"
+    "@signalbox/cloudflare": "npm:^0.2.3"
+    "@signalbox/commons": "npm:^0.3.1"
+    "@signalbox/config": "npm:^0.3.2"
+    "@signalbox/core": "npm:^0.5.0"
+    "@signalbox/permissions": "npm:^0.3.0"
+    "@signalbox/service-cli": "npm:^0.4.2"
     "@signalbox/shared-config": "npm:^0.1.0"
-    "@signalbox/upnp": "npm:^0.2.2"
+    "@signalbox/upnp": "npm:^0.2.3"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
@@ -1257,14 +1257,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/cloudflare@npm:^0.2.2, @signalbox/cloudflare@workspace:packages/cloudflare":
+"@signalbox/cloudflare@npm:^0.2.3, @signalbox/cloudflare@workspace:packages/cloudflare":
   version: 0.0.0-use.local
   resolution: "@signalbox/cloudflare@workspace:packages/cloudflare"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
-    "@signalbox/graph": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
+    "@signalbox/graph": "npm:^0.4.1"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1274,13 +1274,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/commons@npm:^0.3.0, @signalbox/commons@workspace:packages/commons":
+"@signalbox/commons@npm:^0.3.1, @signalbox/commons@workspace:packages/commons":
   version: 0.0.0-use.local
   resolution: "@signalbox/commons@workspace:packages/commons"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
@@ -1292,13 +1292,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/config@npm:^0.3.1, @signalbox/config@workspace:packages/config":
+"@signalbox/config@npm:^0.3.2, @signalbox/config@workspace:packages/config":
   version: 0.0.0-use.local
   resolution: "@signalbox/config@workspace:packages/config"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
     "@signalbox/secrets": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
@@ -1312,13 +1312,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/core@npm:^0.4.0, @signalbox/core@workspace:packages/core":
+"@signalbox/core@npm:^0.5.0, @signalbox/core@workspace:packages/core":
   version: 0.0.0-use.local
   resolution: "@signalbox/core@workspace:packages/core"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/permissions": "npm:^0.2.0"
+    "@signalbox/permissions": "npm:^0.3.0"
     "@signalbox/secrets": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
@@ -1336,17 +1336,17 @@ __metadata:
   resolution: "@signalbox/ddns-ovh@workspace:apps/ddns-ovh"
   dependencies:
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/commons": "npm:^0.3.0"
-    "@signalbox/config": "npm:^0.3.1"
-    "@signalbox/core": "npm:^0.4.0"
-    "@signalbox/discord-bot": "npm:^0.2.2"
-    "@signalbox/ovh": "npm:^0.2.2"
-    "@signalbox/permissions": "npm:^0.2.0"
-    "@signalbox/schedule": "npm:^0.2.2"
-    "@signalbox/service-cli": "npm:^0.4.1"
+    "@signalbox/commons": "npm:^0.3.1"
+    "@signalbox/config": "npm:^0.3.2"
+    "@signalbox/core": "npm:^0.5.0"
+    "@signalbox/discord-bot": "npm:^0.2.3"
+    "@signalbox/ovh": "npm:^0.2.3"
+    "@signalbox/permissions": "npm:^0.3.0"
+    "@signalbox/schedule": "npm:^0.2.3"
+    "@signalbox/service-cli": "npm:^0.4.2"
     "@signalbox/shared-config": "npm:^0.1.0"
-    "@signalbox/store": "npm:^0.2.2"
-    "@signalbox/upnp": "npm:^0.2.2"
+    "@signalbox/store": "npm:^0.2.3"
+    "@signalbox/upnp": "npm:^0.2.3"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
     prettier: "npm:^3.8.1"
@@ -1357,13 +1357,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/discord-bot@npm:^0.2.2, @signalbox/discord-bot@workspace:packages/discord-bot":
+"@signalbox/discord-bot@npm:^0.2.3, @signalbox/discord-bot@workspace:packages/discord-bot":
   version: 0.0.0-use.local
   resolution: "@signalbox/discord-bot@workspace:packages/discord-bot"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
@@ -1382,8 +1382,8 @@ __metadata:
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
-    "@signalbox/permissions": "npm:^0.2.0"
+    "@signalbox/core": "npm:^0.5.0"
+    "@signalbox/permissions": "npm:^0.3.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
@@ -1395,13 +1395,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/graph@npm:^0.4.0, @signalbox/graph@workspace:packages/graph":
+"@signalbox/graph@npm:^0.4.1, @signalbox/graph@workspace:packages/graph":
   version: 0.0.0-use.local
   resolution: "@signalbox/graph@workspace:packages/graph"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
     "@signalbox/secrets": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
@@ -1414,15 +1414,15 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/http@npm:^0.2.2, @signalbox/http@workspace:packages/http":
+"@signalbox/http@npm:^0.2.3, @signalbox/http@workspace:packages/http":
   version: 0.0.0-use.local
   resolution: "@signalbox/http@workspace:packages/http"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
     "@hono/node-server": "npm:^1.13.0"
-    "@signalbox/core": "npm:^0.4.0"
-    "@signalbox/permissions": "npm:^0.2.0"
+    "@signalbox/core": "npm:^0.5.0"
+    "@signalbox/permissions": "npm:^0.3.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
@@ -1436,14 +1436,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/ovh@npm:^0.2.2, @signalbox/ovh@workspace:packages/ovh":
+"@signalbox/ovh@npm:^0.2.3, @signalbox/ovh@workspace:packages/ovh":
   version: 0.0.0-use.local
   resolution: "@signalbox/ovh@workspace:packages/ovh"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
-    "@signalbox/graph": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
+    "@signalbox/graph": "npm:^0.4.1"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     eslint: "npm:^9.39.2"
@@ -1459,9 +1459,9 @@ __metadata:
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/permissions": "npm:^0.2.0"
+    "@signalbox/permissions": "npm:^0.3.0"
     "@signalbox/shared-config": "npm:^0.1.0"
-    "@signalbox/store": "npm:^0.2.2"
+    "@signalbox/store": "npm:^0.2.3"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
     eslint: "npm:^9.39.2"
@@ -1472,7 +1472,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/permissions@npm:^0.2.0, @signalbox/permissions@workspace:packages/permissions":
+"@signalbox/permissions@npm:^0.3.0, @signalbox/permissions@workspace:packages/permissions":
   version: 0.0.0-use.local
   resolution: "@signalbox/permissions@workspace:packages/permissions"
   dependencies:
@@ -1489,13 +1489,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/schedule@npm:^0.2.2, @signalbox/schedule@workspace:packages/schedule":
+"@signalbox/schedule@npm:^0.2.3, @signalbox/schedule@workspace:packages/schedule":
   version: 0.0.0-use.local
   resolution: "@signalbox/schedule@workspace:packages/schedule"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
@@ -1525,14 +1525,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/service-cli@npm:^0.4.1, @signalbox/service-cli@workspace:packages/service-cli":
+"@signalbox/service-cli@npm:^0.4.2, @signalbox/service-cli@workspace:packages/service-cli":
   version: 0.0.0-use.local
   resolution: "@signalbox/service-cli@workspace:packages/service-cli"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/config": "npm:^0.3.1"
-    "@signalbox/core": "npm:^0.4.0"
+    "@signalbox/config": "npm:^0.3.2"
+    "@signalbox/core": "npm:^0.5.0"
     "@signalbox/secrets": "npm:^0.2.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
@@ -1564,13 +1564,13 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/store@npm:^0.2.2, @signalbox/store@workspace:packages/store":
+"@signalbox/store@npm:^0.2.3, @signalbox/store@workspace:packages/store":
   version: 0.0.0-use.local
   resolution: "@signalbox/store@workspace:packages/store"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
@@ -1582,14 +1582,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/upnp@npm:^0.2.2, @signalbox/upnp@workspace:packages/upnp":
+"@signalbox/upnp@npm:^0.2.3, @signalbox/upnp@workspace:packages/upnp":
   version: 0.0.0-use.local
   resolution: "@signalbox/upnp@workspace:packages/upnp"
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
-    "@signalbox/graph": "npm:^0.4.0"
+    "@signalbox/core": "npm:^0.5.0"
+    "@signalbox/graph": "npm:^0.4.1"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
@@ -1607,9 +1607,9 @@ __metadata:
   dependencies:
     "@arethetypeswrong/core": "npm:^0.18.2"
     "@gamedev-sensei/ts-config": "npm:^2.1.0"
-    "@signalbox/core": "npm:^0.4.0"
-    "@signalbox/http": "npm:^0.2.2"
-    "@signalbox/permissions": "npm:^0.2.0"
+    "@signalbox/core": "npm:^0.5.0"
+    "@signalbox/http": "npm:^0.2.3"
+    "@signalbox/permissions": "npm:^0.3.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@types/node": "npm:^22.10.2"
     "@vitest/coverage-v8": "npm:^2.1.9"
