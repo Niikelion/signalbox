@@ -37,6 +37,26 @@ afterEach(async () => {
 })
 
 describe("secure config commands", () => {
+    it("awaits asynchronous app construction for run", async () => {
+        const { app, configPath } = await fixture()
+        const store = app.createStore(configPath)
+        await store.save({ token: "runtime-secret", name: "runtime" })
+        const run = vi.fn(async () => undefined)
+
+        await runCli(
+            {
+                ...app,
+                createApp: async () => {
+                    await Promise.resolve()
+                    return { run }
+                },
+            },
+            ["run", "--config", configPath],
+        )
+
+        expect(run).toHaveBeenCalledOnce()
+    })
+
     it("rejects secret plaintext passed in argv", async () => {
         const { app, configPath } = await fixture()
         await expect(runCli(app, ["config", "set", "token", "leaked-value", "--config", configPath])).rejects.toThrow(

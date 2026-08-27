@@ -43,7 +43,7 @@ export interface ServiceApp<TSchema extends ConfigSchema> {
      * Build the runnable app from validated config (backs `run`).
      * @param config the validated config
      */
-    createApp: (config: ConfigOf<TSchema>) => Runnable
+    createApp: (config: ConfigOf<TSchema>) => Runnable | Promise<Runnable>
     /**
      * Optional one-shot that applies state once and exits (backs `once`).
      * @param config the validated config
@@ -519,7 +519,7 @@ export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSche
             return
 
         case "run": {
-            const runnable = app.createApp(await store.load())
+            const runnable = await app.createApp(await store.load())
             await runnable.run()
             return
         }
