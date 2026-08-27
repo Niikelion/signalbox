@@ -1,6 +1,11 @@
 export { CompiledAuthority } from "./authority"
 export type { AuthorityContribution } from "./authority"
-export type { AuthorizationAuditEvent, PermissionAuditSink } from "./audit"
+export type {
+    AuthorityChangeAuditEvent,
+    AuthorizationAuditEvent,
+    PermissionAuditEvent,
+    PermissionAuditSink,
+} from "./audit"
 export type { PermissionRegistryBackend, PermissionRegistryDraft } from "./backend"
 export { PermissionError } from "./errors"
 export type { PermissionErrorCode } from "./errors"
@@ -10,6 +15,7 @@ export type {
     PermissionExecutionContext,
     PermissionExecutionOptions,
     PermissionRuntime,
+    PermissionCoreRuntime,
     ProtectOptions,
 } from "./execution"
 export type { ActiveAuthority, IdentityGrant, IdentityGrantInput, TrustedIdentityIssuer } from "./identity"

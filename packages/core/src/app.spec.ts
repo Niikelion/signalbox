@@ -1,4 +1,5 @@
 import { Secret } from "@signalbox/secrets"
+import { createPermissionExecution, entityRef } from "@signalbox/permissions"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 const observed = vi.hoisted(() => ({
@@ -25,7 +26,7 @@ vi.mock("@/log", async importOriginal => {
     }
 })
 
-import { createApp, definePlugin, write } from "@/index"
+import { createApp, definePlugin, write, type Channel } from "@/index"
 
 afterEach(() => {
     observed.errors.length = 0
@@ -36,6 +37,15 @@ afterEach(() => {
 const flush = async (): Promise<void> => {
     await Promise.resolve()
     await Promise.resolve()
+}
+
+const testPermissions = () => {
+    const execution = createPermissionExecution()
+    return {
+        runtime: execution.runtime,
+        core: execution.core,
+        host: execution.identities.issue({ principal: entityRef("system", "test-host") }),
+    }
 }
 
 describe("createApp", () => {
@@ -54,6 +64,7 @@ describe("createApp", () => {
 
         const app = createApp({
             name: "app",
+            permissions: testPermissions(),
             plugins: { plugin },
             logging: false,
             workflows: [
@@ -77,6 +88,7 @@ describe("createApp", () => {
         const cleanup = vi.fn()
         const app = createApp({
             name: "app",
+            permissions: testPermissions(),
             logging: false,
             plugins: {
                 plugin: definePlugin({
@@ -104,6 +116,7 @@ describe("createApp", () => {
         const seen: string[] = []
         const app = createApp({
             name: "app",
+            permissions: testPermissions(),
             plugins: {
                 plugin: definePlugin({
                     name: "plugin",
@@ -137,6 +150,7 @@ describe("createApp", () => {
         const order: string[] = []
         const app = createApp({
             name: "app",
+            permissions: testPermissions(),
             logging: false,
             plugins: {
                 plugin: definePlugin({
@@ -171,6 +185,7 @@ describe("createApp", () => {
         vi.useFakeTimers()
         const app = createApp({
             name: "app",
+            permissions: testPermissions(),
             plugins: {},
             workflows: [
                 {
@@ -200,6 +215,7 @@ describe("createApp", () => {
         const secret = Secret.from("subscriber-secret-value")
         const app = createApp({
             name: "containment-test",
+            permissions: testPermissions(),
             plugins: {},
             workflows: [
                 {
@@ -231,5 +247,42 @@ describe("createApp", () => {
         expect(output).toHaveBeenCalledOnce()
         expect(String(output.mock.calls[0]?.[0])).toContain("revealed [redacted]")
         expect(String(output.mock.calls[0]?.[0])).not.toContain("duplicate-copy-output-secret")
+    })
+
+    it("derives command actors and workflow run principals from opaque identities", async () => {
+        type Events = { trigger: string }
+        const permissions = createPermissionExecution()
+        const host = permissions.identities.issue({ principal: entityRef("system", "host") })
+        const alice = permissions.identities.issue({ principal: entityRef("user", "alice") })
+        let events!: Channel<Events>
+        const principals: string[] = []
+        const app = createApp<Events, Record<string, never>>({
+            name: "commands",
+            logging: false,
+            permissions: { runtime: permissions.runtime, core: permissions.core, host },
+            plugins: {},
+            workflows: [
+                {
+                    name: "manual-trigger",
+                    setup: ctx => {
+                        events = ctx.app
+                        ctx.app.flow("trigger").effect((_value, run) => {
+                            principals.push(run.principal?.id ?? "missing")
+                        })
+                    },
+                },
+            ],
+        })
+        await app.start()
+
+        const actor = await app.command({ identity: alice, operation: "trigger.invoke" }, commandActor => {
+            events.emit("trigger", "payload-with-forged-actor")
+            return commandActor
+        })
+        await flush()
+
+        expect(actor).toEqual(entityRef("user", "alice"))
+        expect(principals).toEqual(["alice"])
+        await app.stop()
     })
 })

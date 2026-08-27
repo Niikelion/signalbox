@@ -1,4 +1,12 @@
 import { toError, write } from "@/log"
+import type {
+    ActiveAuthority,
+    EntityRef,
+    IdentityGrant,
+    PermissionClaim,
+    PermissionCoreRuntime,
+    PermissionExecutionContext,
+} from "@signalbox/permissions"
 
 /** A JSON-compatible value. */
 export type JsonValue = null | string | number | boolean | JsonValue[] | { [key: string]: JsonValue }
@@ -10,6 +18,10 @@ export interface RunContext {
     readonly correlationId: string
     readonly parentRunId?: string
     readonly causedByRunId?: string
+    /** Canonical principal derived from the opaque event identity. */
+    readonly principal?: EntityRef
+    /** Original authenticated identity when authority was assumed or forwarded. */
+    readonly origin?: EntityRef
     annotate(key: string, value: JsonValue): void
 }
 
@@ -24,6 +36,10 @@ export type FilterHandler<T> = (value: T, run: RunContext) => boolean | Promise<
 
 /** Splits one run branch into eager joined child runs. */
 export type ForkHandler<T, U> = (value: T, run: RunContext) => readonly U[] | Promise<readonly U[]>
+
+export type AuthorityClaimSelector<T> = (value: T, run: RunContext) => PermissionClaim | readonly PermissionClaim[]
+
+export type IdentitySelector<T> = (value: T, run: RunContext) => IdentityGrant
 
 /**
  * A handle onto a shared workflow graph. Calling operators appends graph nodes;
@@ -59,6 +75,21 @@ export interface Flow<T> {
     fork<U>(fn: ForkHandler<T, U>): Flow<U>
     /** Continue downstream work in a detached run that no longer affects the parent. */
     detach(): Flow<T>
+    /** Restrict downstream authority to the selected claims. */
+    narrow(selector: AuthorityClaimSelector<T>): Flow<T>
+    /** Add selected ceiling claims to downstream authority after authorization. */
+    elevate(selector: AuthorityClaimSelector<T>): Flow<T>
+    /** Replace downstream event identity, still bounded by the workflow ceiling. */
+    assume(selector: IdentitySelector<T>): Flow<T>
+}
+
+export interface PermissionFlowOptions<T> {
+    readonly permissions: PermissionCoreRuntime
+    readonly ceiling: ActiveAuthority
+    readonly authority: (value: T) => ActiveAuthority | Promise<ActiveAuthority>
+    readonly workflowId: string
+    readonly subscriptionClaims?: readonly PermissionClaim[]
+    readonly sourceOperation?: string
 }
 
 interface MutableRunState {
@@ -73,6 +104,9 @@ interface MutableRunState {
 interface Item<T = unknown> {
     value: T
     run: MutableRunState
+    authority?: ActiveAuthority
+    ceiling?: ActiveAuthority
+    permissions?: PermissionCoreRuntime
 }
 
 type SourceStart<T> = (emit: (value: T) => void) => void
@@ -86,6 +120,9 @@ type RuntimeNode =
     | { kind: "filter"; children: NodeId[]; predicate: FilterHandler<unknown> }
     | { kind: "fork"; children: NodeId[]; fn: ForkHandler<unknown, unknown> }
     | { kind: "detach"; children: NodeId[] }
+    | { kind: "narrow"; children: NodeId[]; selector: AuthorityClaimSelector<unknown> }
+    | { kind: "elevate"; children: NodeId[]; selector: AuthorityClaimSelector<unknown> }
+    | { kind: "assume"; children: NodeId[]; selector: IdentitySelector<unknown> }
     | { kind: "effect"; handler: EffectHandler<unknown> }
     | { kind: "bridge"; handler: (item: Item) => void | Promise<void> }
 
@@ -165,27 +202,43 @@ const isJsonValue = (value: unknown): value is JsonValue => {
     }
 }
 
-const contextFor = (run: MutableRunState): RunContext => ({
+const contextFor = (item: Item): RunContext => ({
     get id() {
-        return run.id
+        return item.run.id
     },
     get workflowId() {
-        return run.workflowId
+        return item.run.workflowId
     },
     get correlationId() {
-        return run.correlationId
+        return item.run.correlationId
     },
     get parentRunId() {
-        return run.parentRunId
+        return item.run.parentRunId
     },
     get causedByRunId() {
-        return run.causedByRunId
+        return item.run.causedByRunId
+    },
+    get principal() {
+        return item.authority?.principal
+    },
+    get origin() {
+        return item.authority?.origin
     },
     annotate: (key, value) => {
         if (!isJsonValue(value)) return
-        run.annotations[key] = value
+        item.run.annotations[key] = value
     },
 })
+
+const executionContext = (item: Item, operation: string): PermissionExecutionContext => ({
+    operation,
+    requestId: item.run.id,
+})
+
+const invoke = <T>(item: Item, operation: string, callback: () => T | Promise<T>): T | Promise<T> =>
+    item.permissions && item.authority
+        ? item.permissions.run(item.authority, executionContext(item, operation), callback)
+        : callback()
 
 const settle = (result: void | Promise<void>): void => {
     if (result instanceof Promise) {
@@ -219,21 +272,21 @@ const runNode = async (graph: RuntimeGraph, nodeId: NodeId, item: Item): Promise
             await runChildren(graph, node.children, item)
             return
         case "map": {
-            const value = await node.fn(item.value, contextFor(item.run))
-            await runChildren(graph, node.children, { value, run: item.run })
+            const value = await invoke(item, "flow.map", () => node.fn(item.value, contextFor(item)))
+            await runChildren(graph, node.children, { ...item, value })
             return
         }
         case "filter":
-            if (await node.predicate(item.value, contextFor(item.run))) {
+            if (await invoke(item, "flow.filter", () => node.predicate(item.value, contextFor(item)))) {
                 await runChildren(graph, node.children, item)
             }
             return
         case "fork": {
-            const values = await node.fn(item.value, contextFor(item.run))
+            const values = await invoke(item, "flow.fork", () => node.fn(item.value, contextFor(item)))
             const failures: Error[] = []
             for (const value of values) {
                 try {
-                    await runChildren(graph, node.children, { value, run: createChildRun(item.run) })
+                    await runChildren(graph, node.children, { ...item, value, run: createChildRun(item.run) })
                 } catch (error) {
                     failures.push(toError(error))
                 }
@@ -244,11 +297,43 @@ const runNode = async (graph: RuntimeGraph, nodeId: NodeId, item: Item): Promise
             return
         }
         case "detach": {
-            settle(runChildren(graph, node.children, { value: item.value, run: createDetachedRun(item.run) }))
+            settle(runChildren(graph, node.children, { ...item, run: createDetachedRun(item.run) }))
+            return
+        }
+        case "narrow": {
+            if (!item.permissions || !item.authority) {
+                throw new Error("authority narrowing requires a permission-bound flow")
+            }
+            const claims = await invoke(item, "flow.narrow", () => node.selector(item.value, contextFor(item)))
+            const authority = item.permissions.narrow(item.authority, claims, executionContext(item, "flow.narrow"))
+            await runChildren(graph, node.children, { ...item, authority })
+            return
+        }
+        case "elevate": {
+            if (!item.permissions || !item.authority || !item.ceiling) {
+                throw new Error("authority elevation requires a permission-bound flow")
+            }
+            const claims = await invoke(item, "flow.elevate", () => node.selector(item.value, contextFor(item)))
+            const authority = item.permissions.elevate(
+                item.authority,
+                item.ceiling,
+                claims,
+                executionContext(item, "flow.elevate"),
+            )
+            await runChildren(graph, node.children, { ...item, authority })
+            return
+        }
+        case "assume": {
+            if (!item.permissions || !item.ceiling) {
+                throw new Error("identity assumption requires a permission-bound flow")
+            }
+            const identity = await invoke(item, "flow.assume", () => node.selector(item.value, contextFor(item)))
+            const authority = item.permissions.assume(identity, item.ceiling, executionContext(item, "flow.assume"))
+            await runChildren(graph, node.children, { ...item, authority })
             return
         }
         case "effect":
-            await node.handler(item.value, contextFor(item.run))
+            await invoke(item, "flow.effect", () => node.handler(item.value, contextFor(item)))
             return
         case "bridge":
             await node.handler(item)
@@ -300,6 +385,36 @@ class FlowHandle<T> implements Flow<T> {
         return new FlowHandle<T>(this.graph, next)
     }
 
+    narrow(selector: AuthorityClaimSelector<T>): Flow<T> {
+        const next = addNode(this.graph, {
+            kind: "narrow",
+            children: [],
+            selector: selector as AuthorityClaimSelector<unknown>,
+        })
+        connect(this.graph, this.nodeId, next)
+        return new FlowHandle<T>(this.graph, next)
+    }
+
+    elevate(selector: AuthorityClaimSelector<T>): Flow<T> {
+        const next = addNode(this.graph, {
+            kind: "elevate",
+            children: [],
+            selector: selector as AuthorityClaimSelector<unknown>,
+        })
+        connect(this.graph, this.nodeId, next)
+        return new FlowHandle<T>(this.graph, next)
+    }
+
+    assume(selector: IdentitySelector<T>): Flow<T> {
+        const next = addNode(this.graph, {
+            kind: "assume",
+            children: [],
+            selector: selector as IdentitySelector<unknown>,
+        })
+        connect(this.graph, this.nodeId, next)
+        return new FlowHandle<T>(this.graph, next)
+    }
+
     effect(handler: EffectHandler<T>): void {
         const next = addNode(this.graph, { kind: "effect", handler: handler as EffectHandler<unknown> })
         connect(this.graph, this.nodeId, next)
@@ -329,6 +444,43 @@ export const makeFlow = <T>(start: SourceStart<T>): Flow<T> => {
             start(value => {
                 const run = createRun({})
                 settle(runNode(graph, nodeId, { value, run }))
+            })
+        },
+    })
+    return new FlowHandle<T>(graph, nodeId)
+}
+
+/** Build a Flow whose root authority is event authority intersected with an app-owned workflow ceiling. */
+export const makePermissionFlow = <T>(start: SourceStart<T>, options: PermissionFlowOptions<T>): Flow<T> => {
+    const graph = createGraph()
+    const nodeId = addNode(graph, { kind: "source", children: [] })
+    graph.starters.push({
+        started: false,
+        start: () => {
+            if (options.subscriptionClaims && options.subscriptionClaims.length > 0) {
+                options.permissions.authorize(options.ceiling, options.subscriptionClaims, {
+                    operation: options.sourceOperation ?? "source.attach",
+                })
+            }
+            start(value => {
+                settle(
+                    Promise.resolve(options.authority(value)).then(async eventAuthority => {
+                        if (options.subscriptionClaims && options.subscriptionClaims.length > 0) {
+                            options.permissions.authorize(options.ceiling, options.subscriptionClaims, {
+                                operation: options.sourceOperation ?? "source.deliver",
+                            })
+                        }
+                        const authority = options.permissions.intersect(eventAuthority, options.ceiling)
+                        const run = createRun({ workflowId: options.workflowId })
+                        await runNode(graph, nodeId, {
+                            value,
+                            run,
+                            authority,
+                            ceiling: options.ceiling,
+                            permissions: options.permissions,
+                        })
+                    }),
+                )
             })
         },
     })

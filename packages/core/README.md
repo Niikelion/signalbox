@@ -16,6 +16,7 @@ An app is two lists: **plugins** that produce events and expose APIs, and **work
 
 ```ts
 import { createApp, createWorkflowDefiner, type PluginApis } from "@signalbox/core"
+import { createPermissionExecution, entityRef } from "@signalbox/permissions"
 
 // Event maps must be `type` aliases (see below).
 type MyEvents = { "job:done": { id: string } }
@@ -25,6 +26,12 @@ const plugins = {
 }
 
 const defineWorkflow = createWorkflowDefiner<MyEvents, PluginApis<typeof plugins>>()
+const permissionExecution = createPermissionExecution()
+const permissions = {
+    runtime: permissionExecution.runtime,
+    core: permissionExecution.core,
+    host: permissionExecution.identities.issue({ principal: entityRef("system", "my-app") }),
+}
 
 const worker = defineWorkflow("worker", ctx => {
     ctx.onStart(() => {
@@ -38,8 +45,10 @@ const worker = defineWorkflow("worker", ctx => {
     })
 })
 
-await createApp({ name: "my-app", plugins, workflows: [worker] }).run()
+await createApp({ name: "my-app", permissions, plugins, workflows: [worker] }).run()
 ```
+
+The permission runtime is required explicitly. Plugin and workflow lifecycle callbacks run with host authority. Authenticated command handlers call `app.command`, which derives the canonical actor from an opaque identity grant. Permission-bound workflow runs intersect caller authority with an app-owned workflow ceiling.
 
 Plugins run first, in declaration order; workflows run second with `ctx.plugins`, the app channel `ctx.app`, and lifecycle hooks (`onStart`, `onStop`, `interval`). Everything registered via `onStop`/`interval` is torn down in reverse order, so a workflow never outlives a plugin it depends on. `run()` blocks until `SIGINT`/`SIGTERM`, then stops cleanly.
 

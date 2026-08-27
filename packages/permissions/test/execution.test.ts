@@ -160,6 +160,78 @@ describe("protected execution", () => {
     })
 })
 
+describe("core authority propagation", () => {
+    it("intersects event authority with a workflow ceiling", () => {
+        const execution = createPermissionExecution({ now: () => 100 })
+        const read = permissionClaim("zone.records.read", entityRef("zone", "example.com"))
+        const write = zoneClaim("example.com")
+        const event = execution.identities.issue({
+            principal: entityRef("user", "alice"),
+            contributions: [
+                { claim: read, grant: new GrantStateCell({ id: "event-read" }) },
+                { claim: write, grant: new GrantStateCell({ id: "event-write" }) },
+            ],
+        })
+        const ceiling = execution.identities.issue({
+            principal: entityRef("system", "workflow-owner"),
+            contributions: [{ claim: read, grant: new GrantStateCell({ id: "ceiling-read" }) }],
+        })
+
+        const bounded = execution.core.intersect(
+            execution.core.authorityFor(event),
+            execution.core.authorityFor(ceiling),
+        )
+
+        expect(bounded.principal).toEqual(entityRef("user", "alice"))
+        expect(bounded.allows(read, 100)).toBe(true)
+        expect(bounded.allows(write, 100)).toBe(false)
+    })
+
+    it("keeps elevation bounded by the ceiling and observes later revocation", () => {
+        const execution = createPermissionExecution({ now: () => 100 })
+        const write = zoneClaim("example.com")
+        const event = execution.identities.issue({ principal: entityRef("user", "alice") })
+        const ceilingGrant = new GrantStateCell({ id: "ceiling-write" })
+        const ceiling = execution.identities.issue({
+            principal: entityRef("system", "workflow-owner"),
+            contributions: [{ claim: write, grant: ceilingGrant }],
+        })
+        const ceilingAuthority = execution.core.authorityFor(ceiling)
+        const root = execution.core.intersect(execution.core.authorityFor(event), ceilingAuthority)
+
+        const elevated = execution.core.elevate(root, ceilingAuthority, write, { operation: "flow.elevate" })
+        expect(elevated.allows(write, 100)).toBe(true)
+
+        ceilingGrant.revoke(101)
+        expect(elevated.allows(write, 102)).toBe(false)
+    })
+
+    it("assumes only opaque identities and preserves their canonical principal", () => {
+        const execution = createPermissionExecution({ now: () => 100 })
+        const write = zoneClaim("example.com")
+        const ceiling = execution.identities.issue({
+            principal: entityRef("system", "workflow-owner"),
+            contributions: [{ claim: write, grant: new GrantStateCell({ id: "ceiling-write" }) }],
+        })
+        const bob = execution.identities.issue({
+            principal: entityRef("user", "bob"),
+            contributions: [{ claim: write, grant: new GrantStateCell({ id: "bob-write" }) }],
+        })
+
+        const assumed = execution.core.assume(bob, execution.core.authorityFor(ceiling), {
+            operation: "flow.assume",
+        })
+
+        expect(assumed.principal).toEqual(entityRef("user", "bob"))
+        expect(assumed.allows(write, 100)).toBe(true)
+        expect(() =>
+            execution.core.assume({} as IdentityGrant, execution.core.authorityFor(ceiling), {
+                operation: "flow.assume",
+            }),
+        ).toThrow(expect.objectContaining({ code: "GRANT_INVALID" }))
+    })
+})
+
 describe("permission-aware source policy", () => {
     it("exposes immutable subscription claims and trusted event identity", async () => {
         const { runtime, identity } = fixture()

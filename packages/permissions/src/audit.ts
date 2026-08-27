@@ -15,5 +15,18 @@ export interface AuthorizationAuditEvent {
     readonly code?: PermissionErrorCode
 }
 
+/** Sanitized branch-local authority transformation. */
+export interface AuthorityChangeAuditEvent {
+    readonly type: "authority-change"
+    readonly timestamp: number
+    readonly operation: "narrow" | "elevate" | "assume"
+    readonly requestId?: string
+    readonly principal: EntityRef
+    readonly origin: EntityRef
+    readonly claims: readonly PermissionClaim[]
+}
+
+export type PermissionAuditEvent = AuthorizationAuditEvent | AuthorityChangeAuditEvent
+
 /** Synchronous audit boundary; a thrown sink error prevents the protected action. */
-export type PermissionAuditSink = (event: AuthorizationAuditEvent) => void
+export type PermissionAuditSink = (event: PermissionAuditEvent) => void

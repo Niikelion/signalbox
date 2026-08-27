@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import { createApp, createWorkflowDefiner, type NoEvents, type PluginApis } from "@signalbox/core"
 import { httpPlugin } from "@signalbox/http"
+import { createPermissionExecution, entityRef } from "@signalbox/permissions"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
     webhookPlugin,
@@ -10,6 +11,15 @@ import {
     type WebhookRequest,
     type WebhookResponse,
 } from "../src/index"
+
+const testPermissions = () => {
+    const permissions = createPermissionExecution()
+    return {
+        runtime: permissions.runtime,
+        core: permissions.core,
+        host: permissions.identities.issue({ principal: entityRef("system", "webhook-test") }),
+    }
+}
 
 // ------------------------------------------------------------------ inbound
 
@@ -33,6 +43,7 @@ describe("webhook plugin — inbound routes (mounted on shared http)", () => {
 
         const app = createApp({
             name: "webhook-test",
+            permissions: testPermissions(),
             logging: false,
             plugins,
             workflows: [

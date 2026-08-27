@@ -41,7 +41,20 @@ interface IdentityRecord {
     readonly principal: EntityRef
     readonly origin: EntityRef
     readonly groups: readonly EntityRef[]
-    readonly authority: CompiledAuthority
+    readonly authority: AuthorityEvaluator
+}
+
+export interface AuthorityEvaluator {
+    allows(claim: PermissionClaim, at?: number): boolean
+    require(claim: PermissionClaim | readonly PermissionClaim[], at?: number): void
+    matchingGrantIds(claim: PermissionClaim, at?: number): readonly string[]
+}
+
+export interface ActiveAuthorityRecord {
+    readonly principal: EntityRef
+    readonly origin: EntityRef
+    readonly groups: readonly EntityRef[]
+    readonly authority: AuthorityEvaluator
 }
 
 const identities = new WeakMap<object, IdentityRecord>()
@@ -60,7 +73,7 @@ class ActiveAuthorityValue implements ActiveAuthority {
     readonly principal: EntityRef
     readonly origin: EntityRef
     readonly groups: readonly EntityRef[]
-    readonly #authority: CompiledAuthority
+    readonly #authority: AuthorityEvaluator
 
     constructor(record: IdentityRecord) {
         this.principal = record.principal
@@ -115,9 +128,23 @@ export const authorityFromIdentity = (owner: symbol, grant: IdentityGrant): Acti
     return authority
 }
 
-export const requireAuthorityRecord = (owner: symbol, authority: ActiveAuthority): void => {
+export const createActiveAuthority = (owner: symbol, record: ActiveAuthorityRecord): ActiveAuthority => {
+    const stored: IdentityRecord = {
+        owner,
+        principal: cloneEntity(record.principal),
+        origin: cloneEntity(record.origin),
+        groups: Object.freeze(record.groups.map(cloneEntity)),
+        authority: record.authority,
+    }
+    const authority = Object.freeze(new ActiveAuthorityValue(stored))
+    authorities.set(authority, stored)
+    return authority
+}
+
+export const requireAuthorityRecord = (owner: symbol, authority: ActiveAuthority): ActiveAuthorityRecord => {
     const record = authorities.get(authority)
     if (record?.owner !== owner) {
         throw new PermissionError("GRANT_INVALID", "authority was not created by this permission runtime")
     }
+    return record
 }
