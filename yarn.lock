@@ -1448,6 +1448,42 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@signalbox/permissions-store@workspace:packages/permissions-store":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/permissions-store@workspace:packages/permissions-store"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/permissions": "npm:^0.1.0"
+    "@signalbox/shared-config": "npm:^0.1.0"
+    "@signalbox/store": "npm:^0.2.2"
+    "@types/node": "npm:^22.10.2"
+    "@vitest/coverage-v8": "npm:^2.1.9"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
+  languageName: unknown
+  linkType: soft
+
+"@signalbox/permissions@npm:^0.1.0, @signalbox/permissions@workspace:packages/permissions":
+  version: 0.0.0-use.local
+  resolution: "@signalbox/permissions@workspace:packages/permissions"
+  dependencies:
+    "@arethetypeswrong/core": "npm:^0.18.2"
+    "@gamedev-sensei/ts-config": "npm:^2.1.0"
+    "@signalbox/shared-config": "npm:^0.1.0"
+    "@types/node": "npm:^22.10.2"
+    "@vitest/coverage-v8": "npm:^2.1.9"
+    eslint: "npm:^9.39.2"
+    prettier: "npm:^3.8.1"
+    tsdown: "npm:^0.15.7"
+    typescript: "npm:^5.9.3"
+    vitest: "npm:^2.1.9"
+  languageName: unknown
+  linkType: soft
+
 "@signalbox/schedule@npm:^0.2.2, @signalbox/schedule@workspace:packages/schedule":
   version: 0.0.0-use.local
   resolution: "@signalbox/schedule@workspace:packages/schedule"
