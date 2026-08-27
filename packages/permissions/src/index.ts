@@ -35,17 +35,28 @@ export type {
     RegistryMutationOptions,
     RetirePermissionInput,
     RevokeAuthorityInput,
+    RegisterResourceInput,
+    SetResourceEnabledInput,
+    SetResourceOwnerStatusInput,
+    TransferResourceInput,
 } from "./registry"
 export type { PermissionRegistryAuditEvent, PermissionRegistryAuditSink } from "./registry-audit"
-export { cloneSnapshot, emptyPermissionRegistrySnapshot } from "./registry-model"
+export { cloneSnapshot, definePermission, emptyPermissionRegistrySnapshot } from "./registry-model"
 export type {
     AuthorityGrantRecord,
     DelegableClaim,
     DelegationMode,
     IdempotencyRecord,
     PermissionDefinition,
+    PermissionDeclaration,
     PermissionRegistrySnapshot,
     RegistryMutationKind,
+    OwnedResourceRecord,
+    ResourceBlockReason,
+    ResourceOwnerStateRecord,
+    ResourceOwnerStatus,
+    ResourceOwnershipRecord,
+    ResourceStatus,
 } from "./registry-model"
-export { GrantStateCell, MembershipStateCell } from "./state"
+export { GrantStateCell, MembershipStateCell, ResourceStateCell } from "./state"
 export type { GrantStateOptions, MembershipStateOptions } from "./state"

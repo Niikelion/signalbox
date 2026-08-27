@@ -5,6 +5,8 @@ export interface PermissionRegistryDraft {
     revision: number
     definitions: PermissionRegistrySnapshot["definitions"]
     grants: PermissionRegistrySnapshot["grants"]
+    resources: PermissionRegistrySnapshot["resources"]
+    owners: PermissionRegistrySnapshot["owners"]
     operations: PermissionRegistrySnapshot["operations"]
 }
 

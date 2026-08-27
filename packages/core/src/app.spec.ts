@@ -1,5 +1,5 @@
 import { Secret } from "@signalbox/secrets"
-import { createPermissionExecution, entityRef } from "@signalbox/permissions"
+import { createPermissionExecution, entityRef, GrantStateCell, permissionClaim } from "@signalbox/permissions"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 const observed = vi.hoisted(() => ({
@@ -283,6 +283,64 @@ describe("createApp", () => {
 
         expect(actor).toEqual(entityRef("user", "alice"))
         expect(principals).toEqual(["alice"])
+        await app.stop()
+    })
+
+    it("validates and authorizes declared manual triggers using the authenticated identity", async () => {
+        type Events = { sync: { force: boolean } }
+        const permissions = createPermissionExecution()
+        const trigger = entityRef("manual-trigger", "sync-now")
+        const invoke = permissionClaim("trigger.invoke", trigger)
+        const host = permissions.identities.issue({ principal: entityRef("system", "host") })
+        const alice = permissions.identities.issue({
+            principal: entityRef("user", "alice"),
+            contributions: [{ claim: invoke, grant: new GrantStateCell({ id: "alice-trigger" }) }],
+        })
+        const received: boolean[] = []
+        const app = createApp<Events, Record<string, never>>({
+            name: "manual-triggers",
+            logging: false,
+            permissions: { runtime: permissions.runtime, core: permissions.core, host },
+            plugins: {},
+            manualTriggers: [
+                {
+                    id: "sync-now",
+                    event: "sync",
+                    schema: {
+                        parse: input => {
+                            if (typeof input !== "object" || input === null || !("force" in input))
+                                throw new Error("invalid")
+                            return { force: Boolean(input.force) }
+                        },
+                    },
+                },
+            ],
+            workflows: [
+                {
+                    name: "sync",
+                    setup: ctx => {
+                        ctx.app.flow("sync").effect(value => {
+                            received.push(value.force)
+                        })
+                    },
+                },
+            ],
+        })
+        await app.start()
+
+        const result = await app.manualTriggers.invoke(
+            "sync-now",
+            { force: true, actor: "forged" },
+            {
+                identity: alice,
+                operation: "ui.trigger",
+            },
+        )
+        await flush()
+
+        expect(result.actor).toEqual(entityRef("user", "alice"))
+        expect(result.eventId).toMatch(/^[0-9a-f-]{36}$/u)
+        expect(received).toEqual([true])
         await app.stop()
     })
 })

@@ -37,6 +37,7 @@
     "dependencies": {
         "@signalbox/core": "^0.4.0",
         "@signalbox/http": "^0.2.2",
+        "@signalbox/permissions": "^0.1.0",
         "zod": "^4.0.0"
     },
     "devDependencies": {

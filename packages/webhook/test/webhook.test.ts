@@ -80,6 +80,24 @@ describe("webhook plugin — inbound routes (mounted on shared http)", () => {
     it("throws if a route is configured without an http server", () => {
         expect(() => webhookPlugin({ routes: { x: { path: "/x" } } }).init({} as any)).toThrow(/needs an http server/)
     })
+
+    it("exposes an authenticated permission source with route-scoped subscription authority", async () => {
+        const permissions = createPermissionExecution()
+        const identity = permissions.identities.issue({ principal: entityRef("service", "github") })
+        const api = await webhookPlugin({
+            http: { handle: vi.fn() } as any,
+            routes: {
+                github: { path: "/github", identity: () => identity },
+            },
+        }).init({} as any)
+
+        const source = api.source("github")
+        expect(source.entity).toEqual(entityRef("webhook-route", "github"))
+        expect(source.subscriptionClaims).toEqual([
+            { permissionId: "webhook.subscribe", scope: entityRef("webhook-route", "github") },
+        ])
+        await expect(source.eventIdentity({} as WebhookRequest)).resolves.toBe(identity)
+    })
 })
 
 // ---------------------------------------------------------------- outbound

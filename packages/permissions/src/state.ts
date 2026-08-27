@@ -96,3 +96,29 @@ export class MembershipStateCell {
         this.#version += 1
     }
 }
+
+/** Reversible validity cell shared by authority derived from one owned resource. */
+export class ResourceStateCell {
+    readonly id: EntityRef
+    #active: boolean
+    #version = 0
+
+    constructor(id: EntityRef, active = true) {
+        this.id = id
+        this.#active = active
+    }
+
+    get active(): boolean {
+        return this.#active
+    }
+
+    get version(): number {
+        return this.#version
+    }
+
+    setActive(active: boolean): void {
+        if (this.#active === active) return
+        this.#active = active
+        this.#version += 1
+    }
+}

@@ -27,6 +27,15 @@ export { createWorkflowDefiner } from "./workflow"
 export type { WorkflowContext, WorkflowDefinition, WorkflowSourceStart } from "./workflow"
 
 export { createApp } from "./app"
-export type { App, AppCommandOptions, AppOptions, AppPermissionOptions } from "./app"
+export type {
+    App,
+    AppCommandOptions,
+    AppOptions,
+    AppPermissionOptions,
+    ManualTriggerDefinition,
+    ManualTriggerInvocation,
+    ManualTriggerRegistry,
+    ManualTriggerSchema,
+} from "./app"
 
 export { isRoot } from "./platform"

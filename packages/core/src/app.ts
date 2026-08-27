@@ -1,7 +1,8 @@
 import { redact } from "@signalbox/secrets"
+import { randomUUID } from "node:crypto"
 import { createBus, type Bus, type Channel, type EventMap, type Listener, type Unsubscribe } from "./bus"
 import { FRAMEWORK_CHANNEL, type FrameworkEvents, type LogLevel } from "./events"
-import { attachConsoleLogger, sanitizeError, toError, write } from "./log"
+import { attachConsoleLogger, sanitizeError, SignalboxError, toError, write } from "./log"
 import type { AnyPluginDefinition, Cleanup, PluginApis, PluginContext } from "./plugin"
 import type { WorkflowContext, WorkflowDefinition } from "./workflow"
 import { makePermissionFlow } from "./flow"
@@ -12,7 +13,9 @@ import type {
     PermissionCoreRuntime,
     PermissionExecutionContext,
     PermissionRuntime,
+    PermissionClaim,
 } from "@signalbox/permissions"
+import { entityRef, permissionClaim } from "@signalbox/permissions"
 
 const APP_CHANNEL = "app"
 
@@ -30,6 +33,8 @@ export interface AppOptions<TAppEvents extends EventMap, TPlugins extends Record
     workflows: WorkflowDefinition<TAppEvents, PluginApis<TPlugins>>[]
     /** Explicit security runtime, host identity, and app-owned workflow ceilings. */
     permissions: AppPermissionOptions
+    /** Events that authenticated management clients may invoke explicitly. */
+    manualTriggers?: readonly ManualTriggerDefinition<TAppEvents>[]
     /** Attach the console logger (default true). */
     logging?: boolean
 }
@@ -45,6 +50,29 @@ export interface AppCommandOptions extends PermissionExecutionContext {
     readonly identity: IdentityGrant
 }
 
+export interface ManualTriggerSchema<T = unknown> {
+    parse(input: unknown): T
+}
+
+export interface ManualTriggerDefinition<TAppEvents extends EventMap = EventMap> {
+    readonly id: string
+    readonly event: keyof TAppEvents & string
+    readonly schema: ManualTriggerSchema<TAppEvents[keyof TAppEvents]>
+    readonly label?: string
+    readonly description?: string
+    readonly requiredClaims?: readonly PermissionClaim[]
+}
+
+export interface ManualTriggerInvocation {
+    readonly eventId: string
+    readonly actor: EntityRef
+}
+
+export interface ManualTriggerRegistry<TAppEvents extends EventMap = EventMap> {
+    list(): readonly ManualTriggerDefinition<TAppEvents>[]
+    invoke(id: string, payload: unknown, options: AppCommandOptions): Promise<ManualTriggerInvocation>
+}
+
 /** A composed application. */
 export interface App {
     /** The app name. */
@@ -57,6 +85,8 @@ export interface App {
     run: () => Promise<void>
     /** Execute a command for an authenticated identity and derive its canonical actor. */
     command<T>(options: AppCommandOptions, callback: (actor: EntityRef) => T | Promise<T>): Promise<T>
+    /** Declared, validated, permission-checked management triggers. */
+    readonly manualTriggers: ManualTriggerRegistry
 }
 
 type ScopedContext = Pick<PluginContext<EventMap>, "log" | "fail" | "onStart" | "onStop" | "interval" | "permissions">
@@ -285,5 +315,39 @@ export const createApp = <TAppEvents extends EventMap, TPlugins extends Record<s
         })
     }
 
-    return { name: options.name, start, stop, run, command }
+    const triggerDefinitions = Object.freeze([...(options.manualTriggers ?? [])])
+    if (new Set(triggerDefinitions.map(trigger => trigger.id)).size !== triggerDefinitions.length) {
+        throw new SignalboxError("manual trigger IDs must be unique")
+    }
+    const manualTriggers: ManualTriggerRegistry<TAppEvents> = Object.freeze({
+        list: () => triggerDefinitions,
+        invoke: async (id: string, payload: unknown, commandOptions: AppCommandOptions) => {
+            const trigger = triggerDefinitions.find(item => item.id === id)
+            if (!trigger) throw new SignalboxError(`unknown manual trigger "${id}"`)
+            return command(commandOptions, actor => {
+                const triggerEntity = entityRef("manual-trigger", id)
+                options.permissions.runtime.authorize(
+                    options.permissions.runtime.currentAuthority(),
+                    trigger.requiredClaims ?? [permissionClaim("trigger.invoke", triggerEntity)],
+                    {
+                        operation: `trigger.invoke:${id}`,
+                        ...(commandOptions.requestId ? { requestId: commandOptions.requestId } : {}),
+                    },
+                )
+                const parsed = trigger.schema.parse(payload)
+                const eventId = randomUUID()
+                appChannel.emit(trigger.event, parsed)
+                return Object.freeze({ eventId, actor })
+            })
+        },
+    })
+
+    return {
+        name: options.name,
+        start,
+        stop,
+        run,
+        command,
+        manualTriggers: manualTriggers as unknown as ManualTriggerRegistry,
+    }
 }

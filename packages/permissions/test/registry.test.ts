@@ -182,8 +182,141 @@ describe("durable reconstruction", () => {
             ],
         }
 
-        await expect(createPermissionRegistry({ backend: createMemoryPermissionBackend(inconsistent) })).rejects.toEqual(
-            expect.objectContaining<Partial<PermissionError>>({ code: "BACKEND_INCONSISTENT" }),
-        )
+        await expect(
+            createPermissionRegistry({ backend: createMemoryPermissionBackend(inconsistent) }),
+        ).rejects.toEqual(expect.objectContaining<Partial<PermissionError>>({ code: "BACKEND_INCONSISTENT" }))
+    })
+})
+
+describe("owned resources", () => {
+    const ownedRead = { claim: read, delegation: ["owned-resource", "subject"] as const }
+
+    it("registers authority atomically and rolls back an incomplete binding", async () => {
+        const { registry, bootstrap } = await setup()
+        await registry.define({ id: "signalbook.read", name: "Read", actor: root })
+        await bootstrap.grant({ id: "alice-read", actor: root, subject: alice, claims: [ownedRead] })
+
+        await expect(
+            registry.registerResource({
+                id: book,
+                actor: alice,
+                requiredClaims: [read, permissionClaim("signalbook.write", book)],
+                parentGrantIds: ["alice-read"],
+            }),
+        ).rejects.toMatchObject({ code: "PERMISSION_UNDEFINED" })
+
+        expect(registry.resource(book)).toBeUndefined()
+        expect(registry.snapshot().grants).toHaveLength(1)
+    })
+
+    it("blocks existing resource authority during suspension and restores it", async () => {
+        const { registry, bootstrap } = await setup()
+        await registry.define({ id: "signalbook.read", name: "Read", actor: root })
+        await bootstrap.grant({ id: "alice-read", actor: root, subject: alice, claims: [ownedRead] })
+        await registry.registerResource({
+            id: book,
+            actor: alice,
+            requiredClaims: [read],
+            parentGrantIds: ["alice-read"],
+        })
+        const authority = new CompiledAuthority(registry.contributionsFor(book))
+
+        await registry.setOwnerStatus({ owner: alice, status: "suspended", actor: alice })
+        expect(registry.resource(book)).toMatchObject({ status: "blocked", blockReasons: ["owner-suspended"] })
+        expect(() => authority.require(read)).toThrow(expect.objectContaining({ code: "RESOURCE_BLOCKED" }))
+
+        await registry.setOwnerStatus({ owner: alice, status: "active", actor: alice })
+        expect(registry.resource(book)).toMatchObject({ status: "active", blockReasons: [] })
+        expect(authority.allows(read)).toBe(true)
+    })
+
+    it("keeps explicit disablement after owner recovery", async () => {
+        const { registry, bootstrap } = await setup()
+        await registry.define({ id: "signalbook.read", name: "Read", actor: root })
+        await bootstrap.grant({ id: "alice-read", actor: root, subject: alice, claims: [ownedRead] })
+        await registry.registerResource({
+            id: book,
+            actor: alice,
+            requiredClaims: [read],
+            parentGrantIds: ["alice-read"],
+        })
+
+        await registry.setResourceEnabled({ id: book, enabled: false, actor: alice })
+        await registry.setOwnerStatus({ owner: alice, status: "suspended", actor: alice })
+        await registry.setOwnerStatus({ owner: alice, status: "active", actor: alice })
+
+        expect(registry.resource(book)).toMatchObject({ desiredEnabled: false, status: "disabled" })
+    })
+
+    it("keeps interrupted runtime activation blocked and recovers on retry", async () => {
+        const { registry, bootstrap } = await setup()
+        await registry.define({ id: "signalbook.read", name: "Read", actor: root })
+        await bootstrap.grant({ id: "alice-read", actor: root, subject: alice, claims: [ownedRead] })
+
+        await expect(
+            registry.registerResource({
+                id: book,
+                actor: alice,
+                requiredClaims: [read],
+                parentGrantIds: ["alice-read"],
+                attach: () => {
+                    throw new Error("runtime unavailable")
+                },
+            }),
+        ).rejects.toThrow("runtime unavailable")
+        expect(registry.resource(book)).toMatchObject({
+            runtimeAttached: false,
+            status: "blocked",
+            blockReasons: ["runtime-attachment-failed"],
+        })
+
+        const recovered = await registry.registerResource({
+            id: book,
+            actor: alice,
+            requiredClaims: [read],
+            parentGrantIds: ["alice-read"],
+            attach: () => undefined,
+        })
+        expect(recovered).toMatchObject({ runtimeAttached: true, status: "active", blockReasons: [] })
+    })
+
+    it("transfers stable resource identity only with source and target authority", async () => {
+        const { registry, bootstrap } = await setup()
+        await registry.define({ id: "signalbook.read", name: "Read", actor: root })
+        await registry.define({ id: "resource.manage", name: "Manage resources", actor: root })
+        await registry.define({ id: "resource.ownership.transfer", name: "Transfer resources", actor: root })
+        await bootstrap.grant({
+            id: "alice-authority",
+            actor: root,
+            subject: alice,
+            claims: [
+                ownedRead,
+                { claim: permissionClaim("resource.manage", book), delegation: [] },
+                { claim: permissionClaim("resource.ownership.transfer", bob), delegation: [] },
+            ],
+        })
+        await bootstrap.grant({ id: "bob-read", actor: root, subject: bob, claims: [ownedRead] })
+        const created = await registry.registerResource({
+            id: book,
+            actor: alice,
+            requiredClaims: [read],
+            parentGrantIds: ["alice-authority"],
+        })
+
+        await expect(
+            registry.transferResource({ id: book, actor: bob, targetOwner: bob, parentGrantIds: ["bob-read"] }),
+        ).rejects.toMatchObject({ code: "OWNERSHIP_TRANSFER_DENIED" })
+
+        const transferred = await registry.transferResource({
+            id: book,
+            actor: alice,
+            targetOwner: bob,
+            parentGrantIds: ["bob-read"],
+        })
+        expect(transferred.id).toEqual(created.id)
+        expect(transferred.createdBy).toEqual(alice)
+        expect(transferred.owner).toEqual(bob)
+        expect(transferred.ownershipHistory.map(item => item.owner)).toEqual([alice, bob])
+        expect(new CompiledAuthority(registry.contributionsFor(book)).allows(read)).toBe(true)
     })
 })

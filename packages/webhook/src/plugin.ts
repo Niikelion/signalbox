@@ -1,6 +1,20 @@
 import { definePlugin, SignalboxError, type ReadChannel } from "@signalbox/core"
 import type { HttpMount } from "@signalbox/http"
+import {
+    definePermissionSource,
+    definePermission,
+    entityRef,
+    permissionClaim,
+    type IdentityGrant,
+    type PermissionSourcePolicy,
+} from "@signalbox/permissions"
 import { z } from "zod"
+
+export const webhookSubscribePermission = definePermission({
+    id: "webhook.subscribe",
+    name: "Subscribe to webhooks",
+    description: "Attach a workflow to an authenticated inbound webhook route",
+})
 
 /** A received webhook request, emitted on the plugin's channel. */
 export interface WebhookRequest {
@@ -24,6 +38,8 @@ export interface RouteConfig {
     method?: string
     /** If set, requests must carry a matching `x-webhook-secret` header. */
     secret?: string
+    /** Resolve the canonical identity represented by an authenticated request. */
+    identity?: (request: WebhookRequest) => IdentityGrant | Promise<IdentityGrant>
 }
 
 /** Configuration for a single outbound webhook target. */
@@ -102,6 +118,8 @@ export interface WebhookApi<
 > {
     /** Subscribe to received requests per route via `events.flow("<route>")`. */
     events: ReadChannel<WebhookEvents<TRoutes>>
+    /** Permission-aware source policy for an authenticated inbound route. */
+    source: (route: keyof TRoutes & string) => PermissionSourcePolicy<WebhookRequest>
     /**
      * Fire a request at a configured outbound target. Resolves with the response;
      * a non-2xx status does not throw (check `response.ok`), but a network failure does.
@@ -229,6 +247,22 @@ export const webhookPlugin = <
                 }
             }
 
-            return { events: ctx.channel, send }
+            const source = (routeName: keyof TRoutes & string): PermissionSourcePolicy<WebhookRequest> => {
+                const route = routes[routeName]
+                if (!route?.identity) {
+                    throw new SignalboxError(
+                        `webhook route "${routeName}" has no identity resolver`,
+                        "configure route.identity before using it as a permission source",
+                    )
+                }
+                const routeEntity = entityRef("webhook-route", routeName)
+                return definePermissionSource({
+                    entity: routeEntity,
+                    subscriptionClaims: [permissionClaim(webhookSubscribePermission.id, routeEntity)],
+                    identity: route.identity,
+                })
+            }
+
+            return { events: ctx.channel, source, send }
         },
     })

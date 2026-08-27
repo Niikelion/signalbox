@@ -1,12 +1,13 @@
 import { PermissionError } from "./errors"
 import { entityKey, permissionClaim, type PermissionClaim } from "./model"
-import type { GrantStateCell, MembershipStateCell } from "./state"
+import type { GrantStateCell, MembershipStateCell, ResourceStateCell } from "./state"
 
 /** One grant-backed contribution to a compiled authority snapshot. */
 export interface AuthorityContribution {
     readonly claim: PermissionClaim
     readonly grant: GrantStateCell
     readonly membership?: MembershipStateCell
+    readonly resource?: ResourceStateCell
 }
 
 interface PermissionIndex {
@@ -15,7 +16,9 @@ interface PermissionIndex {
 }
 
 const valid = (contribution: AuthorityContribution, at: number): boolean =>
-    contribution.grant.isValid(at) && (contribution.membership?.active ?? true)
+    contribution.grant.isValid(at) &&
+    (contribution.membership?.active ?? true) &&
+    (contribution.resource?.active ?? true)
 
 /** Immutable claim index whose shared state cells reflect revocation without rebuilding. */
 export class CompiledAuthority {
@@ -64,13 +67,15 @@ export class CompiledAuthority {
         const candidates = this.#candidates(firstMissing).filter(
             contribution => contribution.membership?.active ?? true,
         )
-        const code = candidates.some(contribution => contribution.grant.revokedAt !== undefined)
-            ? "GRANT_REVOKED"
-            : candidates.some(
-                    contribution => contribution.grant.expiresAt !== undefined && at >= contribution.grant.expiresAt,
-                )
-              ? "GRANT_EXPIRED"
-              : "PERMISSION_DENIED"
+        const code = candidates.some(contribution => contribution.resource && !contribution.resource.active)
+            ? "RESOURCE_BLOCKED"
+            : candidates.some(contribution => contribution.grant.revokedAt !== undefined)
+              ? "GRANT_REVOKED"
+              : candidates.some(
+                      contribution => contribution.grant.expiresAt !== undefined && at >= contribution.grant.expiresAt,
+                  )
+                ? "GRANT_EXPIRED"
+                : "PERMISSION_DENIED"
         throw new PermissionError(code, `missing required permission claim(s): ${rendered}`)
     }
 

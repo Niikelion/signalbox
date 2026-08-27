@@ -14,6 +14,10 @@ export type PermissionErrorCode =
     | "GRANT_REVOKED"
     | "GRANT_EXPIRED"
     | "PERMISSION_DENIED"
+    | "RESOURCE_ALREADY_REGISTERED"
+    | "RESOURCE_NOT_FOUND"
+    | "RESOURCE_BLOCKED"
+    | "OWNERSHIP_TRANSFER_DENIED"
 
 /** Error with a machine-readable permission failure code. */
 export class PermissionError extends Error {
