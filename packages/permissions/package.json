@@ -1,0 +1,53 @@
+{
+    "name": "@signalbox/permissions",
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Scoped authority, grant invalidation, and permission enforcement primitives for Signalbox",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Niikelion/signalbox.git",
+        "directory": "packages/permissions"
+    },
+    "type": "module",
+    "main": "dist/index.cjs",
+    "module": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "/dist"
+    ],
+    "exports": {
+        "import": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "require": {
+            "types": "./dist/index.d.cts",
+            "require": "./dist/index.cjs"
+        }
+    },
+    "engines": {
+        "node": ">=22.5.0"
+    },
+    "scripts": {
+        "build": "tsc --noEmit && tsdown",
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "bench": "vitest bench --run",
+        "lint": "eslint src",
+        "lint:fix": "eslint src --fix",
+        "format": "prettier --write ."
+    },
+    "devDependencies": {
+        "@arethetypeswrong/core": "^0.18.2",
+        "@gamedev-sensei/ts-config": "^2.1.0",
+        "@signalbox/shared-config": "^0.1.0",
+        "@types/node": "^22.10.2",
+        "@vitest/coverage-v8": "^2.1.9",
+        "eslint": "^9.39.2",
+        "prettier": "^3.8.1",
+        "tsdown": "^0.15.7",
+        "typescript": "^5.9.3",
+        "vitest": "^2.1.9"
+    }
+}
