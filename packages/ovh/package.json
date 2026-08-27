@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/ovh",
-    "version": "0.2.3",
+    "version": "0.3.0",
     "license": "MIT",
     "description": "signalbox plugin: keep an OVH DynHost record pointed at a changing address",
     "repository": {
@@ -35,9 +35,9 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.5.0",
+        "@signalbox/core": "^0.5.1",
         "@signalbox/graph": "^0.4.1",
-        "@signalbox/permissions": "^0.3.0"
+        "@signalbox/permissions": "^0.4.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

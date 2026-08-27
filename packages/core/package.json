@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/core",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "license": "MIT",
     "description": "Event-based application framework: typed bus, plugins, workflows, lifecycle and config",
     "repository": {
@@ -35,7 +35,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/permissions": "^0.3.0",
+        "@signalbox/permissions": "^0.4.0",
         "@signalbox/secrets": "^0.2.0"
     },
     "devDependencies": {

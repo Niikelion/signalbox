@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/webhook",
-    "version": "0.4.0",
+    "version": "0.4.1",
     "license": "MIT",
     "description": "signalbox plugin: receive inbound HTTP webhooks and emit them as events",
     "repository": {
@@ -35,15 +35,15 @@
         "format": "prettier --write ."
     },
     "dependencies": {
-        "@signalbox/core": "^0.5.0",
+        "@signalbox/core": "^0.5.1",
         "@signalbox/http": "^0.2.3",
-        "@signalbox/permissions": "^0.3.0",
+        "@signalbox/permissions": "^0.4.0",
         "zod": "^4.0.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",
         "@gamedev-sensei/ts-config": "^2.1.0",
-        "@signalbox/permissions": "^0.3.0",
+        "@signalbox/permissions": "^0.4.0",
         "@signalbox/shared-config": "^0.1.0",
         "@types/node": "^22.10.2",
         "@vitest/coverage-v8": "^2.1.9",

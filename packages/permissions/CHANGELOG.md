@@ -1,5 +1,11 @@
 # @signalbox/permissions
 
+## 0.4.0
+
+### Minor Changes
+
+- 66737bf: Compose durable permission systems with registry-backed identities and unified auditing, protect OVH DynHost updates with hostname-scoped claims, wire durable permissions into the DDNS OVH application, and allow service applications to initialize asynchronously.
+
 ## 0.3.0
 
 ### Minor Changes

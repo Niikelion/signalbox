@@ -1,5 +1,13 @@
 # @signalbox/webhook
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies [66737bf]
+    - @signalbox/permissions@0.4.0
+    - @signalbox/core@0.5.1
+
 ## 0.4.0
 
 ### Minor Changes

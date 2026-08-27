@@ -1,5 +1,12 @@
 # @signalbox/permissions-store
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [66737bf]
+    - @signalbox/permissions@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
