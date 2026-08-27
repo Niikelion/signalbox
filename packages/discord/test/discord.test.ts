@@ -1,16 +1,36 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import { afterAll, describe, expect, it, vi } from "vitest"
-import { discordPlugin } from "../src/index"
+import { createPermissionExecution, entityRef, GrantStateCell, permissionClaim } from "@signalbox/permissions"
+import { DISCORD_SEND_PERMISSION, discordPlugin, discordWebhookRef } from "../src/index"
 
 const fetchMock = vi.spyOn(globalThis, "fetch")
 afterAll(() => {
     fetchMock.mockRestore()
 })
 
-const makeApi = async () =>
-    (await discordPlugin({ webhookUrl: "https://discord/webhook", username: "bot" }).init({} as any)) as {
-        send: (message: { content: string; username?: string; avatarUrl?: string }) => Promise<void>
+const makeApi = async (allowed = true) => {
+    const permissions = createPermissionExecution()
+    const identity = permissions.identities.issue({
+        principal: entityRef("workflow", "discord-test"),
+        contributions: allowed
+            ? [
+                  {
+                      claim: permissionClaim(DISCORD_SEND_PERMISSION, discordWebhookRef("alerts")),
+                      grant: new GrantStateCell({ id: "discord-send" }),
+                  },
+              ]
+            : [],
+    })
+    const api = await discordPlugin({
+        webhookUrl: "https://discord/webhook",
+        username: "bot",
+        resourceId: "alerts",
+    }).init({ permissions: permissions.runtime } as any)
+    return {
+        send: (message: { content: string; username?: string; avatarUrl?: string }) =>
+            permissions.runtime.runAs(identity, { operation: "test" }, () => api.send(message)),
     }
+}
 
 describe("discord plugin", () => {
     it("posts a webhook payload with the username default", async () => {
@@ -42,5 +62,13 @@ describe("discord plugin", () => {
         const api = await makeApi()
 
         await expect(api.send({ content: "x" })).rejects.toThrow(/400/)
+    })
+
+    it("denies sends without the webhook-scoped permission", async () => {
+        fetchMock.mockReset().mockResolvedValue(new Response(null, { status: 204 }))
+        const api = await makeApi(false)
+
+        await expect(api.send({ content: "x" })).rejects.toMatchObject({ code: "PERMISSION_DENIED" })
+        expect(fetchMock).not.toHaveBeenCalled()
     })
 })

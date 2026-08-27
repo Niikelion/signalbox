@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest"
-import { combine, makeFlow, type Flow, type RunContext } from "@/flow"
+import { combine, makeFlow, makePermissionFlow, type Flow, type RunContext } from "@/flow"
+import {
+    GrantStateCell,
+    PermissionError,
+    createPermissionExecution,
+    entityRef,
+    permissionClaim,
+    type ActiveAuthority,
+} from "@signalbox/permissions"
 import * as log from "@/log"
 
 const flush = async (): Promise<void> => {
@@ -463,5 +471,168 @@ describe("Flow", () => {
 
             expect(annotations).toHaveLength(1)
         })
+    })
+})
+
+describe("permission-bound Flow", () => {
+    const record = entityRef("record", "primary")
+    const read = permissionClaim("record.read", record)
+    const writeClaim = permissionClaim("record.write", record)
+
+    const authority = (
+        execution: ReturnType<typeof createPermissionExecution>,
+        principal: string,
+        claims: readonly { claim: typeof read; id: string }[],
+    ): ActiveAuthority =>
+        execution.core.authorityFor(
+            execution.identities.issue({
+                principal: entityRef("user", principal),
+                contributions: claims.map(item => ({
+                    claim: item.claim,
+                    grant: new GrantStateCell({ id: item.id }),
+                })),
+            }),
+        )
+
+    it("intersects event claims with the ceiling before protected effects", async () => {
+        const execution = createPermissionExecution()
+        const eventAuthority = authority(execution, "alice", [
+            { claim: read, id: "event-read" },
+            { claim: writeClaim, id: "event-write" },
+        ])
+        const ceiling = authority(execution, "owner", [{ claim: read, id: "ceiling-read" }])
+        const readHandler = vi.fn<(input: string) => void>()
+        const writeHandler = vi.fn<(input: string) => void>()
+        const readAction = execution.runtime.protect<string, void>(() => read, readHandler)
+        const writeAction = execution.runtime.protect<string, void>(() => writeClaim, writeHandler)
+        let emit!: (value: string) => void
+        const flow = makePermissionFlow<string>(
+            push => {
+                emit = push
+            },
+            { permissions: execution.core, ceiling, workflowId: "records", authority: () => eventAuthority },
+        )
+        flow.effect(async value => readAction(value))
+        flow.effect(async value => writeAction(value))
+
+        emit("value")
+        await flush()
+        await flush()
+
+        expect(readHandler).toHaveBeenCalledOnce()
+        expect(writeHandler).not.toHaveBeenCalled()
+    })
+
+    it("keeps elevation branch-local", async () => {
+        const execution = createPermissionExecution()
+        const eventAuthority = authority(execution, "alice", [{ claim: read, id: "event-read" }])
+        const ceiling = authority(execution, "owner", [
+            { claim: read, id: "ceiling-read" },
+            { claim: writeClaim, id: "ceiling-write" },
+        ])
+        const elevatedHandler = vi.fn<(input: string) => void>()
+        const siblingHandler = vi.fn<(input: string) => void>()
+        const elevatedAction = execution.runtime.protect<string, void>(() => writeClaim, elevatedHandler)
+        const siblingAction = execution.runtime.protect<string, void>(() => writeClaim, siblingHandler)
+        let emit!: (value: string) => void
+        const flow = makePermissionFlow<string>(
+            push => {
+                emit = push
+            },
+            { permissions: execution.core, ceiling, workflowId: "records", authority: () => eventAuthority },
+        )
+        flow.elevate(() => writeClaim).effect(async value => elevatedAction(value))
+        flow.effect(async value => siblingAction(value))
+
+        emit("value")
+        await flush()
+        await flush()
+
+        expect(elevatedHandler).toHaveBeenCalledOnce()
+        expect(siblingHandler).not.toHaveBeenCalled()
+    })
+
+    it("keeps narrowing branch-local", async () => {
+        const execution = createPermissionExecution()
+        const eventAuthority = authority(execution, "alice", [
+            { claim: read, id: "event-read" },
+            { claim: writeClaim, id: "event-write" },
+        ])
+        const ceiling = authority(execution, "owner", [
+            { claim: read, id: "ceiling-read" },
+            { claim: writeClaim, id: "ceiling-write" },
+        ])
+        const narrowedHandler = vi.fn<(input: string) => void>()
+        const siblingHandler = vi.fn<(input: string) => void>()
+        const narrowedAction = execution.runtime.protect<string, void>(() => writeClaim, narrowedHandler)
+        const siblingAction = execution.runtime.protect<string, void>(() => writeClaim, siblingHandler)
+        let emit!: (value: string) => void
+        const flow = makePermissionFlow<string>(
+            push => {
+                emit = push
+            },
+            { permissions: execution.core, ceiling, workflowId: "records", authority: () => eventAuthority },
+        )
+        flow.narrow(() => read).effect(value => narrowedAction(value))
+        flow.effect(value => siblingAction(value))
+
+        emit("value")
+        await flush()
+        await flush()
+
+        expect(narrowedHandler).not.toHaveBeenCalled()
+        expect(siblingHandler).toHaveBeenCalledOnce()
+    })
+
+    it("keeps identity assumption branch-local and bounded by the ceiling", async () => {
+        const execution = createPermissionExecution()
+        const eventAuthority = authority(execution, "alice", [])
+        const ceiling = authority(execution, "owner", [{ claim: writeClaim, id: "ceiling-write" }])
+        const bobIdentity = execution.identities.issue({
+            principal: entityRef("user", "bob"),
+            contributions: [{ claim: writeClaim, grant: new GrantStateCell({ id: "bob-write" }) }],
+        })
+        const assumedPrincipals: string[] = []
+        const siblingHandler = vi.fn<(input: string) => void>()
+        const assumedAction = execution.runtime.protect<string, void>(
+            () => writeClaim,
+            input => {
+                assumedPrincipals.push(`${execution.runtime.currentAuthority().principal.id}:${input}`)
+            },
+        )
+        const siblingAction = execution.runtime.protect<string, void>(() => writeClaim, siblingHandler)
+        let emit!: (value: string) => void
+        const flow = makePermissionFlow<string>(
+            push => {
+                emit = push
+            },
+            { permissions: execution.core, ceiling, workflowId: "records", authority: () => eventAuthority },
+        )
+        flow.assume(() => bobIdentity).effect(value => assumedAction(value))
+        flow.effect(value => siblingAction(value))
+
+        emit("value")
+        await flush()
+        await flush()
+
+        expect(assumedPrincipals).toEqual(["bob:value"])
+        expect(siblingHandler).not.toHaveBeenCalled()
+    })
+
+    it("denies source attachment when the ceiling lacks subscription claims", () => {
+        const execution = createPermissionExecution()
+        const eventAuthority = authority(execution, "alice", [])
+        const ceiling = authority(execution, "owner", [])
+        const flow = makePermissionFlow<string>(() => undefined, {
+            permissions: execution.core,
+            ceiling,
+            workflowId: "records",
+            authority: () => eventAuthority,
+            subscriptionClaims: [read],
+        })
+
+        expect(() => {
+            flow.effect(vi.fn())
+        }).toThrow(PermissionError)
     })
 })

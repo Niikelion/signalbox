@@ -40,6 +40,8 @@ export const createStorePermissionBackend = (
                         revision: base.revision,
                         definitions: [...base.definitions],
                         grants: [...base.grants],
+                        resources: [...base.resources],
+                        owners: [...base.owners],
                         operations: [...base.operations],
                     }
                     const value = await callback(draft)

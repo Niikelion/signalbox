@@ -35,6 +35,7 @@
         "format": "prettier --write ."
     },
     "dependencies": {
+        "@signalbox/permissions": "^0.2.0",
         "@signalbox/secrets": "^0.2.0"
     },
     "devDependencies": {

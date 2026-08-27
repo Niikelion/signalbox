@@ -1,8 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import { createApp, createWorkflowDefiner, type NoEvents, type PluginApis } from "@signalbox/core"
+import { createPermissionExecution, entityRef } from "@signalbox/permissions"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { httpPlugin } from "../src/index"
+
+const testPermissions = () => {
+    const permissions = createPermissionExecution()
+    return {
+        runtime: permissions.runtime,
+        core: permissions.core,
+        host: permissions.identities.issue({ principal: entityRef("system", "http-test") }),
+    }
+}
 
 describe("http plugin", () => {
     it("serves routes registered via handle()", async () => {
@@ -12,6 +22,7 @@ describe("http plugin", () => {
 
         const app = createApp({
             name: "http-test",
+            permissions: testPermissions(),
             logging: false,
             plugins,
             workflows: [
@@ -49,6 +60,7 @@ describe("http plugin", () => {
 
         const app = createApp({
             name: "http-openapi",
+            permissions: testPermissions(),
             logging: false,
             plugins,
             workflows: [

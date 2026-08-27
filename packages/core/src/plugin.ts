@@ -1,5 +1,6 @@
 import type { Channel, EventMap } from "./bus"
 import type { LogLevel } from "./events"
+import type { PermissionRuntime } from "@signalbox/permissions"
 
 /** A teardown callback registered with `onStop`. */
 export type Cleanup = () => void | Promise<void>
@@ -11,6 +12,8 @@ export type Cleanup = () => void | Promise<void>
 export interface PluginContext<TEvents extends EventMap> {
     /** The plugin's own typed channel (emit/subscribe to its events). */
     channel: Channel<TEvents>
+    /** Restricted permission enforcement capability. */
+    permissions: PermissionRuntime
     /**
      * Log a message under the plugin's scope.
      * @param message the message

@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import { createApp, createWorkflowDefiner, type NoEvents, type PluginApis } from "@signalbox/core"
 import { httpPlugin } from "@signalbox/http"
+import { createPermissionExecution, entityRef } from "@signalbox/permissions"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import {
     webhookPlugin,
@@ -10,6 +11,15 @@ import {
     type WebhookRequest,
     type WebhookResponse,
 } from "../src/index"
+
+const testPermissions = () => {
+    const permissions = createPermissionExecution()
+    return {
+        runtime: permissions.runtime,
+        core: permissions.core,
+        host: permissions.identities.issue({ principal: entityRef("system", "webhook-test") }),
+    }
+}
 
 // ------------------------------------------------------------------ inbound
 
@@ -33,6 +43,7 @@ describe("webhook plugin — inbound routes (mounted on shared http)", () => {
 
         const app = createApp({
             name: "webhook-test",
+            permissions: testPermissions(),
             logging: false,
             plugins,
             workflows: [
@@ -68,6 +79,24 @@ describe("webhook plugin — inbound routes (mounted on shared http)", () => {
 
     it("throws if a route is configured without an http server", () => {
         expect(() => webhookPlugin({ routes: { x: { path: "/x" } } }).init({} as any)).toThrow(/needs an http server/)
+    })
+
+    it("exposes an authenticated permission source with route-scoped subscription authority", async () => {
+        const permissions = createPermissionExecution()
+        const identity = permissions.identities.issue({ principal: entityRef("service", "github") })
+        const api = await webhookPlugin({
+            http: { handle: vi.fn() } as any,
+            routes: {
+                github: { path: "/github", identity: () => identity },
+            },
+        }).init({} as any)
+
+        const source = api.source("github")
+        expect(source.entity).toEqual(entityRef("webhook-route", "github"))
+        expect(source.subscriptionClaims).toEqual([
+            { permissionId: "webhook.subscribe", scope: entityRef("webhook-route", "github") },
+        ])
+        await expect(source.eventIdentity({} as WebhookRequest)).resolves.toBe(identity)
     })
 })
 

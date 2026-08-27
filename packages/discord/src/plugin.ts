@@ -1,4 +1,15 @@
 import { definePlugin, SignalboxError, type NoEvents } from "@signalbox/core"
+import { definePermission, entityRef, permissionClaim, type EntityRef } from "@signalbox/permissions"
+
+export const discordSendPermission = definePermission({
+    id: "discord.message.send",
+    name: "Send Discord messages",
+    description: "Send a message through a configured Discord webhook",
+})
+export const DISCORD_SEND_PERMISSION = discordSendPermission.id
+
+/** Stable permission scope for one configured Discord webhook. */
+export const discordWebhookRef = (id: string): EntityRef => entityRef("discord-webhook", id)
 
 /** A message to post to Discord. */
 export interface DiscordMessage {
@@ -14,6 +25,8 @@ export interface DiscordMessage {
 export interface DiscordOptions {
     /** A Discord channel webhook URL to post to. */
     webhookUrl: string
+    /** Stable non-secret ID used as the permission scope. Defaults to `default`. */
+    resourceId?: string
     /** Default display name for messages that don't set their own `username`. */
     username?: string
     /** How many times to retry on an HTTP 429 rate limit. Defaults to 3. */
@@ -41,33 +54,37 @@ const sleep = (ms: number): Promise<void> =>
 export const discordPlugin = (options: DiscordOptions) =>
     definePlugin<DiscordApi, NoEvents>({
         name: "discord",
-        init: () => ({
-            send: async message => {
-                const body = JSON.stringify({
-                    content: message.content,
-                    username: message.username ?? options.username,
-                    avatar_url: message.avatarUrl,
-                })
-                const retries = options.maxRetries ?? 3
-
-                for (let attempt = 0; attempt <= retries; attempt++) {
-                    const response = await fetch(options.webhookUrl, {
-                        method: "POST",
-                        headers: { "content-type": "application/json" },
-                        body,
+        init: ctx => ({
+            send: ctx.permissions.protect(
+                () => permissionClaim(DISCORD_SEND_PERMISSION, discordWebhookRef(options.resourceId ?? "default")),
+                async message => {
+                    const body = JSON.stringify({
+                        content: message.content,
+                        username: message.username ?? options.username,
+                        avatar_url: message.avatarUrl,
                     })
-                    if (response.ok) return
+                    const retries = options.maxRetries ?? 3
 
-                    if (response.status === 429 && attempt < retries) {
-                        const retryAfter = Number(response.headers.get("retry-after") ?? "1")
-                        await sleep((Number.isFinite(retryAfter) ? retryAfter : 1) * 1000)
-                        continue
+                    for (let attempt = 0; attempt <= retries; attempt++) {
+                        const response = await fetch(options.webhookUrl, {
+                            method: "POST",
+                            headers: { "content-type": "application/json" },
+                            body,
+                        })
+                        if (response.ok) return
+
+                        if (response.status === 429 && attempt < retries) {
+                            const retryAfter = Number(response.headers.get("retry-after") ?? "1")
+                            await sleep((Number.isFinite(retryAfter) ? retryAfter : 1) * 1000)
+                            continue
+                        }
+
+                        throw new SignalboxError(
+                            `discord webhook failed: ${String(response.status)} ${await response.text()}`,
+                        )
                     }
-
-                    throw new SignalboxError(
-                        `discord webhook failed: ${String(response.status)} ${await response.text()}`,
-                    )
-                }
-            },
+                },
+                { operation: "discord.message.send" },
+            ),
         }),
     })

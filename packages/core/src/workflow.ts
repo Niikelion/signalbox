@@ -1,6 +1,10 @@
 import type { Channel, EventMap } from "./bus"
 import type { LogLevel } from "./events"
 import type { Cleanup } from "./plugin"
+import type { Flow } from "./flow"
+import type { PermissionRuntime, PermissionSourcePolicy } from "@signalbox/permissions"
+
+export type WorkflowSourceStart<T> = (emit: (value: T) => void) => void
 
 /**
  * What a workflow receives at setup.
@@ -12,6 +16,10 @@ export interface WorkflowContext<TAppEvents extends EventMap, TPlugins> {
     app: Channel<TAppEvents>
     /** The app's plugin APIs. */
     plugins: TPlugins
+    /** Restricted permission enforcement capability. */
+    permissions: PermissionRuntime
+    /** Attach a permission-declared source using this workflow's app-owned ceiling. */
+    source<T>(policy: PermissionSourcePolicy<T>, start: WorkflowSourceStart<T>): Flow<T>
     /**
      * Log a message under the workflow's scope.
      * @param message the message

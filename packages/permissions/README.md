@@ -2,7 +2,7 @@
 
 Framework-neutral authority primitives for Signalbox.
 
-The package provides validated entity references and claims, a transactional definition and grant registry, constrained delegation, versioned grant and membership state, compiled exact/wildcard authorization indexes, opaque identity grants, asynchronous execution leases, protected actions, source policies, and sanitized auditing. It intentionally has no dependency on `@signalbox/core` or storage packages.
+The package provides validated entity references and claims, a transactional definition and grant registry, constrained delegation, versioned grant and membership state, compiled exact/wildcard authorization indexes, opaque identity grants, workflow ceilings, branch-local authority transformations, asynchronous execution leases, protected actions, source policies, and sanitized auditing. It intentionally has no dependency on `@signalbox/core` or storage packages.
 
 ```ts
 import { CompiledAuthority, GrantStateCell, entityRef, permissionClaim } from "@signalbox/permissions"
