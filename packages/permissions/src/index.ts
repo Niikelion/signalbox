@@ -60,3 +60,12 @@ export type {
 } from "./registry-model"
 export { GrantStateCell, MembershipStateCell, ResourceStateCell } from "./state"
 export type { GrantStateOptions, MembershipStateOptions } from "./state"
+export { createPermissionSystem } from "./system"
+export type {
+    PermissionSystem,
+    PermissionSystemAuditEvent,
+    PermissionSystemAuditSink,
+    PermissionSystemIdentityInput,
+    PermissionSystemIdentityIssuer,
+    PermissionSystemOptions,
+} from "./system"

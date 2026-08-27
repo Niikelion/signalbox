@@ -1,5 +1,13 @@
 import { definePlugin, type ReadChannel } from "@signalbox/core"
+import { definePermission, entityRef, permissionClaim, type EntityRef } from "@signalbox/permissions"
 import { updateDynHost, type OvhDynHostCredentials } from "./api"
+
+export const ovhDynHostUpdatePermission = definePermission({
+    id: "ovh.dynhost.update",
+    name: "Update OVH DynHost records",
+})
+
+export const ovhDynHostRef = (record: string): EntityRef => entityRef("ovh-dynhost", record)
 
 /** Events emitted by the OVH plugin. */
 export type OvhEvents = {
@@ -66,14 +74,21 @@ export const ovhPlugin = (options: OvhOptions) =>
         name: "ovh",
         init: ctx => ({
             events: ctx.channel,
-            update: async (ip: string) => {
-                const changed = await applyRecords(options, ip, outcome => {
-                    if (outcome.changed)
-                        ctx.channel.emit("dns:updated", { record: outcome.record, previous: null, current: ip })
-                })
+            update: ctx.permissions.protect(
+                () =>
+                    options.records.map(record =>
+                        permissionClaim(ovhDynHostUpdatePermission.id, ovhDynHostRef(record)),
+                    ),
+                async (ip: string) => {
+                    const changed = await applyRecords(options, ip, outcome => {
+                        if (outcome.changed)
+                            ctx.channel.emit("dns:updated", { record: outcome.record, previous: null, current: ip })
+                    })
 
-                if (!changed) ctx.channel.emit("dns:unchanged", { ip })
-                return changed
-            },
+                    if (!changed) ctx.channel.emit("dns:unchanged", { ip })
+                    return changed
+                },
+                { operation: "ovh.dynhost.update" },
+            ),
         }),
     })

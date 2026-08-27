@@ -19,4 +19,23 @@ const authority = new CompiledAuthority([
 authority.require(permissionClaim("cloudflare.records.update", zone))
 ```
 
-Use `createMemoryPermissionBackend` for ephemeral state. For durable state, install `@signalbox/permissions-store` and pass its backend to `createPermissionRegistry`.
+Use `createMemoryPermissionBackend` for ephemeral state. For durable state, install `@signalbox/permissions-store`. `createPermissionSystem` composes the registry, execution runtime, trusted registry-backed identities, host authority, and unified audit stream:
+
+```ts
+const permissions = await createPermissionSystem({
+    backend: createStorePermissionBackend(store),
+    host: entityRef("system", "my-app"),
+    permissions: [updateDnsRecord],
+    hostClaims: [{ claim: permissionClaim(updateDnsRecord.id, zone), delegation: [] }],
+    audit: event => audit.write(event),
+})
+
+const app = createApp({
+    name: "my-app",
+    permissions: permissions.app,
+    plugins,
+    workflows,
+})
+```
+
+Authentication integrations call `permissions.identities.issue({ principal, groups })`; callers cannot inject contributions. The issuer compiles direct and trusted group authority from the registry.

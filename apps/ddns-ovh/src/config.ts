@@ -15,6 +15,7 @@ export const configSchema = config({
     discordGuildId: field().string().optional().describe("Guild to register /remind in instantly (else global, ~1h)"),
     timezone: field().string().default("UTC").describe("IANA timezone for recurring reminders, e.g. Europe/Warsaw"),
     remindersDb: field().string().default("reminders.db").describe("SQLite file where reminders are stored"),
+    permissionsDb: field().string().default("permissions.db").describe("SQLite file for durable permission state"),
 })
 
 export type DdnsOvhConfig = Infer<typeof configSchema>

@@ -8,6 +8,6 @@ await runCliMain({
     tagline: "OVH DynHost DDNS and a Discord reminders bot in one service",
     schema: configSchema,
     createStore: path => createDdnsOvhConfigStore(path),
-    createApp: config => createDdnsOvhApp(config),
+    createApp: createDdnsOvhApp,
     firewallPort: config => config.watchPort ?? 5960,
 })
