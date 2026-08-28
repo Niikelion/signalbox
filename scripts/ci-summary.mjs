@@ -61,7 +61,10 @@ const coverageRows = () => {
         ]),
     )
 
-    return { rows: rows.sort((a, b) => a.packageName.localeCompare(b.packageName)), aggregate: aggregateTotal }
+    return {
+        rows: rows.sort((a, b) => a.packageName.localeCompare(b.packageName)),
+        aggregate: aggregateTotal,
+    }
 }
 
 const cognitiveSummary = () => {
@@ -69,9 +72,15 @@ const cognitiveSummary = () => {
     return existsSync(file) ? readJson(file) : undefined
 }
 
+const documentationSummary = () => {
+    const file = path.join(root, "documentation-coverage", "summary.json")
+    return existsSync(file) ? readJson(file) : undefined
+}
+
 const markdown = () => {
     const coverage = coverageRows()
     const cognitive = cognitiveSummary()
+    const documentation = documentationSummary()
     const lines = []
 
     lines.push("## Signalbox Quality Report")
@@ -99,6 +108,42 @@ const markdown = () => {
         lines.push("")
     }
 
+    lines.push("### Documentation Coverage")
+    lines.push("")
+    if (documentation) {
+        lines.push(
+            `**Repo total:** ${formatPct(documentation.repository.percentage)} (${formatNumber(documentation.repository.documented)}/${formatNumber(documentation.repository.required)} documented items; ${formatNumber(documentation.repository.missing)} missing).`,
+        )
+        lines.push("")
+        lines.push("| Package | Mode | Coverage | Documented | Missing | Status |")
+        lines.push("| --- | --- | ---: | ---: | ---: | --- |")
+        for (const item of documentation.packages) {
+            lines.push(
+                `| ${item.name} | ${item.mode} | ${formatPct(item.percentage)} | ${formatNumber(item.documented)}/${formatNumber(item.required)} | ${formatNumber(item.missing)} | ${item.status} |`,
+            )
+        }
+        if (documentation.failures.length > 0) {
+            lines.push("")
+            lines.push("#### Extraction Failures")
+            lines.push("")
+            for (const failure of documentation.failures) lines.push(`- ${failure.package}: ${failure.message}`)
+        }
+        if (documentation.findings.length > 0) {
+            lines.push("")
+            lines.push("#### Missing Documentation")
+            lines.push("")
+            for (const finding of documentation.findings.slice(0, maxRows)) {
+                const location = finding.file
+                    ? `${finding.file}:${formatNumber(finding.line)}:${formatNumber(finding.column)}`
+                    : "unknown"
+                lines.push(`- ${finding.package}: ${finding.symbol} — ${finding.requirement} (${location})`)
+            }
+        }
+    } else {
+        lines.push("No documentation-coverage summary was found.")
+    }
+
+    lines.push("")
     lines.push("### Cognitive Load")
     lines.push("")
     if (cognitive) {

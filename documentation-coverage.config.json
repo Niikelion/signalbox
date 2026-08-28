@@ -1,0 +1,22 @@
+{
+    "findingLimit": 25,
+    "packages": {
+        "@signalbox/cloudflare": "report",
+        "@signalbox/commons": "report",
+        "@signalbox/config": "report",
+        "@signalbox/core": "report",
+        "@signalbox/discord": "report",
+        "@signalbox/discord-bot": "report",
+        "@signalbox/graph": "report",
+        "@signalbox/http": "report",
+        "@signalbox/ovh": "report",
+        "@signalbox/permissions": "report",
+        "@signalbox/permissions-store": "report",
+        "@signalbox/schedule": "report",
+        "@signalbox/secrets": "report",
+        "@signalbox/service-cli": "report",
+        "@signalbox/store": "report",
+        "@signalbox/upnp": "report",
+        "@signalbox/webhook": "report"
+    }
+}
