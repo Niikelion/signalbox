@@ -62,7 +62,7 @@ Age prompts securely when the SSH private key is passphrase-protected. `ssh-rsa`
 
 Set `SIGNALBOX_AGE_EXECUTABLE` when `age` is not on `PATH`.
 
-The service runs as a dedicated system user under systemd hardening, not as root. Setup seals active and retired keys with `systemd-creds`, verifies every round trip, loads them through unit credentials, then removes verified file-fallback copies. Config lives at `/etc/<appName>/config.json` as root, otherwise `~/.config/<appName>/config.json`, written `0640` when it holds secrets. Use `createServiceManager` directly for programmatic control.
+The service runs as a dedicated system user under systemd hardening, not as root. `ServiceApp.systemService` can select the user/group, supplementary groups, a runtime directory, and narrow writable paths without accepting raw unit directives. Setup seals active and retired keys with `systemd-creds`, verifies every round trip, loads them through unit credentials, then removes verified file-fallback copies. Config lives at `/etc/<appName>/config.json` as root, otherwise `~/.config/<appName>/config.json`, written `0640` when it holds secrets. Use `createServiceManager` directly for programmatic control.
 
 ## License
 

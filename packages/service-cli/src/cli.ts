@@ -14,7 +14,7 @@ import {
 } from "@signalbox/config"
 import { SignalboxError, write } from "@signalbox/core"
 import { FileKeyBackend, type KeyMaterial } from "@signalbox/secrets"
-import { createServiceManager, type ServiceManager, type ServiceScope } from "./systemd"
+import { createServiceManager, type ServiceManager, type ServiceScope, type SystemServiceProfile } from "./systemd"
 import { readInputFile, readMasked, readPlain, readStream, selectOption } from "./terminal"
 import { exportConfigTransfer, importConfigTransfer } from "./transfer"
 
@@ -54,6 +54,8 @@ export interface ServiceApp<TSchema extends ConfigSchema> {
      * @param config the (possibly partial) config
      */
     firewallPort?: (config: Partial<ConfigOf<TSchema>>) => number | undefined
+    /** Narrow customizations for the generated systemd service. */
+    systemService?: SystemServiceProfile
 }
 
 const usage = (appName: string, tagline: string): string => `${appName} - ${tagline}
@@ -457,7 +459,10 @@ export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSche
 
     const scope: ServiceScope = values.user ? "user" : "system"
     const store = app.createStore(values.config)
-    const service = createServiceManager(app.appName)
+    const service = createServiceManager(app.appName, {
+        description: app.tagline,
+        systemService: app.systemService,
+    })
 
     switch (command) {
         case "config":

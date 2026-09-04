@@ -58,6 +58,7 @@ Plugins that wrap an external capability, exposing it as events and an API.
 | plugin | what it does |
 | --- | --- |
 | [`@signalbox/http`](packages/http) | one shared HTTP server (Hono) that other plugins mount routes on |
+| [`@signalbox/local-rpc`](packages/local-rpc) | typed Linux Unix-socket RPC with kernel-authenticated peer identity |
 | [`@signalbox/webhook`](packages/webhook) | receive inbound HTTP webhooks and emit them as events |
 | [`@signalbox/discord`](packages/discord) | send messages to Discord via a channel webhook |
 | [`@signalbox/discord-bot`](packages/discord-bot) | a Discord gateway bot (slash commands, send, DM) via discord.js |

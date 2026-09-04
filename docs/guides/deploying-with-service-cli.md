@@ -20,6 +20,13 @@ await runCliMain({
     createApp: config => createMyApp(config), // returns an App (something with run())
     runOnce: async config => createMyApp(config), // optional: back the `once` command
     firewallPort: config => config.watchPort, // optional: port to open at setup
+    systemService: { // optional, structured systemd customizations
+        user: "my-service",
+        group: "my-service",
+        supplementaryGroups: ["allowed-local-users"],
+        runtimeDirectory: { name: "my-service", mode: 0o750 },
+        readWritePaths: ["/var/lib/my-service"],
+    },
 })
 ```
 
@@ -40,6 +47,10 @@ await runCliMain({
 `setup` installs a hardened systemd unit that runs `my-service run` as a dedicated, unprivileged system user — not root. It points the unit at the config file, opens the inbound firewall port if `firewallPort` returns one, then enables and starts the service. `teardown` reverses it; `--purge` also deletes the config.
 
 Config lives at `/etc/<appName>/config.json` under the system service, written `0640` when it holds [secrets](../concepts/config.md). `config init` prompts for each field using the schema's descriptions.
+
+`systemService` adds only the corresponding `User`, `Group`, `SupplementaryGroups`, `RuntimeDirectory`, `RuntimeDirectoryMode`, and `ReadWritePaths` directives. It does not accept raw systemd unit text. Existing hardening remains active, and writable paths are narrow exceptions to `ProtectSystem=strict`.
+
+Missing primary users and groups are created by default. Supplementary groups must already exist. Teardown does not delete accounts or groups because they may be shared or operator-owned.
 
 ## Programmatic control
 

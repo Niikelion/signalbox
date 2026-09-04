@@ -18,6 +18,8 @@ jobs:
                 run: yarn install --immutable
             -   name: Build packages
                 run: yarn build
+            -   name: Verify local RPC socket permissions
+                run: sudo env "PATH=$PATH" node node_modules/vitest/vitest.mjs run packages/local-rpc/test/local-rpc.test.ts -t "should reject a caller outside"
             -   name: Save build artifacts
                 uses: actions/cache/save@v5
                 with:
