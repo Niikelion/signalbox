@@ -3,6 +3,7 @@ dist/
 dist-bundle/
 coverage/
 cognitive-load/
+/documentation-coverage/
 *.tgz
 
 .turbo/

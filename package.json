@@ -15,6 +15,8 @@
         "test": "turbo test",
         "test:coverage": "turbo test -- --coverage --coverage.include='src/**/*.ts' --coverage.reporter=text --coverage.reporter=json-summary",
         "cognitive-load": "node scripts/cognitive-load.mjs",
+        "documentation-coverage": "node scripts/documentation-coverage.mjs",
+        "test:documentation-coverage": "vitest run scripts/documentation-coverage.test.mjs",
         "ci:summary": "node scripts/ci-summary.mjs",
         "format": "turbo format",
         "changeset": "changeset",
@@ -25,6 +27,7 @@
         "@vitest/coverage-v8": "^2.1.9",
         "tsdown": "^0.15.7",
         "turbo": "^2.8.20",
+        "typedoc": "^0.28.20",
         "typescript": "^5.9.3",
         "vitest": "^2.1.9"
     }

@@ -75,9 +75,15 @@ jobs:
                 run: yarn install --immutable
             -   name: Run tests
                 run: yarn test:coverage
+            -   name: Test documentation checker
+                if: always()
+                run: yarn test:documentation-coverage
             -   name: Report cognitive load
                 if: always()
                 run: yarn cognitive-load
+            -   name: Report documentation coverage
+                if: always()
+                run: yarn documentation-coverage
             -   name: Write quality summary
                 if: always()
                 run: yarn ci:summary

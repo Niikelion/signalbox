@@ -1,0 +1,12 @@
+{
+    "name": "documentation-coverage-fixture",
+    "types": "./declarations/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./declarations/index.d.ts"
+        },
+        "./secondary": {
+            "types": "./declarations/secondary.d.ts"
+        }
+    }
+}
