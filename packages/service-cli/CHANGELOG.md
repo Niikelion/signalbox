@@ -1,5 +1,11 @@
 # @signalbox/service-cli
 
+## 0.6.0
+
+### Minor Changes
+
+- 46687ff: Add typed Unix-socket RPC with kernel peer credentials and structured systemd service profiles.
+
 ## 0.5.0
 
 ### Minor Changes

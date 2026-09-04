@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/local-rpc",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "license": "MIT",
     "description": "signalbox plugin: typed local RPC over Unix sockets with kernel-authenticated peer identity",
     "repository": {

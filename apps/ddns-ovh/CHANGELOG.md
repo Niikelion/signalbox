@@ -1,5 +1,12 @@
 # @signalbox/ddns-ovh
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [46687ff]
+    - @signalbox/service-cli@0.6.0
+
 ## 0.2.0
 
 ### Minor Changes

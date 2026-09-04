@@ -1407,7 +1407,7 @@ __metadata:
     "@signalbox/config": "npm:^0.3.2"
     "@signalbox/core": "npm:^0.5.1"
     "@signalbox/permissions": "npm:^0.4.0"
-    "@signalbox/service-cli": "npm:^0.5.0"
+    "@signalbox/service-cli": "npm:^0.6.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@signalbox/upnp": "npm:^0.2.3"
     "@types/node": "npm:^22.10.2"
@@ -1507,7 +1507,7 @@ __metadata:
     "@signalbox/permissions": "npm:^0.4.0"
     "@signalbox/permissions-store": "npm:^0.3.1"
     "@signalbox/schedule": "npm:^0.2.3"
-    "@signalbox/service-cli": "npm:^0.5.0"
+    "@signalbox/service-cli": "npm:^0.6.0"
     "@signalbox/shared-config": "npm:^0.1.0"
     "@signalbox/store": "npm:^0.2.3"
     "@signalbox/upnp": "npm:^0.2.3"
@@ -1715,7 +1715,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@signalbox/service-cli@npm:^0.5.0, @signalbox/service-cli@workspace:packages/service-cli":
+"@signalbox/service-cli@npm:^0.6.0, @signalbox/service-cli@workspace:packages/service-cli":
   version: 0.0.0-use.local
   resolution: "@signalbox/service-cli@workspace:packages/service-cli"
   dependencies:
