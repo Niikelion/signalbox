@@ -9,7 +9,7 @@ export type {
 } from "./systemd"
 
 export { runCli, runCliMain } from "./cli"
-export type { ServiceApp, Runnable } from "./cli"
+export type { ServiceApp, Runnable, ServiceCommand, ServiceCommandContext } from "./cli"
 
 export { createAgeRunner, createConfigTransferBundle, exportConfigTransfer, importConfigTransfer } from "./transfer"
 export type { AgeRunner } from "./transfer"

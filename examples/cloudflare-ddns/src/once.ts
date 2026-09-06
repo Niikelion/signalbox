@@ -1,7 +1,8 @@
 import { applyRecords } from "@signalbox/cloudflare"
 import { publicIPv4 } from "@signalbox/commons"
 import { write } from "@signalbox/core"
-import type { CloudflareDdnsConfig } from "./config"
+import type { ServiceCommand } from "@signalbox/service-cli"
+import type { CloudflareDdnsConfig, configSchema } from "./config"
 
 export const runOnce = async (config: CloudflareDdnsConfig): Promise<boolean> => {
     const ip = await publicIPv4(message => {
@@ -16,4 +17,11 @@ export const runOnce = async (config: CloudflareDdnsConfig): Promise<boolean> =>
 
     if (!changed) write("info", `no change needed, still ${ip}`)
     return changed
+}
+
+export const onceCommand: ServiceCommand<typeof configSchema> = {
+    summary: "update the records a single time and exit",
+    run: async ({ config }) => {
+        await runOnce(config)
+    },
 }

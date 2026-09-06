@@ -18,7 +18,9 @@ await runCliMain({
     schema,
     createStore: path => createConfigStore({ appName: "my-service", schema, ...(path ? { path } : {}) }),
     createApp: config => createMyApp(config), // returns an App (something with run())
-    runOnce: async config => createMyApp(config), // optional: back the `once` command
+    commands: { // optional: app-supplied commands added alongside the built-ins
+        once: { summary: "apply state once and exit", run: async ({ config }) => createMyApp(config) },
+    },
     firewallPort: config => config.watchPort, // optional: port to open at setup
     systemService: { // optional, structured systemd customizations
         user: "my-service",
@@ -40,7 +42,11 @@ await runCliMain({
 | `setup` / `teardown [--purge]` | install or remove the systemd service |
 | `start \| stop \| restart \| status` | control the running unit |
 | `run` | run in the foreground (what systemd invokes) |
-| `once` | apply state a single time and exit (needs `runOnce`) |
+| *(your commands)* | anything you add via `commands`, listed in `--help` |
+
+## Custom commands
+
+`commands` maps a name to a `{ summary, run }` pair. Each handler receives the loaded `config`, the `store`, and any positional `args` that followed the command name. Names that collide with a built-in are rejected. This is how you add one-shots like `once`, maintenance tasks, or diagnostics without leaving the shared CLI.
 
 ## What `setup` does
 

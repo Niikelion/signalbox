@@ -78,6 +78,37 @@ describe("secure config commands", () => {
         expect(String(output.mock.calls.at(-1)?.[0])).toBe("file-secret-value\n")
     })
 
+    it("dispatches an app-supplied custom command with loaded config and args", async () => {
+        const { app, configPath } = await fixture()
+        const store = app.createStore(configPath)
+        await store.save({ token: "runtime-secret", name: "runtime" })
+        const run = vi.fn(async () => undefined)
+
+        await runCli({ ...app, commands: { sync: { summary: "sync it", run } } }, ["sync", "now", "--config", configPath])
+
+        expect(run).toHaveBeenCalledOnce()
+        const context = run.mock.calls[0]?.[0] as { config: { name: string }; args: string[] }
+        expect(context.config.name).toBe("runtime")
+        expect(context.args).toEqual(["now"])
+    })
+
+    it("rejects a custom command that collides with a built-in", async () => {
+        const { app, configPath } = await fixture()
+        await expect(
+            runCli(
+                { ...app, commands: { run: { summary: "no", run: async () => undefined } } },
+                ["status", "--config", configPath],
+            ),
+        ).rejects.toThrow("collides with a built-in")
+    })
+
+    it("lists custom commands in --help", async () => {
+        const { app } = await fixture()
+        const output = vi.spyOn(process.stdout, "write").mockImplementation(() => true)
+        await runCli({ ...app, commands: { sync: { summary: "sync it", run: async () => undefined } } }, ["--help"])
+        expect(String(output.mock.calls.at(-1)?.[0])).toContain("sync it")
+    })
+
     it("rekeys an uninstalled config without invoking systemd", async () => {
         const { app, configPath } = await fixture()
         const store = app.createStore(configPath)
