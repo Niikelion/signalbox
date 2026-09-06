@@ -1,4 +1,6 @@
+import * as p from "@clack/prompts"
 import { Command, CommanderError } from "commander"
+import pc from "picocolors"
 import {
     describeOf,
     isRequired,
@@ -15,7 +17,7 @@ import {
 import { SignalboxError, write } from "@signalbox/core"
 import { FileKeyBackend, type KeyMaterial } from "@signalbox/secrets"
 import { createServiceManager, type ServiceManager, type ServiceScope, type SystemServiceProfile } from "./systemd"
-import { readInputFile, readMasked, readPlain, readStream, selectOption } from "./terminal"
+import { readConfirm, readInputFile, readMasked, readPlain, readStream, selectOption } from "./terminal"
 import { exportConfigTransfer, importConfigTransfer } from "./transfer"
 
 /** Something the `run` command can start â€” an app's `run()`. */
@@ -97,8 +99,7 @@ const renderValue = (value: unknown): string => {
 
 const confirm = async (question: string, yes: boolean): Promise<void> => {
     if (yes) return
-    const answer = await readPlain(`${question} Type "yes" to continue: `)
-    if (answer !== "yes") throw new SignalboxError("operation cancelled")
+    if (!(await readConfirm(question))) throw new SignalboxError("operation cancelled")
 }
 
 const keyMaterialsForService = async <TSchema extends ConfigSchema>(
@@ -171,10 +172,16 @@ const plaintextValues = <TSchema extends ConfigSchema>(values: Record<string, un
         Object.entries(values).map(([field, value]) => [field, isSecretValue(value) ? value.reveal() : value]),
     ) as Partial<InputOf<TSchema>>
 
+const fieldPrompt = (field: string, schema: z.ZodType): string => {
+    const description = describeOf(schema)
+    return description ? `${field} — ${description}` : field
+}
+
 const interactiveConfig = async <TSchema extends ConfigSchema>(store: ConfigStore<TSchema>): Promise<void> => {
     const shape = store.schema.shape as Record<string, z.ZodType>
     const fields = Object.entries(shape)
     const staged = (await store.readPartial()) as Record<string, unknown>
+    p.intro(pc.cyan(`Edit ${store.appName} config`))
     let selected = 0
     for (;;) {
         const labels = fields.map(([field, schema]) => {
@@ -183,27 +190,25 @@ const interactiveConfig = async <TSchema extends ConfigSchema>(store: ConfigStor
             return `${field}: ${shown || "(empty)"}`
         })
         labels.push("Save", "Discard")
-        selected = await selectOption("config", labels, selected)
+        selected = await selectOption("Choose a field to edit, or Save/Discard", labels, selected)
         if (selected === fields.length) {
             await store.save(plaintextValues<TSchema>(staged))
-            write("info", `wrote ${store.path}`)
+            p.outro(pc.green(`wrote ${store.path}`))
             return
         }
         if (selected === fields.length + 1) {
-            write("info", "discarded config changes")
+            p.outro(pc.dim("discarded config changes"))
             return
         }
         const entry = fields[selected]
         if (!entry) continue
         const [field, schema] = entry
-        const description = describeOf(schema)
         if (isSecret(schema)) {
-            const raw = await readMasked(`${field}${description ? ` - ${description}` : ""}: `)
+            const raw = await readMasked(fieldPrompt(field, schema))
             const parsed = validateStaged(field, schema, store.coerce(field, raw))
             staged[field] = Secret.from(parsed as JsonValue)
         } else {
-            const current = staged[field]
-            const raw = await readPlain(`${field}${description ? ` - ${description}` : ""} [${renderValue(current)}]: `)
+            const raw = await readPlain(fieldPrompt(field, schema), renderValue(staged[field]))
             if (raw !== "") staged[field] = validateStaged(field, schema, store.coerce(field, raw))
         }
     }
@@ -212,21 +217,20 @@ const interactiveConfig = async <TSchema extends ConfigSchema>(store: ConfigStor
 const initConfig = async <TSchema extends ConfigSchema>(store: ConfigStore<TSchema>): Promise<void> => {
     const fields = Object.entries(store.schema.shape as Record<string, z.ZodType>)
     const current = (await store.readPartial()) as Record<string, unknown>
+    p.intro(pc.cyan(`Configure ${store.appName}`))
     for (const [field, fieldSchema] of fields) {
         if (!isRequired(fieldSchema)) continue
         const existing = current[field]
-        const shown =
-            isSecret(fieldSchema) && existing ? "(set)" : Array.isArray(existing) ? existing.join(",") : existing
-        const suffix = existing !== undefined ? ` [${String(shown)}]` : ""
-        const question = `${field} - ${describeOf(fieldSchema) ?? ""}${suffix}: `
-        const answer = isSecret(fieldSchema) ? await readMasked(question) : await readPlain(question)
+        const answer = isSecret(fieldSchema)
+            ? await readMasked(fieldPrompt(field, fieldSchema))
+            : await readPlain(fieldPrompt(field, fieldSchema), renderValue(existing))
         if (answer) {
             const parsed = validateStaged(field, fieldSchema, store.coerce(field, answer))
             current[field] = isSecret(fieldSchema) ? Secret.from(parsed as JsonValue) : parsed
         }
     }
     await store.save(plaintextValues<TSchema>(current))
-    write("info", `wrote ${store.path}`)
+    p.outro(pc.green(`wrote ${store.path}`))
 }
 
 /** Global options that every leaf command accepts, so they may appear after the command name. */

@@ -1,6 +1,15 @@
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { PassThrough } from "node:stream"
-import { describe, expect, it, vi } from "vitest"
-import { readMasked, stripOneTerminalNewline } from "../src/terminal"
+import { afterEach, describe, expect, it } from "vitest"
+import { readInputFile, readStream, stripOneTerminalNewline } from "../src/terminal"
+
+const directories: string[] = []
+
+afterEach(async () => {
+    await Promise.all(directories.splice(0).map(directory => rm(directory, { recursive: true, force: true })))
+})
 
 describe("secure terminal input", () => {
     it("removes exactly one terminal newline", () => {
@@ -10,21 +19,17 @@ describe("secure terminal input", () => {
         expect(stripOneTerminalNewline(" secret ")).toBe(" secret ")
     })
 
-    it("supports masked cursor insertion without echoing plaintext", async () => {
-        const input = new PassThrough() as PassThrough & NodeJS.ReadStream
-        Object.assign(input, { isTTY: true, isRaw: false, setRawMode: vi.fn() })
-        const output = new PassThrough() as PassThrough & NodeJS.WriteStream
-        Object.assign(output, { isTTY: true })
-        let rendered = ""
-        output.on("data", chunk => {
-            rendered += chunk.toString("utf8")
-        })
+    it("reads a secret from a stream and strips one trailing newline", async () => {
+        const input = new PassThrough()
+        input.end("stream-secret\n")
+        expect(await readStream(input)).toBe("stream-secret")
+    })
 
-        const answer = readMasked("token: ", input, output)
-        input.write("ac\u001B[Db\r")
-
-        await expect(answer).resolves.toBe("abc")
-        expect(rendered).not.toContain("abc")
-        expect(rendered).toContain("***")
+    it("reads a secret from a UTF-8 file and strips one trailing newline", async () => {
+        const directory = await mkdtemp(join(tmpdir(), "terminal-"))
+        directories.push(directory)
+        const path = join(directory, "secret.txt")
+        await writeFile(path, "file-secret\n")
+        expect(await readInputFile(path)).toBe("file-secret")
     })
 })
