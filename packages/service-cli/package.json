@@ -37,7 +37,8 @@
     "dependencies": {
         "@signalbox/config": "^0.3.2",
         "@signalbox/core": "^0.5.1",
-        "@signalbox/secrets": "^0.2.0"
+        "@signalbox/secrets": "^0.2.0",
+        "commander": "^13.1.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",
