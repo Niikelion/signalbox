@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { createServiceManager } from "../src/index"
+import { createSystemdServiceAdapter } from "../src/index"
 import { renderSystemdUnit } from "../src/systemd"
 
 const render = (systemService = {}) =>
@@ -9,7 +9,7 @@ const render = (systemService = {}) =>
         scope: "system",
         configPath: "/etc/proxybox/config.json",
         executable: "/usr/bin/node",
-        cliPath: "/usr/bin/proxybox",
+        runArgs: ["/usr/bin/proxybox", "run"],
         credentials: [],
         systemService,
     })
@@ -20,6 +20,7 @@ describe("systemd service profiles", () => {
 
         expect(unit).toContain("Description=manages local proxy routes")
         expect(unit).toContain("User=signalbox\nGroup=signalbox")
+        expect(unit).toContain("ExecStart=/usr/bin/node /usr/bin/proxybox run")
         expect(unit).toContain("ProtectSystem=strict")
         expect(unit).toContain("RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX")
     })
@@ -40,12 +41,12 @@ describe("systemd service profiles", () => {
     })
 
     it("should reject values that could inject unit directives", () => {
-        expect(() => createServiceManager("proxybox", { systemService: { user: "proxybox\nUser=root" } })).toThrow(
+        expect(() => createSystemdServiceAdapter({ profile: { user: "proxybox\nUser=root" } })).toThrow(
             "invalid system account",
         )
-        expect(() =>
-            createServiceManager("proxybox", { systemService: { readWritePaths: ["/var/lib/proxybox extra"] } }),
-        ).toThrow("invalid writable path")
+        expect(() => createSystemdServiceAdapter({ profile: { readWritePaths: ["/var/lib/proxybox extra"] } })).toThrow(
+            "invalid writable path",
+        )
         expect(() =>
             renderSystemdUnit({
                 appName: "proxybox",
@@ -53,9 +54,17 @@ describe("systemd service profiles", () => {
                 scope: "system",
                 configPath: "/etc/proxybox/config.json",
                 executable: "/usr/bin/node",
-                cliPath: "/usr/bin/proxybox",
+                runArgs: ["/usr/bin/proxybox", "run"],
                 credentials: [],
             }),
         ).toThrow("description cannot contain")
+    })
+})
+
+describe("systemd service adapter", () => {
+    it("declares system and user scopes with system as default", () => {
+        const adapter = createSystemdServiceAdapter()
+        expect(adapter.defaultScope).toBe("system")
+        expect(adapter.scopes.map(scope => scope.name)).toEqual(["system", "user"])
     })
 })

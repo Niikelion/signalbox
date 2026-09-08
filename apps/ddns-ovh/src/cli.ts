@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 import { runCliMain } from "@signalbox/service-cli"
+import { createSystemdServiceAdapter } from "@signalbox/service-systemd"
 import { createDdnsOvhApp } from "./app"
 import { APP_NAME, configSchema, createDdnsOvhConfigStore } from "./config"
 
-await runCliMain({
-    appName: APP_NAME,
-    tagline: "OVH DynHost DDNS and a Discord reminders bot in one service",
-    schema: configSchema,
-    createStore: path => createDdnsOvhConfigStore(path),
-    createApp: createDdnsOvhApp,
-    firewallPort: config => config.watchPort ?? 5960,
-})
+await runCliMain(
+    {
+        appName: APP_NAME,
+        tagline: "OVH DynHost DDNS and a Discord reminders bot in one service",
+        schema: configSchema,
+        createStore: path => createDdnsOvhConfigStore(path),
+        createApp: createDdnsOvhApp,
+    },
+    { service: createSystemdServiceAdapter({ firewallPort: config => config.watchPort ?? 5960 }) },
+)

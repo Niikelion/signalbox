@@ -33,6 +33,7 @@
         "@signalbox/permissions-store": "^0.3.1",
         "@signalbox/schedule": "^0.2.3",
         "@signalbox/service-cli": "^0.8.0",
+        "@signalbox/service-systemd": "^0.0.0",
         "@signalbox/store": "^0.2.3",
         "@signalbox/upnp": "^0.2.3"
     },

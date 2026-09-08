@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs"
 import * as p from "@clack/prompts"
 import { Command, CommanderError } from "commander"
 import pc from "picocolors"
@@ -16,7 +17,7 @@ import {
 } from "@signalbox/config"
 import { SignalboxError, write } from "@signalbox/core"
 import { FileKeyBackend, type KeyMaterial } from "@signalbox/secrets"
-import { createServiceManager, type ServiceManager, type ServiceScope, type SystemServiceProfile } from "./systemd"
+import type { ServiceAdapter, ServiceTarget } from "./adapter"
 import { readConfirm, readInputFile, readMasked, readPlain, readStream, selectOption } from "./terminal"
 import { exportConfigTransfer, importConfigTransfer } from "./transfer"
 
@@ -54,10 +55,12 @@ export interface ServiceCommand<TSchema extends ConfigSchema> {
 
 /**
  * The descriptor a concrete app supplies to drive the shared service CLI.
+ * It describes application behavior only; service-system integration is
+ * supplied separately as a {@link ServiceAdapter} through {@link RunCliOptions}.
  * @typeParam TSchema the app's Zod config schema
  */
 export interface ServiceApp<TSchema extends ConfigSchema> {
-    /** Binary/app name (config path, systemd unit, usage header). */
+    /** Binary/app name (config path, service unit, usage header). */
     appName: string
     /** One-line summary shown in `--help`. */
     tagline: string
@@ -78,13 +81,19 @@ export interface ServiceApp<TSchema extends ConfigSchema> {
      * built-in commands. Names that collide with a built-in are rejected.
      */
     commands?: Record<string, ServiceCommand<TSchema>>
+}
+
+/**
+ * Options for {@link runCli} / {@link runCliMain}.
+ * @typeParam TSchema the app's Zod config schema
+ */
+export interface RunCliOptions<TSchema extends ConfigSchema> {
     /**
-     * Optional inbound port to open from the gateway at `setup`.
-     * @param config the (possibly partial) config
+     * The service-system adapter. When supplied, the lifecycle commands
+     * (`setup`, `teardown`, `start`, `stop`, `restart`, `status`) are enabled;
+     * when omitted, they are hidden and rejected.
      */
-    firewallPort?: (config: Partial<ConfigOf<TSchema>>) => number | undefined
-    /** Narrow customizations for the generated systemd service. */
-    systemService?: SystemServiceProfile
+    service?: ServiceAdapter<ConfigOf<TSchema>>
 }
 
 const BUILTIN_COMMANDS = ["config", "setup", "teardown", "start", "stop", "restart", "status", "run"] as const
@@ -133,28 +142,11 @@ const removeFileFallbackKeys = async <TSchema extends ConfigSchema>(
     return removed
 }
 
-const sealForService = async <TSchema extends ConfigSchema>(
-    store: ConfigStore<TSchema>,
-    service: ServiceManager,
-    scope: ServiceScope,
-    watchPort?: number,
-): Promise<void> => {
-    const keys = await keyMaterialsForService(store)
-    service.setupService({
-        scope,
-        configPath: store.path,
-        ...(watchPort === undefined ? {} : { watchPort }),
-        ...(keys.activeKeyId ? { activeKeyId: keys.activeKeyId } : {}),
-        keys: keys.materials,
-    })
-    for (const material of keys.materials) {
-        const verified = await store.keyMaterial(material.id)
-        if (!Buffer.from(verified.key).equals(Buffer.from(material.key))) {
-            throw new SignalboxError(`sealed credential ${material.id} failed config-store verification`)
-        }
-    }
-    const removed = await removeFileFallbackKeys(store)
-    if (removed.length > 0) write("info", `removed ${String(removed.length)} verified file-fallback key(s)`)
+/** Executable and args the installed service uses to invoke this CLI's `run`. */
+const cliRunInfo = (): { executable: string; runArgs: readonly string[] } => {
+    const argv1 = process.argv[1]
+    if (!argv1) throw new SignalboxError("cannot determine the path to this CLI")
+    return { executable: process.execPath, runArgs: [realpathSync(argv1), "run"] }
 }
 
 const validateStaged = (field: string, schema: z.ZodType, value: unknown): unknown => {
@@ -233,19 +225,26 @@ const initConfig = async <TSchema extends ConfigSchema>(store: ConfigStore<TSche
     p.outro(pc.green(`wrote ${store.path}`))
 }
 
-/** Global options that every leaf command accepts, so they may appear after the command name. */
-interface GlobalOptions {
-    readonly config?: string
-    readonly user?: boolean
+/** Validate adapter metadata; invalid metadata is a configuration error. */
+const validateAdapter = <TConfig>(service: ServiceAdapter<TConfig>): void => {
+    if (service.scopes.length === 0) throw new SignalboxError("service adapter declares no scopes")
+    const names = service.scopes.map(scope => scope.name)
+    if (names.some(name => name.length === 0)) throw new SignalboxError("service adapter has an empty scope name")
+    if (new Set(names).size !== names.length) throw new SignalboxError("service adapter has duplicate scope names")
+    if (!names.includes(service.defaultScope)) {
+        throw new SignalboxError(`service adapter defaultScope "${service.defaultScope}" is not a declared scope`)
+    }
 }
 
 /**
- * Build the commander program for one app: global options, systemd lifecycle,
- * the `config` command group, `run`, and any app-supplied custom commands.
+ * Build the commander program for one app: config commands, `run`, any
+ * app-supplied custom commands, and — when an adapter is supplied — the
+ * generic lifecycle commands.
  */
 const buildProgram = <TSchema extends ConfigSchema>(
     app: ServiceApp<TSchema>,
     commands: Record<string, ServiceCommand<TSchema>>,
+    service?: ServiceAdapter<ConfigOf<TSchema>>,
 ): Command => {
     const program = new Command()
     // Throw instead of calling process.exit so runCli stays testable and runCliMain owns reporting.
@@ -265,86 +264,121 @@ const buildProgram = <TSchema extends ConfigSchema>(
         return schema
     }
 
-    // Add the shared --config/--user options so they may appear after the command name.
-    const withContext = (command: Command): Command =>
-        command
-            .option("--config <path>", "use a specific config file")
-            .option("--user", "act on a per-user systemd unit instead of a system one (no root)")
+    // `--config` may appear after any command; `--scope` only where the adapter is used.
+    const withConfig = (command: Command): Command => command.option("--config <path>", "use a specific config file")
+    const withScope = (command: Command): Command =>
+        service
+            ? command.option(
+                  "--scope <name>",
+                  `service scope: ${service.scopes.map(scope => scope.name).join(", ")} (default ${service.defaultScope})`,
+              )
+            : command
 
-    // Build the per-invocation store/service/scope from a command's global options.
-    const ctxOf = (command: Command): { store: ConfigStore<TSchema>; service: ServiceManager; scope: ServiceScope } => {
-        const opts = command.opts<GlobalOptions>()
-        return {
-            store: app.createStore(opts.config),
-            service: createServiceManager(app.appName, {
-                description: app.tagline,
-                ...(app.systemService ? { systemService: app.systemService } : {}),
-            }),
-            scope: opts.user ? "user" : "system",
+    const storeOf = (command: Command): ConfigStore<TSchema> =>
+        app.createStore(command.opts<{ config?: string }>().config)
+    const resolveScope = (command: Command): string => {
+        if (!service) throw new SignalboxError("this command needs a service adapter")
+        const requested = command.opts<{ scope?: string }>().scope ?? service.defaultScope
+        if (!service.scopes.some(scope => scope.name === requested)) {
+            throw new SignalboxError(
+                `unknown scope "${requested}"`,
+                `known scopes: ${service.scopes.map(scope => scope.name).join(", ")}`,
+            )
         }
+        return requested
     }
+    const targetOf = (command: Command): ServiceTarget => ({ appName: app.appName, scope: resolveScope(command) })
 
-    // ---- lifecycle -------------------------------------------------------
-    withContext(program.command("setup"))
-        .description("install and start the systemd service")
-        .action(async function (this: Command) {
-            const { store, service, scope } = ctxOf(this)
-            const config = await store.load()
-            await sealForService(store, service, scope, app.firewallPort?.(config))
+    const seal = async (store: ConfigStore<TSchema>, scope: string, config: ConfigOf<TSchema>): Promise<void> => {
+        if (!service) throw new SignalboxError("this command needs a service adapter")
+        const keys = await keyMaterialsForService(store)
+        const runInfo = cliRunInfo()
+        await service.setup({
+            appName: app.appName,
+            scope,
+            description: app.tagline,
+            config,
+            configPath: store.path,
+            executable: runInfo.executable,
+            runArgs: runInfo.runArgs,
+            keys: keys.materials,
+            ...(keys.activeKeyId ? { activeKeyId: keys.activeKeyId } : {}),
         })
-
-    withContext(program.command("teardown"))
-        .description("stop and remove the service; --purge also drops the config")
-        .option("--purge", "also delete the config and managed keys")
-        .option("--yes", "confirm destructive non-interactive commands")
-        .action(async function (this: Command) {
-            const { store, service, scope } = ctxOf(this)
-            const opts = this.opts<{ purge?: boolean; yes?: boolean }>()
-            const partial = (await store.inspect()).values as Partial<ConfigOf<TSchema>>
-            if (opts.purge) {
-                const inventory = await store.keyInventory()
-                const targets = [store.path, ...inventory.map(item => `${item.backend}:${item.id}`)]
-                await confirm(
-                    `Purge config and managed keys?\n${targets.map(target => `  ${target}`).join("\n")}\n`,
-                    opts.yes ?? false,
-                )
-                await store.purge()
-                service.purgeSealedCredentials(scope)
-                const external = inventory
-                    .filter(item => !item.managed && item.backend !== "systemd-creds")
-                    .map(item => item.id)
-                if (external.length > 0) {
-                    write("warn", `external environment keys cannot be deleted: ${external.join(", ")}`)
-                }
+        for (const material of keys.materials) {
+            const verified = await store.keyMaterial(material.id)
+            if (!Buffer.from(verified.key).equals(Buffer.from(material.key))) {
+                throw new SignalboxError(`sealed credential ${material.id} failed config-store verification`)
             }
-            service.teardownService({
-                scope,
-                purge: opts.purge ?? false,
-                configPath: store.path,
-                watchPort: app.firewallPort?.(partial),
-            })
-        })
+        }
+        const removed = await removeFileFallbackKeys(store)
+        if (removed.length > 0) write("info", `removed ${String(removed.length)} verified file-fallback key(s)`)
+    }
 
-    for (const action of ["start", "stop", "restart"] as const) {
-        withContext(program.command(action))
-            .description(`${action} the running unit`)
-            .action(function (this: Command) {
-                const { service, scope } = ctxOf(this)
-                service.controlService(scope, action)
+    // ---- lifecycle (only with an adapter) --------------------------------
+    if (service) {
+        withScope(withConfig(program.command("setup")))
+            .description("install and start the service")
+            .action(async function (this: Command) {
+                const store = storeOf(this)
+                await seal(store, resolveScope(this), await store.load())
+            })
+
+        withScope(withConfig(program.command("teardown")))
+            .description("stop and remove the service; --purge also drops the config")
+            .option("--purge", "also delete the config and managed keys")
+            .option("--yes", "confirm destructive non-interactive commands")
+            .action(async function (this: Command) {
+                const store = storeOf(this)
+                const scope = resolveScope(this)
+                const opts = this.opts<{ purge?: boolean; yes?: boolean }>()
+                const partial = (await store.inspect()).values as Partial<ConfigOf<TSchema>>
+                const inventory = opts.purge ? await store.keyInventory() : []
+                if (opts.purge) {
+                    const targets = [store.path, ...inventory.map(item => `${item.backend}:${item.id}`)]
+                    await confirm(
+                        `Purge config and managed keys?\n${targets.map(target => `  ${target}`).join("\n")}\n`,
+                        opts.yes ?? false,
+                    )
+                }
+                await service.teardown({
+                    appName: app.appName,
+                    scope,
+                    description: app.tagline,
+                    config: partial,
+                    configPath: store.path,
+                    purge: opts.purge ?? false,
+                })
+                if (opts.purge) {
+                    await service.purgeCredentials({ appName: app.appName, scope })
+                    await store.purge()
+                    const external = inventory
+                        .filter(item => !item.managed && item.backend !== "systemd-creds")
+                        .map(item => item.id)
+                    if (external.length > 0) {
+                        write("warn", `external environment keys cannot be deleted: ${external.join(", ")}`)
+                    }
+                }
+            })
+
+        for (const action of ["start", "stop", "restart"] as const) {
+            withScope(withConfig(program.command(action)))
+                .description(`${action} the service`)
+                .action(async function (this: Command) {
+                    await service.control(targetOf(this), action)
+                })
+        }
+
+        withScope(withConfig(program.command("status")))
+            .description("print the service status")
+            .action(async function (this: Command) {
+                process.stdout.write(await service.status(targetOf(this)))
             })
     }
 
-    withContext(program.command("status"))
-        .description("print the unit status")
-        .action(function (this: Command) {
-            const { service, scope } = ctxOf(this)
-            process.stdout.write(service.serviceStatus(scope))
-        })
-
-    withContext(program.command("run"))
-        .description("run in the foreground (this is what systemd calls)")
+    withConfig(program.command("run"))
+        .description("run in the foreground (this is what the service calls)")
         .action(async function (this: Command) {
-            const { store } = ctxOf(this)
+            const store = storeOf(this)
             const runnable = await app.createApp(await store.load())
             await runnable.run()
         })
@@ -352,29 +386,29 @@ const buildProgram = <TSchema extends ConfigSchema>(
     // ---- config ----------------------------------------------------------
     const config = program.command("config").description("manage the config file")
 
-    withContext(config.command("path"))
+    withConfig(config.command("path"))
         .description("print the config file location")
         .action(function (this: Command) {
-            process.stdout.write(`${ctxOf(this).store.path}\n`)
+            process.stdout.write(`${storeOf(this).path}\n`)
         })
 
-    withContext(config.command("list"))
+    withConfig(config.command("list"))
         .description("show the current values, secrets redacted")
         .action(async function (this: Command) {
-            const inspection = await ctxOf(this).store.inspect()
+            const inspection = await storeOf(this).inspect()
             process.stdout.write(`${JSON.stringify(inspection.values, null, 4)}\n`)
         })
 
-    withContext(config.command("get"))
+    withConfig(config.command("get"))
         .description("print one value, secrets redacted")
         .argument("<key>")
         .action(async function (this: Command, key: string) {
             requireKey(key)
-            const value = (await ctxOf(this).store.inspect()).values[key]
+            const value = (await storeOf(this).inspect()).values[key]
             process.stdout.write(`${renderValue(value)}\n`)
         })
 
-    withContext(config.command("reveal"))
+    withConfig(config.command("reveal"))
         .description("explicitly print one secret value")
         .argument("<key>")
         .action(async function (this: Command, key: string) {
@@ -382,19 +416,19 @@ const buildProgram = <TSchema extends ConfigSchema>(
             if (!isSecret(schemaOf(field))) {
                 throw new SignalboxError(`config reveal accepts only secret fields; ${field} is not secret`)
             }
-            const value = ((await ctxOf(this).store.load()) as Record<string, unknown>)[field]
+            const value = ((await storeOf(this).load()) as Record<string, unknown>)[field]
             if (!isSecretValue(value)) throw new SignalboxError(`secret config field ${field} is absent`)
             process.stdout.write(`${renderValue(value.reveal())}\n`)
         })
 
-    withContext(config.command("set"))
+    withConfig(config.command("set"))
         .description("set a non-secret value, or a secret via --stdin/--file")
         .argument("<key>")
         .argument("[value...]")
         .option("--stdin", "read a secret value from standard input")
         .option("--file <path>", "read a secret value from a UTF-8 file")
         .action(async function (this: Command, key: string, value: string[]) {
-            const { store } = ctxOf(this)
+            const store = storeOf(this)
             const opts = this.opts<{ stdin?: boolean; file?: string }>()
             const field = requireKey(key)
             if (isSecret(schemaOf(field))) {
@@ -421,29 +455,32 @@ const buildProgram = <TSchema extends ConfigSchema>(
             write("info", `set ${field} in ${store.path}`)
         })
 
-    withContext(config.command("unset"))
+    withConfig(config.command("unset"))
         .description("remove one value")
         .argument("<key>")
         .action(async function (this: Command, key: string) {
-            const { store } = ctxOf(this)
+            const store = storeOf(this)
             const field = requireKey(key)
             await store.unset(field)
             write("info", `unset ${field} in ${store.path}`)
         })
 
-    withContext(config.command("rekey"))
+    withScope(withConfig(config.command("rekey")))
         .description("rotate the encryption key")
         .option("--revoke-old", "delete the prior key after verified rekey")
         .action(async function (this: Command) {
-            const { store, service, scope } = ctxOf(this)
+            const store = storeOf(this)
             const revokeOld = this.opts<{ revokeOld?: boolean }>().revokeOld ?? false
-            const installed = service.isInstalled(scope)
+            const scope = service ? resolveScope(this) : undefined
+            const installed = service && scope ? await service.isInstalled({ appName: app.appName, scope }) : false
             const result = await store.rekey({
                 revokeOld,
-                ...(installed ? { verify: async () => sealForService(store, service, scope) } : {}),
+                ...(installed && scope ? { verify: async () => seal(store, scope, await store.load()) } : {}),
             })
             if (installed) await removeFileFallbackKeys(store)
-            if (installed && revokeOld) service.deleteSealedKeys(scope, result.oldKeyIds)
+            if (installed && revokeOld && service && scope) {
+                await service.removeCredentials({ appName: app.appName, scope }, result.oldKeyIds)
+            }
             write("info", `rekeyed config to ${result.newKeyId} using ${result.backend}`)
             if (result.externalKeyIds.length > 0 && !revokeOld) {
                 write("info", `retained external key(s): ${result.externalKeyIds.join(", ")}`)
@@ -452,18 +489,18 @@ const buildProgram = <TSchema extends ConfigSchema>(
 
     const keys = config.command("keys").description("manage encryption keys")
 
-    withContext(keys.command("list"))
+    withConfig(keys.command("list"))
         .description("list the key inventory")
         .action(async function (this: Command) {
-            process.stdout.write(`${JSON.stringify(await ctxOf(this).store.keyInventory(), null, 4)}\n`)
+            process.stdout.write(`${JSON.stringify(await storeOf(this).keyInventory(), null, 4)}\n`)
         })
 
-    withContext(keys.command("prune"))
+    withScope(withConfig(keys.command("prune")))
         .description("delete retired keys")
         .argument("<id...>")
         .option("--yes", "confirm destructive non-interactive commands")
         .action(async function (this: Command, ids: string[]) {
-            const { store, service, scope } = ctxOf(this)
+            const store = storeOf(this)
             const yes = this.opts<{ yes?: boolean }>().yes ?? false
             const inventory = await store.keyInventory()
             const selected = ids.map(keyId => {
@@ -480,17 +517,20 @@ const buildProgram = <TSchema extends ConfigSchema>(
                 .filter(item => item.entries.some(entry => entry.backend === "systemd-creds"))
                 .map(item => item.keyId)
             if (managed.length > 0) await store.pruneKeys(managed)
-            if (sealed.length > 0) service.deleteSealedKeys(scope, sealed)
+            if (sealed.length > 0) {
+                if (!service) throw new SignalboxError("removing sealed credentials needs a service adapter")
+                await service.removeCredentials({ appName: app.appName, scope: resolveScope(this) }, sealed)
+            }
             write("info", `pruned key(s): ${ids.join(", ")}`)
         })
 
-    withContext(config.command("export"))
+    withConfig(config.command("export"))
         .description("export an encrypted transfer bundle")
         .option("--recipient <key>", "age1, ssh-rsa, or ssh-ed25519 export recipient")
         .option("--recipients-file <path>", "file containing one or more Age/SSH recipients")
         .option("--output <path>", "new encrypted transfer file to create")
         .action(async function (this: Command) {
-            const { store } = ctxOf(this)
+            const store = storeOf(this)
             const opts = this.opts<{ recipient?: string; recipientsFile?: string; output?: string }>()
             if (!opts.output) throw new SignalboxError("config export needs --output <file>")
             await exportConfigTransfer(store, {
@@ -501,13 +541,13 @@ const buildProgram = <TSchema extends ConfigSchema>(
             write("info", `exported encrypted config to ${opts.output}`)
         })
 
-    withContext(config.command("import"))
+    withConfig(config.command("import"))
         .description("import an encrypted transfer bundle")
         .option("--identity <path>", "Age or SSH private identity used for import")
         .option("--file <path>", "encrypted transfer file to import")
         .option("--yes", "confirm destructive non-interactive commands")
         .action(async function (this: Command) {
-            const { store } = ctxOf(this)
+            const store = storeOf(this)
             const opts = this.opts<{ identity?: string; file?: string; yes?: boolean }>()
             if (!opts.file) throw new SignalboxError("config import needs --file <bundle>")
             if (!opts.identity) throw new SignalboxError("config import needs --identity <private-key>")
@@ -516,25 +556,25 @@ const buildProgram = <TSchema extends ConfigSchema>(
             write("info", `imported and locally encrypted config at ${store.path}`)
         })
 
-    withContext(config.command("init"))
+    withConfig(config.command("init"))
         .description("fill in the required values interactively")
         .action(async function (this: Command) {
-            await initConfig(ctxOf(this).store)
+            await initConfig(storeOf(this))
         })
 
-    withContext(config.command("interactive"))
+    withConfig(config.command("interactive"))
         .description("edit all fields, then Save or Discard")
         .action(async function (this: Command) {
-            await interactiveConfig(ctxOf(this).store)
+            await interactiveConfig(storeOf(this))
         })
 
     // ---- app-supplied custom commands -----------------------------------
     for (const [name, custom] of Object.entries(commands)) {
-        withContext(program.command(name))
+        withConfig(program.command(name))
             .description(custom.summary)
             .argument("[args...]")
             .action(async function (this: Command, args: string[]) {
-                const { store } = ctxOf(this)
+                const store = storeOf(this)
                 await custom.run({ config: await store.load(), store, args })
             })
     }
@@ -543,20 +583,26 @@ const buildProgram = <TSchema extends ConfigSchema>(
 }
 
 /**
- * Run the shared service CLI (config commands, systemd lifecycle, run, and any
- * app-supplied custom commands) for one app.
+ * Run the shared service CLI (config commands, `run`, any app-supplied custom
+ * commands, and — when a service adapter is supplied — the lifecycle commands).
  * @typeParam TSchema the app's Zod config schema
  * @param app the app descriptor
  * @param argv the CLI arguments (without node/script)
+ * @param options optional service adapter and other run options
  */
-export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSchema>, argv: string[]): Promise<void> => {
+export const runCli = async <TSchema extends ConfigSchema>(
+    app: ServiceApp<TSchema>,
+    argv: string[],
+    options: RunCliOptions<TSchema> = {},
+): Promise<void> => {
     const commands = app.commands ?? {}
     const builtins = new Set<string>(BUILTIN_COMMANDS)
     for (const name of Object.keys(commands)) {
         if (builtins.has(name)) throw new SignalboxError(`custom command "${name}" collides with a built-in command`)
     }
+    if (options.service) validateAdapter(options.service)
 
-    const program = buildProgram(app, commands)
+    const program = buildProgram(app, commands, options.service)
     if (argv.length === 0) {
         program.outputHelp()
         return
@@ -578,10 +624,14 @@ export const runCli = async <TSchema extends ConfigSchema>(app: ServiceApp<TSche
  * {@link runCli} over `process.argv`, with SignalboxError-aware error reporting and exit code.
  * @typeParam TSchema the app's Zod config schema
  * @param app the app descriptor
+ * @param options optional service adapter and other run options
  */
-export const runCliMain = async <TSchema extends ConfigSchema>(app: ServiceApp<TSchema>): Promise<void> => {
+export const runCliMain = async <TSchema extends ConfigSchema>(
+    app: ServiceApp<TSchema>,
+    options: RunCliOptions<TSchema> = {},
+): Promise<void> => {
     try {
-        await runCli(app, process.argv.slice(2))
+        await runCli(app, process.argv.slice(2), options)
     } catch (error) {
         if (error instanceof SignalboxError) {
             write("error", error.message)
