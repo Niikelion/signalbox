@@ -1,5 +1,13 @@
 # @signalbox/ddns-ovh
 
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies [8023d01]
+    - @signalbox/service-cli@0.9.0
+    - @signalbox/service-systemd@0.1.0
+
 ## 0.2.3
 
 ### Patch Changes

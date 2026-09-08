@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/service-systemd",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "license": "MIT",
     "description": "signalbox systemd service adapter for @signalbox/service-cli: unit rendering, hardening, credential sealing, and lifecycle management",
     "repository": {
@@ -37,7 +37,7 @@
     "dependencies": {
         "@signalbox/core": "^0.5.1",
         "@signalbox/secrets": "^0.2.0",
-        "@signalbox/service-cli": "^0.8.0"
+        "@signalbox/service-cli": "^0.9.0"
     },
     "devDependencies": {
         "@arethetypeswrong/core": "^0.18.2",

@@ -1,6 +1,6 @@
 {
     "name": "@signalbox/cloudflare-ddns",
-    "version": "0.1.8",
+    "version": "0.1.9",
     "license": "MIT",
     "description": "Cloudflare dynamic DNS for home connections, driven by your router's UPnP events",
     "repository": {
@@ -29,8 +29,8 @@
         "@signalbox/config": "^0.3.2",
         "@signalbox/core": "^0.5.1",
         "@signalbox/permissions": "^0.4.0",
-        "@signalbox/service-cli": "^0.8.0",
-        "@signalbox/service-systemd": "^0.0.0",
+        "@signalbox/service-cli": "^0.9.0",
+        "@signalbox/service-systemd": "^0.1.0",
         "@signalbox/upnp": "^0.2.3"
     },
     "devDependencies": {
