@@ -1,15 +1,5 @@
 import { execFileSync } from "node:child_process"
-import {
-    chownSync,
-    chmodSync,
-    existsSync,
-    mkdirSync,
-    readFileSync,
-    realpathSync,
-    readdirSync,
-    rmSync,
-    writeFileSync,
-} from "node:fs"
+import { chownSync, chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import { homedir } from "node:os"
 import { dirname, isAbsolute, join, resolve } from "node:path"
 import { isRoot, SignalboxError, write } from "@signalbox/core"
@@ -17,25 +7,15 @@ import {
     systemdActiveCredentialName,
     systemdCredentialName,
     systemdManifestName,
-    type KeyMaterial,
     type SystemdCredentialManifest,
 } from "@signalbox/secrets"
-
-/** Whether a systemd unit is system-wide (root) or per-user (rootless). */
-export type ServiceScope = "system" | "user"
-
-/** Options for installing the service. */
-export interface SetupOptions {
-    scope: ServiceScope
-    /** Path to the config file the unit points at. */
-    configPath: string
-    /** Inbound port to open in the firewall, if any. */
-    watchPort?: number
-    /** Keys to seal and expose to the installed unit. */
-    keys?: readonly KeyMaterial[]
-    /** Key the unit should use for new writes. */
-    activeKeyId?: string
-}
+import type {
+    ServiceAdapter,
+    ServiceScope,
+    ServiceSetupContext,
+    ServiceTarget,
+    ServiceTeardownContext,
+} from "@signalbox/service-cli"
 
 /** Narrow, structured customizations for a generated systemd service. */
 export interface SystemServiceProfile {
@@ -53,42 +33,24 @@ export interface SystemServiceProfile {
     readWritePaths?: readonly string[]
 }
 
-/** Options fixed for the lifetime of a service manager. */
-export interface ServiceManagerOptions {
-    /** Description written to the systemd unit. */
-    description?: string
+/**
+ * Options for {@link createSystemdServiceAdapter}.
+ * @typeParam TConfig the app's validated config type
+ */
+export interface SystemdServiceAdapterOptions<TConfig> {
     /** Structured systemd service customizations. */
-    systemService?: SystemServiceProfile
+    readonly profile?: SystemServiceProfile
+    /** Inbound firewall port to open at setup / close at teardown, derived from config. */
+    readonly firewallPort?: (config: Partial<TConfig>) => number | undefined
 }
 
-/** Options for removing the service. */
-export interface TeardownOptions {
-    scope: ServiceScope
-    /** Also delete the config file. */
-    purge: boolean
-    /** Path to the config file. */
-    configPath: string
-    /** Firewall port to close, if any. */
-    watchPort?: number
-}
+/** systemd's two scopes: a system-wide unit (root) and a per-user unit (rootless). */
+type SystemdScope = "system" | "user"
 
-/** Manages an app's systemd unit lifecycle. */
-export interface ServiceManager {
-    /** Whether the selected unit file currently exists. */
-    isInstalled: (scope: ServiceScope) => boolean
-    /** Install and start the unit. */
-    setupService: (options: SetupOptions) => void
-    /** Stop and remove the unit (optionally purge config). */
-    teardownService: (options: TeardownOptions) => void
-    /** Start/stop/restart the unit. */
-    controlService: (scope: ServiceScope, action: "start" | "stop" | "restart") => void
-    /** Return the unit's status output. */
-    serviceStatus: (scope: ServiceScope) => string
-    /** Remove selected sealed credentials after verified revocation/pruning. */
-    deleteSealedKeys: (scope: ServiceScope, keyIds: readonly string[]) => void
-    /** Remove all sealed credentials managed for this app. */
-    purgeSealedCredentials: (scope: ServiceScope) => void
-}
+const SYSTEMD_SCOPES: readonly ServiceScope[] = [
+    { name: "system", description: "system-wide unit (needs root)" },
+    { name: "user", description: "per-user unit (no root)" },
+]
 
 const DEFAULT_SERVICE_USER = "signalbox"
 const ACCOUNT_NAME = /^[a-z_][a-z0-9_-]*[$]?$/u
@@ -99,23 +61,23 @@ interface ResolvedSystemServiceProfile {
     readonly group: string
     readonly createAccount: boolean
     readonly supplementaryGroups: readonly string[]
-    readonly runtimeDirectory?: { readonly name: string; readonly mode: number }
+    readonly runtimeDirectory?: { readonly name?: string; readonly mode: number }
     readonly readWritePaths: readonly string[]
 }
 
 interface SystemdUnitRenderOptions {
     readonly appName: string
-    readonly scope: ServiceScope
+    readonly scope: SystemdScope
     readonly configPath: string
     readonly executable: string
-    readonly cliPath: string
+    readonly runArgs: readonly string[]
     readonly credentials: readonly { readonly name: string; readonly path: string }[]
     readonly activeKeyId?: string
     readonly description?: string
     readonly systemService?: SystemServiceProfile
 }
 
-const resolveProfile = (appName: string, profile: SystemServiceProfile = {}): ResolvedSystemServiceProfile => {
+const resolveProfile = (profile: SystemServiceProfile = {}): ResolvedSystemServiceProfile => {
     const user = profile.user ?? DEFAULT_SERVICE_USER
     const group = profile.group ?? user
     const supplementaryGroups = [...new Set(profile.supplementaryGroups ?? [])]
@@ -124,11 +86,11 @@ const resolveProfile = (appName: string, profile: SystemServiceProfile = {}): Re
     }
     const runtimeDirectory = profile.runtimeDirectory
         ? {
-              name: profile.runtimeDirectory.name ?? appName,
+              ...(profile.runtimeDirectory.name !== undefined ? { name: profile.runtimeDirectory.name } : {}),
               mode: profile.runtimeDirectory.mode ?? 0o750,
           }
         : undefined
-    if (runtimeDirectory && !RUNTIME_DIRECTORY_NAME.test(runtimeDirectory.name)) {
+    if (runtimeDirectory?.name !== undefined && !RUNTIME_DIRECTORY_NAME.test(runtimeDirectory.name)) {
         throw new SignalboxError(`invalid runtime directory name "${runtimeDirectory.name}"`)
     }
     if (
@@ -151,7 +113,7 @@ const resolveProfile = (appName: string, profile: SystemServiceProfile = {}): Re
         group,
         createAccount: profile.createAccount ?? true,
         supplementaryGroups,
-        runtimeDirectory,
+        ...(runtimeDirectory ? { runtimeDirectory } : {}),
         readWritePaths,
     }
 }
@@ -187,13 +149,38 @@ const tryRun = (command: string, args: string[]): string | null => {
 
 const userExists = (name: string): boolean => tryRun("id", ["-u", name]) !== null
 const groupExists = (name: string): boolean => tryRun("getent", ["group", name]) !== null
-
 const ufwIsActive = (): boolean => (tryRun("ufw", ["status"]) ?? "").includes("Status: active")
 
-const cliEntry = (): string => {
-    const argv1 = process.argv[1]
-    if (!argv1) throw new SignalboxError("cannot determine the path to this CLI")
-    return realpathSync(argv1)
+const systemdScope = (scope: string): SystemdScope => {
+    if (scope === "system" || scope === "user") return scope
+    throw new SignalboxError(`unsupported systemd scope "${scope}"`)
+}
+
+const systemUnitPath = (appName: string): string => `/etc/systemd/system/${appName}.service`
+const userUnitPath = (appName: string): string => join(homedir(), ".config", "systemd", "user", `${appName}.service`)
+const unitPath = (appName: string, scope: SystemdScope): string =>
+    scope === "system" ? systemUnitPath(appName) : userUnitPath(appName)
+const ownedConfigDirs = (appName: string): string[] => [
+    resolve(`/etc/${appName}`),
+    resolve(join(homedir(), ".config", appName)),
+]
+const credentialArchive = (scope: SystemdScope): string =>
+    scope === "system" ? "/etc/credstore.encrypted" : join(homedir(), ".config", "systemd", "credstore.encrypted")
+const systemctl = (scope: SystemdScope, args: string[]): string[] => (scope === "system" ? args : ["--user", ...args])
+
+const requireScopePrivileges = (appName: string, scope: SystemdScope, action: string): void => {
+    if (scope === "system" && !isRoot()) {
+        throw new SignalboxError(
+            `${action} of a system service needs root`,
+            `either \`sudo ${appName} ${action}\`, or \`${appName} ${action} --scope user\` which needs no root at all`,
+        )
+    }
+    if (scope === "user" && isRoot()) {
+        throw new SignalboxError(
+            `${action} --scope user as root would install into root's home`,
+            `drop the sudo, or use \`sudo ${appName} ${action}\` for a system service`,
+        )
+    }
 }
 
 /** @internal Pure unit rendering entrypoint used by tests. */
@@ -201,7 +188,7 @@ export const renderSystemdUnit = (options: SystemdUnitRenderOptions): string => 
     if (options.description && /[\r\n]/u.test(options.description)) {
         throw new SignalboxError("systemd service description cannot contain a line break")
     }
-    const profile = resolveProfile(options.appName, options.systemService)
+    const profile = resolveProfile(options.systemService)
     const configEnv = `${options.appName.toUpperCase().replace(/-/g, "_")}_CONFIG`
     const account = options.scope === "system" ? `User=${profile.user}\nGroup=${profile.group}\n` : ""
     const hardening =
@@ -226,13 +213,14 @@ PrivateTmp=yes
             ? [`SetCredential=${systemdActiveCredentialName(options.appName)}:${options.activeKeyId}`]
             : []),
     ].join("\n")
+    const runtimeName = profile.runtimeDirectory?.name ?? options.appName
     const profileLines = [
         ...(options.scope === "system" && profile.supplementaryGroups.length > 0
             ? [`SupplementaryGroups=${profile.supplementaryGroups.join(" ")}`]
             : []),
         ...(profile.runtimeDirectory
             ? [
-                  `RuntimeDirectory=${profile.runtimeDirectory.name}`,
+                  `RuntimeDirectory=${runtimeName}`,
                   `RuntimeDirectoryMode=${profile.runtimeDirectory.mode.toString(8).padStart(4, "0")}`,
               ]
             : []),
@@ -247,53 +235,34 @@ Wants=network-online.target
 [Service]
 Type=simple
 ${account}Environment=${configEnv}=${options.configPath}
-ExecStart=${options.executable} ${options.cliPath} run
+ExecStart=${options.executable} ${options.runArgs.join(" ")}
 Restart=always
 RestartSec=10
 ${credentialLines}
 ${profileLines}
 
-${hardening}
-[Install]
+${hardening}[Install]
 WantedBy=${options.scope === "system" ? "multi-user.target" : "default.target"}
 `
 }
 
 /**
- * Create a systemd service manager for an app.
- * @param appName the app/unit name
+ * Create a systemd {@link ServiceAdapter} for `@signalbox/service-cli`. Invalid
+ * profile metadata throws immediately.
+ * @typeParam TConfig the app's validated config type
+ * @param options the systemd profile and firewall configuration
  */
-export const createServiceManager = (appName: string, managerOptions: ServiceManagerOptions = {}): ServiceManager => {
-    const profile = resolveProfile(appName, managerOptions.systemService)
-    const systemUnitPath = `/etc/systemd/system/${appName}.service`
-    const userUnitPath = join(homedir(), ".config", "systemd", "user", `${appName}.service`)
-    const ownedConfigDirs = [resolve(`/etc/${appName}`), resolve(join(homedir(), ".config", appName))]
-    const credentialArchive = (scope: ServiceScope): string =>
-        scope === "system" ? "/etc/credstore.encrypted" : join(homedir(), ".config", "systemd", "credstore.encrypted")
+export const createSystemdServiceAdapter = <TConfig>(
+    options: SystemdServiceAdapterOptions<TConfig> = {},
+): ServiceAdapter<TConfig> => {
+    const profile = resolveProfile(options.profile)
+    const watchPortFor = (config: Partial<TConfig>): number | undefined => options.firewallPort?.(config)
 
-    const unitPath = (scope: ServiceScope): string => (scope === "system" ? systemUnitPath : userUnitPath)
-    const systemctl = (scope: ServiceScope, args: string[]): string[] =>
-        scope === "system" ? args : ["--user", ...args]
-
-    const requireScopePrivileges = (scope: ServiceScope, action: string): void => {
-        if (scope === "system" && !isRoot()) {
-            throw new SignalboxError(
-                `${action} of a system service needs root`,
-                `either \`sudo ${appName} ${action}\`, or \`${appName} ${action} --user\` which needs no root at all`,
-            )
-        }
-        if (scope === "user" && isRoot()) {
-            throw new SignalboxError(
-                `${action} --user as root would install into root's home`,
-                `drop the sudo, or use \`sudo ${appName} ${action}\` for a system service`,
-            )
-        }
-    }
-
-    const setupService = (options: SetupOptions): void => {
-        const { scope } = options
-        requireScopePrivileges(scope, "setup")
-        const configuredProfile = managerOptions.systemService
+    const setup = (context: ServiceSetupContext<TConfig>): void => {
+        const appName = context.appName
+        const scope = systemdScope(context.scope)
+        requireScopePrivileges(appName, scope, "setup")
+        const configuredProfile = options.profile
         if (
             scope === "user" &&
             configuredProfile &&
@@ -302,7 +271,7 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
                 configuredProfile.createAccount !== undefined ||
                 (configuredProfile.supplementaryGroups?.length ?? 0) > 0)
         ) {
-            throw new SignalboxError("system account and supplementary-group settings cannot be used with --user")
+            throw new SignalboxError("system account and supplementary-group settings cannot be used with --scope user")
         }
 
         if (process.execPath.includes("/.nvm/") || process.execPath.includes("/.volta/")) {
@@ -312,6 +281,8 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
                     : "fine for a user service, but the path breaks if you switch node versions"
             write("warn", `node lives at ${process.execPath}, inside a per-user version manager: ${detail}`)
         }
+
+        const watchPort = watchPortFor(context.config)
 
         if (scope === "system") {
             for (const supplementaryGroup of profile.supplementaryGroups) {
@@ -338,13 +309,13 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
                 write("info", `created system user ${profile.user}`)
             }
 
-            const configDir = dirname(options.configPath)
+            const configDir = dirname(context.configPath)
             mkdirSync(configDir, { recursive: true, mode: 0o750 })
             const gid = Number(run("id", ["-g", profile.user]).trim())
             chownSync(configDir, 0, gid)
-            if (existsSync(options.configPath)) chownSync(options.configPath, 0, gid)
+            if (existsSync(context.configPath)) chownSync(context.configPath, 0, gid)
 
-            if (options.watchPort !== undefined && ufwIsActive()) {
+            if (watchPort !== undefined && ufwIsActive()) {
                 const gateway = tryRun("ip", ["route", "show", "default"])?.trim().split(/\s+/)[2]
                 if (gateway) {
                     tryRun("ufw", [
@@ -354,24 +325,24 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
                         "to",
                         "any",
                         "port",
-                        String(options.watchPort),
+                        String(watchPort),
                         "proto",
                         "tcp",
                         "comment",
                         `${appName} UPnP callback`,
                     ])
-                    write("info", `ufw: allowed tcp/${String(options.watchPort)} from gateway ${gateway}`)
+                    write("info", `ufw: allowed tcp/${String(watchPort)} from gateway ${gateway}`)
                 }
             }
         }
 
         const archive = credentialArchive(scope)
         const credentials: { name: string; path: string }[] = []
-        if (options.keys && options.keys.length > 0) {
-            if (!options.activeKeyId) throw new SignalboxError("setup needs an active key ID when sealing credentials")
+        if (context.keys.length > 0) {
+            if (!context.activeKeyId) throw new SignalboxError("setup needs an active key ID when sealing credentials")
             mkdirSync(archive, { recursive: true, mode: 0o700 })
             chmodSync(archive, 0o700)
-            for (const material of options.keys) {
+            for (const material of context.keys) {
                 const name = systemdCredentialName(appName, material.id)
                 const targetPath = join(archive, name)
                 const commandOptions = scope === "user" ? ["--user"] : []
@@ -389,15 +360,15 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
             const manifest: SystemdCredentialManifest = {
                 version: 1,
                 appName,
-                activeKeyId: options.activeKeyId,
-                keyIds: options.keys.map(key => key.id),
+                activeKeyId: context.activeKeyId,
+                keyIds: context.keys.map(key => key.id),
             }
             writeFileSync(join(archive, systemdManifestName(appName)), `${JSON.stringify(manifest, null, 4)}\n`, {
                 mode: 0o600,
             })
         }
 
-        const target = unitPath(scope)
+        const target = unitPath(appName, scope)
         const wasInstalled = existsSync(target)
         mkdirSync(dirname(target), { recursive: true })
         writeFileSync(
@@ -405,17 +376,15 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
             renderSystemdUnit({
                 appName,
                 scope,
-                configPath: options.configPath,
-                executable: process.execPath,
-                cliPath: cliEntry(),
+                configPath: context.configPath,
+                executable: context.executable,
+                runArgs: context.runArgs,
                 credentials,
-                activeKeyId: options.activeKeyId,
-                description: managerOptions.description,
-                systemService: managerOptions.systemService,
+                ...(context.activeKeyId ? { activeKeyId: context.activeKeyId } : {}),
+                ...(context.description ? { description: context.description } : {}),
+                ...(options.profile ? { systemService: options.profile } : {}),
             }),
-            {
-                mode: 0o644,
-            },
+            { mode: 0o644 },
         )
 
         run("systemctl", systemctl(scope, ["daemon-reload"]))
@@ -438,10 +407,10 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
                     `lingering is off, so this stops when your last session ends. Enable it once with: sudo loginctl enable-linger ${process.env["USER"] ?? "$USER"}`,
                 )
             }
-            if (options.watchPort !== undefined && ufwIsActive()) {
+            if (watchPort !== undefined && ufwIsActive()) {
                 write(
                     "warn",
-                    `ufw is active - allow tcp/${String(options.watchPort)} from your gateway or NOTIFYs will be dropped`,
+                    `ufw is active - allow tcp/${String(watchPort)} from your gateway or NOTIFYs will be dropped`,
                 )
             }
         }
@@ -449,13 +418,14 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
         write("info", `follow it with: journalctl ${scope === "user" ? "--user " : ""}-u ${appName} -f`)
     }
 
-    const teardownService = (options: TeardownOptions): void => {
-        const { scope } = options
-        requireScopePrivileges(scope, "teardown")
+    const teardown = (context: ServiceTeardownContext<TConfig>): void => {
+        const appName = context.appName
+        const scope = systemdScope(context.scope)
+        requireScopePrivileges(appName, scope, "teardown")
 
         tryRun("systemctl", systemctl(scope, ["disable", "--now", `${appName}.service`]))
 
-        const target = unitPath(scope)
+        const target = unitPath(appName, scope)
         if (existsSync(target)) {
             rmSync(target)
             write("info", `removed ${target}`)
@@ -463,7 +433,8 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
         run("systemctl", systemctl(scope, ["daemon-reload"]))
         tryRun("systemctl", systemctl(scope, ["reset-failed", `${appName}.service`]))
 
-        if (scope === "system" && options.watchPort !== undefined && ufwIsActive()) {
+        const watchPort = watchPortFor(context.config)
+        if (scope === "system" && watchPort !== undefined && ufwIsActive()) {
             const gateway = tryRun("ip", ["route", "show", "default"])?.trim().split(/\s+/)[2]
             if (gateway) {
                 tryRun("ufw", [
@@ -474,46 +445,41 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
                     "to",
                     "any",
                     "port",
-                    String(options.watchPort),
+                    String(watchPort),
                     "proto",
                     "tcp",
                 ])
             }
         }
 
-        if (!options.purge) {
-            write("info", `kept ${options.configPath} (pass --purge to remove it)`)
-            return
-        }
-
-        if (existsSync(options.configPath)) {
-            rmSync(options.configPath)
-            write("info", `removed ${options.configPath}`)
-        }
-
-        const configDir = resolve(dirname(options.configPath))
-        if (ownedConfigDirs.includes(configDir)) {
-            if (existsSync(configDir)) {
+        if (context.purge) {
+            const configDir = resolve(dirname(context.configPath))
+            if (ownedConfigDirs(appName).includes(configDir) && existsSync(configDir)) {
                 rmSync(configDir, { recursive: true, force: true })
                 write("info", `removed ${configDir}`)
             }
-        } else {
-            write("info", `left ${configDir} in place - not a directory ${appName} created`)
         }
     }
 
-    const serviceStatus = (scope: ServiceScope): string =>
-        tryRun("systemctl", systemctl(scope, ["status", `${appName}.service`, "--no-pager"])) ??
-        `${appName}.service is not installed (${scope} scope)`
-
-    const controlService = (scope: ServiceScope, action: "start" | "stop" | "restart"): void => {
-        requireScopePrivileges(scope, action)
-        run("systemctl", systemctl(scope, [action, `${appName}.service`]))
-        write("info", `${action}ed ${appName}`)
+    const controlService = (target: ServiceTarget, action: "start" | "stop" | "restart"): void => {
+        const scope = systemdScope(target.scope)
+        requireScopePrivileges(target.appName, scope, action)
+        run("systemctl", systemctl(scope, [action, `${target.appName}.service`]))
+        write("info", `${action}ed ${target.appName}`)
     }
 
-    const deleteSealedKeys = (scope: ServiceScope, keyIds: readonly string[]): void => {
-        requireScopePrivileges(scope, "delete sealed keys")
+    const serviceStatus = (target: ServiceTarget): string => {
+        const scope = systemdScope(target.scope)
+        return (
+            tryRun("systemctl", systemctl(scope, ["status", `${target.appName}.service`, "--no-pager"])) ??
+            `${target.appName}.service is not installed (${scope} scope)`
+        )
+    }
+
+    const removeCredentials = (target: ServiceTarget, keyIds: readonly string[]): void => {
+        const appName = target.appName
+        const scope = systemdScope(target.scope)
+        requireScopePrivileges(appName, scope, "delete sealed keys")
         const archive = credentialArchive(scope)
         const removed = new Set(keyIds)
         const manifestPath = join(archive, systemdManifestName(appName))
@@ -534,8 +500,10 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
         }
     }
 
-    const purgeSealedCredentials = (scope: ServiceScope): void => {
-        requireScopePrivileges(scope, "purge sealed credentials")
+    const purgeCredentials = (target: ServiceTarget): void => {
+        const appName = target.appName
+        const scope = systemdScope(target.scope)
+        requireScopePrivileges(appName, scope, "purge sealed credentials")
         const archive = credentialArchive(scope)
         if (!existsSync(archive)) return
         const prefix = `${appName.replace(/[^A-Za-z0-9_.-]+/gu, "-")}-config-key-`
@@ -547,12 +515,24 @@ export const createServiceManager = (appName: string, managerOptions: ServiceMan
     }
 
     return {
-        isInstalled: scope => existsSync(unitPath(scope)),
-        setupService,
-        teardownService,
-        controlService,
-        serviceStatus,
-        deleteSealedKeys,
-        purgeSealedCredentials,
+        scopes: SYSTEMD_SCOPES,
+        defaultScope: "system",
+        isInstalled: async target => existsSync(unitPath(target.appName, systemdScope(target.scope))),
+        setup: async context => {
+            setup(context)
+        },
+        teardown: async context => {
+            teardown(context)
+        },
+        control: async (target, action) => {
+            controlService(target, action)
+        },
+        status: async target => serviceStatus(target),
+        removeCredentials: async (target, keyIds) => {
+            removeCredentials(target, keyIds)
+        },
+        purgeCredentials: async target => {
+            purgeCredentials(target)
+        },
     }
 }
