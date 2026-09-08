@@ -16,6 +16,7 @@
         "@signalbox/schedule": "report",
         "@signalbox/secrets": "report",
         "@signalbox/service-cli": "report",
+        "@signalbox/service-systemd": "report",
         "@signalbox/store": "report",
         "@signalbox/upnp": "report",
         "@signalbox/webhook": "report"
